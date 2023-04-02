@@ -27,7 +27,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: 'Hi, what would you like to learn about this legal case?',
+        message: 'Hi Who would you like me to be from the text?',
         type: 'apiMessage',
       },
     ],
@@ -51,7 +51,7 @@ export default function Home() {
     setError(null);
 
     if (!query) {
-      alert('Please input a question');
+      alert('Please ask a question');
       return;
     }
 
@@ -165,7 +165,7 @@ export default function Home() {
       <Layout>
         <div className="mx-auto flex flex-col gap-4">
           <h1 className="text-2xl font-bold leading-[1.1] tracking-tighter text-center">
-            Chat With Your Legal Docs
+            Chat With The Groovy AI Bot GAIB
           </h1>
           <main className={styles.main}>
             <div className={styles.cloud}>
@@ -177,7 +177,7 @@ export default function Home() {
                     icon = (
                       <Image
                         src="/bot-image.png"
-                        alt="AI"
+                        alt="GAIB"
                         width="40"
                         height="40"
                         className={styles.boticon}
@@ -282,7 +282,7 @@ export default function Home() {
                     placeholder={
                       loading
                         ? 'Waiting for response...'
-                        : 'What is this legal case about?'
+                        : 'Hi what is your name? Who would you like me to be from the text?'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -319,8 +319,8 @@ export default function Home() {
           </main>
         </div>
         <footer className="m-auto p-4">
-          <a href="https://twitter.com/mayowaoshin">
-            Powered by LangChainAI. Demo built by Mayo (Twitter: @mayowaoshin).
+          <a href="https://groovy.org">
+            The Groovy Organization GAIB.
           </a>
         </footer>
       </Layout>
