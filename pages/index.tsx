@@ -27,7 +27,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: 'Hi Who would you like me to be from the text?',
+        message: 'What sort of wisdom are you looking for?',
         type: 'apiMessage',
       },
     ],
@@ -51,7 +51,7 @@ export default function Home() {
     setError(null);
 
     if (!query) {
-      alert('Please ask a question');
+      alert('Please ask me a question');
       return;
     }
 
@@ -282,7 +282,7 @@ export default function Home() {
                     placeholder={
                       loading
                         ? 'Waiting for response...'
-                        : 'Hi what is your name? Who would you like me to be from the text?'
+                        : 'I am GAIB, what wisdom would you like to know?'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -320,7 +320,7 @@ export default function Home() {
         </div>
         <footer className="m-auto p-4">
           <a href="https://groovy.org">
-            The Groovy Organization GAIB.
+            The Groovy Organization.
           </a>
         </footer>
       </Layout>
