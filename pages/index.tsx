@@ -27,7 +27,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: 'What sort of wisdom are you looking for?',
+        message: 'I am GAIB, What sort of wisdom are you looking for?',
         type: 'apiMessage',
       },
     ],
