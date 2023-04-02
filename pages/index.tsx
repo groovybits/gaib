@@ -95,7 +95,7 @@ export default function Home() {
                 {
                   type: 'apiMessage',
                   message: state.pending ?? '',
-                  sourceDocs: state.pendingSourceDocs,
+                  //sourceDocs: state.pendingSourceDocs,
                 },
               ],
               pending: undefined,
