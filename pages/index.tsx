@@ -27,7 +27,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: 'I am GAIB, What sort of wisdom are you looking for?',
+        message: 'I am GAIB, the wise old Groovy AI Bot?',
         type: 'apiMessage',
       },
     ],
@@ -51,7 +51,7 @@ export default function Home() {
     setError(null);
 
     if (!query) {
-      alert('Please ask me a question');
+      alert('Please ask me a question.');
       return;
     }
 
@@ -165,7 +165,7 @@ export default function Home() {
       <Layout>
         <div className="mx-auto flex flex-col gap-4">
           <h1 className="text-2xl font-bold leading-[1.1] tracking-tighter text-center">
-            Chat With The Groovy AI Bot GAIB
+            The Groovy AI Bot GAIB
           </h1>
           <main className={styles.main}>
             <div className={styles.cloud}>
@@ -282,7 +282,7 @@ export default function Home() {
                     placeholder={
                       loading
                         ? 'Waiting for response...'
-                        : 'I am GAIB, what wisdom would you like to know?'
+                        : 'I am GAIB, The Groovy AI Bot, ask me for wisdom and advice?'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
