@@ -1,4 +1,14 @@
-# GPT-4 & LangChain - Create a ChatGPT Chatbot for Your PDF Files
+# Groovy AI Bot (GAIM)
+
+Project is forked and customized from "GPT-4 & LangChain - Create a ChatGPT Chatbot for Your PDF Files"
+
+This fork will include customizations to become a more generalized chatbot.
+The goal of GAIM is to ingest and create personalities and a universal
+wise guru like AI Bot that is super groovy.
+
+Also this uses GPT-3 for now until I gain GPT-4 access.
+
+-- Original project instructions --
 
 Use the new GPT-4 api to build a chatGPT chatbot for multiple Large PDF files.
 
