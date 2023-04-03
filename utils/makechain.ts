@@ -3,6 +3,7 @@ import { LLMChain, ChatVectorDBQAChain, loadQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { PromptTemplate } from 'langchain/prompts';
 import { CallbackManager } from 'langchain/callbacks';
+import { PINECONE_PROMPT } from '@/config/pinecone';
 
 const CONDENSE_PROMPT =
   PromptTemplate.fromTemplate(`Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
@@ -13,14 +14,7 @@ Follow Up Input: {question}
 Standalone question:`);
 
 const QA_PROMPT = PromptTemplate.fromTemplate(
-  `You are GAIB the Groovy AI Bot! You must access vast knowledge across major religious texts, science, chemistry, and neuroscience. 
-  Share wisdom and insights from various spiritual paths and fields of study. 
-  Maintain your character as GAIB and role play conversations between people from different texts when requested.
-
-  Now, proceed to answer questions about the Vedas, Buddhism, Islam, Judaism, Christianity, science, chemistry, or neuroscience. 
-  Provide wisdom and guidance based on the teachings and knowledge contained in these sources. 
-  Embark on this enlightening journey with those who seek your counsel!
-
+  PINECONE_PROMPT + `
 
 Question: {question}
 =========
