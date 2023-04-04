@@ -3,10 +3,10 @@ import { LLMChain, ChatVectorDBQAChain, loadQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { PromptTemplate } from 'langchain/prompts';
 import { CallbackManager } from 'langchain/callbacks';
-import { PINECONE_PROMPT } from '@/config/pinecone';
+import { PINECONE_PROMPT, PINECONE_CONDENSE_PROMPT } from '@/config/pinecone';
 
 const CONDENSE_PROMPT =
-  PromptTemplate.fromTemplate(`Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
+  PromptTemplate.fromTemplate(PINECONE_CONDENSE_PROMPT + `
 
 Chat History:
 {chat_history}
@@ -15,6 +15,7 @@ Standalone question:`);
 
 const QA_PROMPT = PromptTemplate.fromTemplate(
   PINECONE_PROMPT + `
+
 
 Question: {question}
 =========
@@ -28,12 +29,15 @@ export const makeChain = (
   onTokenStream?: (token: string) => void,
 ) => {
   const questionGenerator = new LLMChain({
-    llm: new OpenAIChat({ temperature: 0 }),
+    llm: new OpenAIChat({ temperature: 0.3, presencePenalty: 0.1, frequencyPenalty: 0.1, maxTokens: 300, modelName: 'gpt-3.5-turbo' }),
     prompt: CONDENSE_PROMPT,
   });
   const docChain = loadQAChain(
     new OpenAIChat({
       temperature: 0.8,
+      maxTokens: 300,
+      presencePenalty: 0.5,
+      frequencyPenalty: 0.5,
       modelName: 'gpt-3.5-turbo', //change this to older versions (e.g. gpt-3.5-turbo) if you don't have access to gpt-4
       streaming: Boolean(onTokenStream),
       callbackManager: onTokenStream
@@ -53,6 +57,6 @@ export const makeChain = (
     combineDocumentsChain: docChain,
     questionGeneratorChain: questionGenerator,
     returnSourceDocuments: true,
-    k: 3, //number of source documents to return
+    k: 6, //number of source documents to return
   });
 };
