@@ -16,11 +16,11 @@ Standalone question:`);
 const QA_PROMPT = PromptTemplate.fromTemplate(
   PINECONE_PROMPT + `
 
-Question: {question}
+Director: {question}
 =========
 Context: {context}
 =========
-Answer:`,
+Script:`,
 );
 
 export const makeChain = (
