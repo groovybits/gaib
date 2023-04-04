@@ -70,7 +70,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;
     } catch (error) {
-      console.error('API error:', error.response ? error.response.data : error);
+      if (error instanceof Error) {
+        console.error('API error:', error.message ? error.name : error);
+      } else {
+        console.error('Unknown error:', error);
+      }
       retries++;
       if (retries >= MAX_RETRIES) {
         sendData(JSON.stringify({ error: 'An error occurred while processing the request. Maximum retries reached.' }));
