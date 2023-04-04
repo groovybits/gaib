@@ -7,17 +7,10 @@ import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 
 export default function Home() {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [sourceDocs, setSourceDocs] = useState<Document[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [messageState, setMessageState] = useState<{
     messages: Message[];
@@ -27,7 +20,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: 'What would you like to know?',
+        message: '[GAIB] Groovy AI Bot: Nice to meet you!',
         type: 'apiMessage',
       },
     ],
@@ -51,7 +44,7 @@ export default function Home() {
     setError(null);
 
     if (!query) {
-      alert('Please ask me a question.');
+      alert('[GAIB] Groovy AI Bot: What sort of Anime would you like me to generate?');
       return;
     }
 
@@ -95,7 +88,7 @@ export default function Home() {
                 {
                   type: 'apiMessage',
                   message: state.pending ?? '',
-                  //sourceDocs: state.pendingSourceDocs,
+                  sourceDocs: state.pendingSourceDocs,
                 },
               ],
               pending: undefined,
@@ -164,9 +157,6 @@ export default function Home() {
     <>
       <Layout>
         <div className="mx-auto flex flex-col gap-4">
-          <h1 className="text-2xl font-bold leading-[1.1] tracking-tighter text-center">
-            The Groovy AI Bot GAIB
-          </h1>
           <main className={styles.main}>
             <div className={styles.cloud}>
               <div ref={messageListRef} className={styles.messagelist}>
@@ -177,7 +167,7 @@ export default function Home() {
                     icon = (
                       <Image
                         src="/bot-image.png"
-                        alt="LamaGAIB"
+                        alt="GAIB"
                         width="40"
                         height="40"
                         className={styles.boticon}
@@ -189,7 +179,7 @@ export default function Home() {
                     icon = (
                       <Image
                         src="/usericon.png"
-                        alt="Monk"
+                        alt="Human"
                         width="30"
                         height="30"
                         className={styles.usericon}
@@ -212,61 +202,11 @@ export default function Home() {
                           </ReactMarkdown>
                         </div>
                       </div>
-                      {message.sourceDocs && (
-                        <div
-                          className="p-5"
-                          key={`sourceDocsAccordion-${index}`}
-                        >
-                          <Accordion
-                            type="single"
-                            collapsible
-                            className="flex-col"
-                          >
-                            {message.sourceDocs.map((doc, index) => (
-                              <div key={`messageSourceDocs-${index}`}>
-                                <AccordionItem value={`item-${index}`}>
-                                  <AccordionTrigger>
-                                    <h3>Source {index + 1}</h3>
-                                  </AccordionTrigger>
-                                  <AccordionContent>
-                                    <ReactMarkdown linkTarget="_blank">
-                                      {doc.pageContent}
-                                    </ReactMarkdown>
-                                    <p className="mt-2">
-                                      <b>Source:</b> {doc.metadata.source}
-                                    </p>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              </div>
-                            ))}
-                          </Accordion>
-                        </div>
-                      )}
                     </>
                   );
                 })}
-                {sourceDocs.length > 0 && (
-                  <div className="p-5">
-                    <Accordion type="single" collapsible className="flex-col">
-                      {sourceDocs.map((doc, index) => (
-                        <div key={`SourceDocs-${index}`}>
-                          <AccordionItem value={`item-${index}`}>
-                            <AccordionTrigger>
-                              <h3>Source {index + 1}</h3>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <ReactMarkdown linkTarget="_blank">
-                                {doc.pageContent}
-                              </ReactMarkdown>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </div>
-                      ))}
-                    </Accordion>
-                  </div>
-                )}
               </div>
-            </div>
+-           </div>
             <div className={styles.center}>
               <div className={styles.cloudform}>
                 <form onSubmit={handleSubmit}>
@@ -274,15 +214,15 @@ export default function Home() {
                     disabled={loading}
                     onKeyDown={handleEnter}
                     ref={textAreaRef}
-                    autoFocus={false}
-                    rows={1}
-                    maxLength={512}
+                    autoFocus={true}
+                    rows={3}
+                    maxLength={300}
                     id="userInput"
                     name="userInput"
                     placeholder={
                       loading
                         ? 'Meditating upon it...'
-                        : 'What would you like to know?'
+                        : '[GAIB] Groovy AI Bot: What sort of Anime would you like me to generate?'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
