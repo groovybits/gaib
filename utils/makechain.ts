@@ -33,7 +33,7 @@ export const makeChain = (
   });
   const docChain = loadQAChain(
     new OpenAIChat({
-      temperature: 0.3,
+      temperature: 0.6,
       maxTokens: 1000,
       presencePenalty: 0.5,
       frequencyPenalty: 0.5,
