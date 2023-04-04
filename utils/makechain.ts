@@ -28,13 +28,13 @@ export const makeChain = (
   onTokenStream?: (token: string) => void,
 ) => {
   const questionGenerator = new LLMChain({
-    llm: new OpenAIChat({ temperature: 0, presencePenalty: 0.5, frequencyPenalty: 0.5, maxTokens: 300, modelName: 'gpt-3.5-turbo' }),
+    llm: new OpenAIChat({ temperature: 0, presencePenalty: 0.5, frequencyPenalty: 0.5, maxTokens: 1000, modelName: 'gpt-3.5-turbo' }),
     prompt: CONDENSE_PROMPT,
   });
   const docChain = loadQAChain(
     new OpenAIChat({
-      temperature: 0.8,
-      maxTokens: 500,
+      temperature: 0.3,
+      maxTokens: 1000,
       presencePenalty: 0.5,
       frequencyPenalty: 0.5,
       modelName: 'gpt-3.5-turbo', //change this to older versions (e.g. gpt-3.5-turbo) if you don't have access to gpt-4
