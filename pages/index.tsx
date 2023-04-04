@@ -27,7 +27,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: 'I am GAIB, the wise old Groovy AI Bot?',
+        message: 'What would you like to know?',
         type: 'apiMessage',
       },
     ],
@@ -177,7 +177,7 @@ export default function Home() {
                     icon = (
                       <Image
                         src="/bot-image.png"
-                        alt="GAIB"
+                        alt="LamaGAIB"
                         width="40"
                         height="40"
                         className={styles.boticon}
@@ -189,7 +189,7 @@ export default function Home() {
                     icon = (
                       <Image
                         src="/usericon.png"
-                        alt="Me"
+                        alt="Monk"
                         width="30"
                         height="30"
                         className={styles.usericon}
@@ -281,8 +281,8 @@ export default function Home() {
                     name="userInput"
                     placeholder={
                       loading
-                        ? 'Waiting for response...'
-                        : 'I am GAIB, The Groovy AI Bot, ask me for wisdom and advice?'
+                        ? 'Meditating upon it...'
+                        : 'What would you like to know?'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -318,11 +318,6 @@ export default function Home() {
             )}
           </main>
         </div>
-        <footer className="m-auto p-4">
-          <a href="https://groovy.org">
-            The Groovy Organization.
-          </a>
-        </footer>
       </Layout>
     </>
   );
