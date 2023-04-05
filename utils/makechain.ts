@@ -8,19 +8,19 @@ import { PINECONE_PROMPT, PINECONE_CONDENSE_PROMPT } from '@/config/pinecone';
 const CONDENSE_PROMPT =
   PromptTemplate.fromTemplate(PINECONE_CONDENSE_PROMPT + `
 
-Chat History:
+Story History:
 {chat_history}
 Follow Up Input: {question}
-Standalone question:`);
+Standalone title:`);
 
 const QA_PROMPT = PromptTemplate.fromTemplate(
   PINECONE_PROMPT + `
 
-Director: {question}
+Story Direction: {question}
 =========
 Context: {context}
 =========
-Script as Markdown:`,
+Story Title and Script as Markdown:`,
 );
 
 export const makeChain = (
@@ -28,15 +28,15 @@ export const makeChain = (
   onTokenStream?: (token: string) => void,
 ) => {
   const questionGenerator = new LLMChain({
-    llm: new OpenAIChat({ temperature: 0.2, presencePenalty: 0, frequencyPenalty: 0, maxTokens: 1000, modelName: 'gpt-3.5-turbo' }),
+    llm: new OpenAIChat({ temperature: 0.8, presencePenalty: 0, frequencyPenalty: 0, maxTokens: 1000, modelName: 'gpt-3.5-turbo' }),
     prompt: CONDENSE_PROMPT,
   });
   const docChain = loadQAChain(
     new OpenAIChat({
       temperature: 0.8,
       maxTokens: 1000,
-      presencePenalty: 0.3,
-      frequencyPenalty: 0.3,
+      presencePenalty: 0.5,
+      frequencyPenalty: 0.5,
       modelName: 'gpt-3.5-turbo', //change this to older versions (e.g. gpt-3.5-turbo) if you don't have access to gpt-4
       streaming: Boolean(onTokenStream),
       callbackManager: onTokenStream

@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('History: ', history ? history : '');
       console.log('Reponse: ', response.text);
       //console.log('Source Documents: ', response.sourceDocuments);
-      sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
+      //sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;
     } catch (error) {
       if (error instanceof Error) {

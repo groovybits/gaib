@@ -152,6 +152,8 @@
   background: #1E1E1E; /* Changed background color to a darker color */
   animation: fadein 0.5s;
   font-family: "Courier New", monospace; /* Added font family */
+  font-weight: bold;
+  font-weight: 500;
 }
 
 .markdownanswer a:hover {
@@ -165,6 +167,7 @@
 
 .markdownanswer code {
   font-weight: 500;
+  font-weight: bold;
   white-space: pre-wrap !important;
   color: #BADA55; /* Changed font color to yellow-green */
   background: #1E1E1E; /* Changed background color to a darker color */
