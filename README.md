@@ -8,6 +8,16 @@ wise guru like AI Bot that is super groovy.
 
 Also this uses GPT-3 for now until I gain GPT-4 access.
 
+Text to Speech: 
+
+To set up Google Cloud authentication for the Text-to-Speech API:
+
+- Get an account: https://cloud.google.com/docs/authentication/getting-started
+- Create a new project in the Google Cloud Console.
+- Enable the Text-to-Speech API for your project.
+- Create a service account in your project and download the service account key as a JSON file.
+- Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the path of your downloaded JSON file.
+
 -- Original project instructions --
 
 Use the new GPT-4 api to build a chatGPT chatbot for multiple Large PDF files.

@@ -3,7 +3,7 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 .header {
@@ -22,7 +22,7 @@
   position: relative;
   resize: none;
   font-size: 1.1rem;
-  padding: 1rem 2rem 1rem 2rem;
+  padding: 0.5rem 1rem 0.5rem 1rem;
   width: 75vw;
   border-radius: 0.5rem;
   border: 2px solid #d9d9e3;
@@ -46,6 +46,34 @@
   color: #6b7280;
 }
 
+.copybutton {
+  position: top;
+  color: #ffffff;
+  background: #000000;
+  padding: 1rem;
+  border-color: #FFA500;
+  width: 15;
+  height: 5;
+  font-size: 6px;
+  font-weight: bold;
+  border-radius: 8px;
+  border: double;
+}
+
+.speakbutton{
+  position: top;
+  color: #ffffff;
+  background: #000000;
+  padding: 1rem;
+  border-color: #FFA500;
+  width: 15;
+  height: 5;
+  font-size: 6px;
+  font-weight: bold;
+  border-radius: 8px;
+  border: double;
+}
+
 .generatebutton {
   position: absolute;
   top: 0.87rem;
@@ -53,9 +81,12 @@
   color: #000000;
   background: #FFA500;
   padding: 0.3rem;
-  border: solid;
-  border-color:rgba(156, 163, 175, 0.5);
+  border-color:#000000;
   display: flex;
+  border-radius: 8px;
+  border: double;
+  width: 20;
+  height: 20;
 }
 
 .loadingwheel {
@@ -98,12 +129,12 @@
 }
 
 .usermessage {
-  padding: 1.0rem;
+  padding: 0.5rem;
   color: #BADA55; /* Changed font color to yellow-green */
   background: #1E1E1E; /* Changed background color to a darker color */}
 
 .usermessagewaiting {
-  padding: 1.5rem;
+  padding: 1.0rem;
   color: #BADA55; /* Changed font color to yellow-green */
   background: #1E1E1E; /* Changed background color to a darker color */
   background: linear-gradient(to left, #07080938, #1a1c2024, #07080936);
@@ -126,7 +157,7 @@
 
 .apimessage {
   background: #1E1E1E;
-  padding: 1.0rem;
+  padding: 0.5rem;
   color: #e5f810;
   animation: fadein 0.5s;
   white-space: pre-wrap !important;
@@ -248,7 +279,7 @@
 /* Mobile optimization */
 @media (max-width: 300px) {
   .main {
-    padding: 1rem;
+    padding: 0.5rem;
     max-height: 60vh;
   }
 

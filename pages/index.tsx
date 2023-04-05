@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 
+
 export default function Home() {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -161,8 +162,28 @@ export default function Home() {
       console.error('Failed to copy text: ', err);
     }
   }
-  
 
+  async function speakText(text: string) {
+    try {
+      const response = await fetch('/api/synthesizeSpeech', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Error in synthesizing speech');
+      }
+  
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+    } catch (error) {
+      console.error('Error in synthesizing speech:', error);
+    }
+  }  
+  
   return (
     <>
       <Layout>
@@ -203,7 +224,7 @@ export default function Home() {
                         : styles.usermessage;
                   }
                   return (
-                    <>
+                    <> 
                       <div key={`chatMessage-${index}`} className={className}>
                         {icon}
                         <div className={styles.markdownanswer}>
@@ -211,13 +232,21 @@ export default function Home() {
                             {message.message}
                           </ReactMarkdown>
                         </div>
-                        <button type="button" disabled={loading} className={styles.generatebutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Script</button>
+                      </div>
+                      <div className={className}>
+                      <table cellSpacing={0} cellPadding={1} border={0} className={className} width="100%"><tr>
+                        <td>
+                          <button type="button" disabled={loading} className={styles.speakbutton} id="playButton" onClick={() => speakText(message.message)}>Speak Text</button>&nbsp;&nbsp;
+                        </td><td>                      
+                          <button type="button" disabled={loading} className={styles.copybutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Text</button>&nbsp;&nbsp;             
+                        </td></tr>
+                      </table>
                       </div>
                     </>
                   );
                 })}
               </div>
--           </div>
+            </div>
             <div className={styles.center}>
               <div className={styles.cloudform}>
                 <form onSubmit={handleSubmit}>
@@ -246,7 +275,7 @@ export default function Home() {
                   >
                     {loading ? (
                       <div className={styles.loadingwheel}>
-                        <LoadingDots color="#BADA55" />
+                        <LoadingDots color="#FFA500" />
                       </div>
                     ) : (
                       // Send icon SVG in input field
