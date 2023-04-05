@@ -6,10 +6,13 @@ import { pinecone } from '@/utils/pinecone-client';
 import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
 
 const MAX_INPUT_LENGTH = 4096; // Set the maximum input length allowed
-const MAX_RETRIES = 10; // Set the maximum number of retries
+const MAX_RETRIES = 3; // Set the maximum number of retries
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { question, history } = req.body;
+
+  console.log('-- START SESSION ---');
+  console.log('Original Question: ', question);
 
   if (!question) {
     return res.status(400).json({ message: 'No question in the request' });
@@ -21,6 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {
     sanitizedQuestion = sanitizedQuestion.substring(0, MAX_INPUT_LENGTH);
   }
+  console.log('Sanitized Question: ', sanitizedQuestion);
 
   const index = pinecone.Index(PINECONE_INDEX_NAME);
 
@@ -66,16 +70,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         chat_history: history || [],
       });
 
-      console.log('response', response);
+      console.log('History: ', history ? history : '');
+      console.log('Reponse: ', response.text);
+      //console.log('Source Documents: ', response.sourceDocuments);
       sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;
     } catch (error) {
       if (error instanceof Error) {
-        console.error('API error:', error.message ? error.name : error);
+        console.error('API error: ', error.message ? error.message : error);
       } else {
         console.error('Unknown error:', error);
       }
       retries++;
+      // Clear the history
+      history.length = 0;
       if (retries >= MAX_RETRIES) {
         sendData(JSON.stringify({ error: 'An error occurred while processing the request. Maximum retries reached.' }));
       }
@@ -84,4 +92,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   sendData('[DONE]');
   res.end();
+  console.log('-- END SESSION ---');
 }

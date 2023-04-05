@@ -20,7 +20,7 @@ Director: {question}
 =========
 Context: {context}
 =========
-Script:`,
+Script as Markdown:`,
 );
 
 export const makeChain = (
@@ -28,22 +28,21 @@ export const makeChain = (
   onTokenStream?: (token: string) => void,
 ) => {
   const questionGenerator = new LLMChain({
-    llm: new OpenAIChat({ temperature: 0, presencePenalty: 0.5, frequencyPenalty: 0.5, maxTokens: 1000, modelName: 'gpt-3.5-turbo' }),
+    llm: new OpenAIChat({ temperature: 0.2, presencePenalty: 0, frequencyPenalty: 0, maxTokens: 1000, modelName: 'gpt-3.5-turbo' }),
     prompt: CONDENSE_PROMPT,
   });
   const docChain = loadQAChain(
     new OpenAIChat({
-      temperature: 0.6,
+      temperature: 0.8,
       maxTokens: 1000,
-      presencePenalty: 0.5,
-      frequencyPenalty: 0.5,
+      presencePenalty: 0.3,
+      frequencyPenalty: 0.3,
       modelName: 'gpt-3.5-turbo', //change this to older versions (e.g. gpt-3.5-turbo) if you don't have access to gpt-4
       streaming: Boolean(onTokenStream),
       callbackManager: onTokenStream
         ? CallbackManager.fromHandlers({
             async handleLLMNewToken(token) {
               onTokenStream(token);
-              console.log(token);
             },
           })
         : undefined,
@@ -55,7 +54,7 @@ export const makeChain = (
     vectorstore,
     combineDocumentsChain: docChain,
     questionGeneratorChain: questionGenerator,
-    returnSourceDocuments: true,
+    returnSourceDocuments: false,
     k: 8, //number of source documents to return
   });
 };
