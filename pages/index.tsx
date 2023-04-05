@@ -44,7 +44,7 @@ export default function Home() {
     setError(null);
 
     if (!query) {
-      alert('[GAIB] Groovy AI Bot: What sort of Anime would you like me to generate?');
+      alert('[GAIB] Specify an Anime plotline to generate!');
       return;
     }
 
@@ -153,6 +153,16 @@ export default function Home() {
     }
   }, [chatMessages]);
 
+  async function copyToClipboard(message: string) {
+    try {
+      await navigator.clipboard.writeText(message);
+      console.log('Text copied to clipboard');
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  }
+  
+
   return (
     <>
       <Layout>
@@ -168,8 +178,8 @@ export default function Home() {
                       <Image
                         src="/bot-image.png"
                         alt="GAIB"
-                        width="40"
-                        height="40"
+                        width="30"
+                        height="30"
                         className={styles.boticon}
                         priority
                       />
@@ -194,6 +204,7 @@ export default function Home() {
                   }
                   return (
                     <>
+                      <button type="button" disabled={loading} className={styles.generatebutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Script</button>
                       <div key={`chatMessage-${index}`} className={className}>
                         {icon}
                         <div className={styles.markdownanswer}>
@@ -222,7 +233,7 @@ export default function Home() {
                     placeholder={
                       loading
                         ? 'Meditating upon it...'
-                        : '[GAIB] Groovy AI Bot: What sort of Anime would you like me to generate?'
+                        : '[GAIB] Give me an Anime plotline to generate?'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -235,7 +246,7 @@ export default function Home() {
                   >
                     {loading ? (
                       <div className={styles.loadingwheel}>
-                        <LoadingDots color="#000" />
+                        <LoadingDots color="#BADA55" />
                       </div>
                     ) : (
                       // Send icon SVG in input field

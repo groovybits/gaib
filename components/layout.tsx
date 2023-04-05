@@ -5,7 +5,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   return (
     <div className="mx-auto flex flex-col space-y-4">
-      <header className="container sticky top-0 z-40 bg-black">
+      <header className="container sticky top-0 z-40 bg-#1F1F1F">
       </header>
       <div>
         <main className="flex w-full flex-1 flex-col overflow-hidden">

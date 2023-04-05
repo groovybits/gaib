@@ -26,9 +26,10 @@
   width: 75vw;
   border-radius: 0.5rem;
   border: 2px solid #d9d9e3;
-  color: #BADA55; /* Changed font color to yellow-green */
-  background: #1E1E1E; /* Changed background color to a darker color */
+  color: #000000; /* Changed font color to yellow-green */
+  background: #ffffff; /* Changed background color to a darker color */
   outline: none;
+  font-family: "Courier New", monospace; /* Added font family */
 }
 
 .textarea:disabled {
@@ -49,10 +50,11 @@
   position: absolute;
   top: 0.87rem;
   right: 1rem;
-  color: rgb(165, 162, 162);
-  background: none;
+  color: #000000;
+  background: #FFA500;
   padding: 0.3rem;
-  border: none;
+  border: solid;
+  border-color:rgba(156, 163, 175, 0.5);
   display: flex;
 }
 
@@ -60,7 +62,7 @@
   position: absolute;
   top: 0.2rem;
   right: 0.25rem;
-  color: #BADA55; /* Changed font color to yellow-green */
+  color: #FFA500; /* Changed font color to yellow-green */
 }
 
 .svgicon {
@@ -71,7 +73,7 @@
 }
 
 .generatebutton:hover {
-  background: #e4575726;
+  background: #e5f810;
   border-radius: 0.2rem;
 }
 
@@ -110,6 +112,7 @@
   animation: loading-gradient 2s ease-in-out infinite;
   animation-direction: alternate;
   animation-name: loading-gradient;
+  font-family: "Courier New", monospace; /* Added font family */
 }
 
 @keyframes loading-gradient {
@@ -124,7 +127,7 @@
 .apimessage {
   background: #1E1E1E;
   padding: 1.0rem;
-  color: #BADA55;
+  color: #e5f810;
   animation: fadein 0.5s;
   white-space: pre-wrap !important;
   font-family: "Courier New", monospace; /* Added font family */
@@ -143,17 +146,18 @@
 .usermessage,
 .usermessagewaiting {
   display: flex;
+  background: #1E1E1E;
 }
 
 .markdownanswer {
   line-height: 1.0;
   white-space: pre-wrap !important;
-  color: #BADA55; /* Changed font color to yellow-green */
-  background: #1E1E1E; /* Changed background color to a darker color */
+  color: #e5f810;
+  background: #1E1E1E;
   animation: fadein 0.5s;
   font-family: "Courier New", monospace; /* Added font family */
-  font-weight: bold;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 300;
 }
 
 .markdownanswer a:hover {
@@ -163,15 +167,16 @@
 .markdownanswer a {
   color: #ffffff;
   font-weight: 500;
+  font-size: 12px;
 }
 
 .markdownanswer code {
   font-weight: 500;
-  font-weight: bold;
   white-space: pre-wrap !important;
   color: #BADA55; /* Changed font color to yellow-green */
   background: #1E1E1E; /* Changed background color to a darker color */
   font-family: "Courier New", monospace; /* Added font family */
+  animation: fadein 0.5s;
 }
 
 .markdownanswer ol,
@@ -184,14 +189,14 @@
   margin-right: 1rem;
   border-radius: 1rem;
   height: 100%;
-  color: #ffffff;
-  background: #ffffff;
+  color: #FFFFFF;
+  background: #FFFFFF;
 }
 
 .markdownanswer h1,
 .markdownanswer h2,
 .markdownanswer h3 {
-  font-size: inherit;
+  font-size: 18;
 }
 
 .center {
@@ -244,7 +249,7 @@
 @media (max-width: 300px) {
   .main {
     padding: 1rem;
-    max-height: 90vh;
+    max-height: 60vh;
   }
 
   .cloud {
@@ -253,8 +258,8 @@
   }
   .textarea {
     width: 22rem;
-    color: #BADA55; /* Changed font color to yellow-green */
-    background: #1E1E1E; /* Changed background color to a darker color */
+    color: #000000; /* Changed font color to yellow-green */
+    background: #ffffff; /* Changed background color to a darker color */
     font-family: "Courier New", monospace; /* Added font family */
   }
   .topnav {
@@ -270,8 +275,8 @@
 
   .markdownanswer code {
     white-space: pre-wrap !important;
-    color: #BADA55; /* Changed font color to yellow-green */
-    background: #1E1E1E; /* Changed background color to a darker color */
+    color: #e5f810;
+    background: #1E1E1E;
     font-family: "Courier New", monospace; /* Added font family */
   }
 

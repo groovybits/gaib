@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error) {
     console.error('Error creating vector store:', error);
-    return res.status(500).json({ message: 'Internal server error while creating vector store.' });
+    return res.status(500).json({ message: 'Internal server error VS001.' });
   }
 
   res.writeHead(200, {
