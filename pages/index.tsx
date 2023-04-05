@@ -204,7 +204,6 @@ export default function Home() {
                   }
                   return (
                     <>
-                      <button type="button" disabled={loading} className={styles.generatebutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Script</button>
                       <div key={`chatMessage-${index}`} className={className}>
                         {icon}
                         <div className={styles.markdownanswer}>
@@ -212,6 +211,7 @@ export default function Home() {
                             {message.message}
                           </ReactMarkdown>
                         </div>
+                        <button type="button" disabled={loading} className={styles.generatebutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Script</button>
                       </div>
                     </>
                   );
@@ -226,13 +226,13 @@ export default function Home() {
                     onKeyDown={handleEnter}
                     ref={textAreaRef}
                     autoFocus={true}
-                    rows={3}
-                    maxLength={300}
+                    rows={4}
+                    maxLength={400}
                     id="userInput"
                     name="userInput"
                     placeholder={
                       loading
-                        ? 'Meditating upon it...'
+                        ? 'GAIB is generating your Anime...'
                         : '[GAIB] Give me an Anime plotline to generate?'
                     }
                     value={query}
