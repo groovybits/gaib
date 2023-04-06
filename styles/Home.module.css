@@ -160,7 +160,9 @@
 .usermessage {
   padding: 0.5rem;
   color: #BADA55; /* Changed font color to yellow-green */
-  background: #1E1E1E; /* Changed background color to a darker color */}
+  background: #1E1E1E; /* Changed background color to a darker color */
+  font-size: 28px;
+}
 
 .usermessagewaiting {
   padding: 1.0rem;
@@ -173,6 +175,7 @@
   animation-direction: alternate;
   animation-name: loading-gradient;
   font-family: "Trebuchet MS", monospace; /* Added font family */
+  font-size: 28px;
 }
 
 @keyframes loading-gradient {
@@ -216,7 +219,7 @@
   background: #1E1E1E;
   animation: fadein 0.5s;
   font-family: "Trebuchet MS", monospace; /* Added font family */
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 300;
 }
 
@@ -237,7 +240,7 @@
   background: #1E1E1E; /* Changed background color to a darker color */
   font-family: "Trebuchet MS", monospace; /* Added font family */
   animation: fadein 0.5s;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .markdownanswer ol,

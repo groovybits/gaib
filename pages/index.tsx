@@ -31,9 +31,9 @@ export default function Home() {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
-  const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(false);
-  const [recognitionComplete, setRecognitionComplete] = useState(false);
 
+  const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(true);
+  const [recognitionComplete, setRecognitionComplete] = useState(true);
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
