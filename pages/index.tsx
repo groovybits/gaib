@@ -201,14 +201,14 @@ export default function Home() {
       recognition.lang = 'en-US';
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
-      recognition.continuous = true;
+      recognition.continuous = false;
       recognition.timeout = 30000;
   
       // Add a delay before starting the recognition
       setTimeout(() => {
         recognition.start();
         setSpeechRecognitionComplete(true);
-      }, 500);
+      }, 0);
   
       recognition.onstart = () => {
         setListening(true);
@@ -305,20 +305,6 @@ export default function Home() {
                           </ReactMarkdown>
                         </div>
                       </div>
-                      <div className={className}>
-                        <table cellSpacing={0} cellPadding={1} border={0} className={className} width="100%"><tr>
-                          <td>
-                            <button
-                              type="button"
-                              disabled={loading}
-                              className={`${styles.copybutton} ${listening ? styles.listening : ''}`}
-                              onClick={startSpeechRecognition}
-                            >
-                              Voice Input
-                            </button>&nbsp;&nbsp;
-                          </td></tr>
-                        </table>
-                      </div>
                     </>
                   );
                 })}
@@ -345,6 +331,8 @@ export default function Home() {
                     onChange={(e) => setQuery(e.target.value)}
                     className={styles.textarea}
                   />
+                  <div className={styles.buttonWrapper}>
+                  <div className={styles.buttoncontainer}>
                   <button
                     type="submit"
                     disabled={loading}
@@ -365,6 +353,33 @@ export default function Home() {
                       </svg>
                     )}
                   </button>
+                  </div>
+                  <div className={styles.buttoncontainer}>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
+                    onClick={startSpeechRecognition}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      height="24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={styles.svgicon}
+                    >
+                      <path d="M12 1v6m0 0v6m-6-6h12"></path>
+                      <path d="M21 12v6a3 3 0 01-3 3h-12a3 3 0 01-3-3v-6"></path>
+                      <path d="M3 15l1.8-1.8c1.1-1.1 2.8-1.1 3.9 0l1.2 1.2 1.2-1.2c1.1-1.1 2.8-1.1 3.9 0L21 15"></path>
+                    </svg>
+                  </button>
+                  </div>
+                  </div>
                 </form>
               </div>
             </div>

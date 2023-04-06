@@ -72,19 +72,39 @@
   border: double;
 }
 
+.buttoncontainer {
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.voicebutton {
+  background-color: #1e90ff;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
+  cursor: pointer;
+  transition-duration: 0.4s;
+}
+
 .generatebutton {
-  position: absolute;
-  top: 0.2rem;
-  right: 0.2rem;
-  color: #000000;
-  background: #FFA500;
-  padding: 0.3rem;
-  border-color:#000000;
-  display: flex;
-  border-radius: 8px;
-  border: double;
-  width: 40;
-  height: 40;
+  background-color: #ff4500;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
+  cursor: pointer;
+  transition-duration: 0.4s;
 }
 
 .loadingwheel {
@@ -107,6 +127,17 @@
 }
 
 .generatebutton:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+  background: none;
+}
+
+.voicebutton:hover {
+  background: #e5f810;
+  border-radius: 0.2rem;
+}
+
+.voicebutton:disabled {
   opacity: 0.9;
   cursor: not-allowed;
   background: none;
