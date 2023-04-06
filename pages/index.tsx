@@ -199,8 +199,8 @@ export default function Home() {
                       <Image
                         src="/bot-image.png"
                         alt="GAIB"
-                        width="30"
-                        height="30"
+                        width="40"
+                        height="40"
                         className={styles.boticon}
                         priority
                       />
@@ -211,8 +211,8 @@ export default function Home() {
                       <Image
                         src="/usericon.png"
                         alt="Human"
-                        width="30"
-                        height="30"
+                        width="40"
+                        height="40"
                         className={styles.usericon}
                         priority
                       />

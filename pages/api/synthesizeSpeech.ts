@@ -2,13 +2,28 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { TextToSpeechClient, protos } from '@google-cloud/text-to-speech';
 
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
     res.status(405).json({ message: 'Method not allowed' });
     return;
   }
 
-  const { text } = req.body;
+  function removeMarkdownAndSpecialSymbols(text: string): string {
+    // Remove markdown formatting
+    const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
+    const cleanedText = text.replace(markdownRegex, '');
+  
+    // Remove special symbols (including periods)
+    const specialSymbolsRegex = /[!@#$%^&*(),.?":{}|<>]/g;
+    const finalText = cleanedText.replace(specialSymbolsRegex, '');
+  
+    return finalText;
+  }  
+
+  let { text } = req.body;
+
+  text = removeMarkdownAndSpecialSymbols(text);
 
   if (!text) {
     res.status(400).json({ message: 'Missing text in request body' });
