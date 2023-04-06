@@ -27,6 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Truncate the input if it exceeds the maximum length
   if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {
+    console.log(`Question exceeds maximum length of ${MAX_INPUT_LENGTH} characters, truncating...`)
     sanitizedQuestion = sanitizedQuestion.substring(0, MAX_INPUT_LENGTH);
   }
   console.log('Sanitized Question: ', sanitizedQuestion);
@@ -91,7 +92,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log(`Retrying in ${retryDelay} ms...`);
         await sleep(retryDelay);
       } else {
+        console.log('Could not contact GPT after multiple retries, giving up. Please try again later.');
         sendData(JSON.stringify({ error: 'Could not contact GPT after multiple retries, giving up. Please try again later.' }));
+        break;
       }
     }
   }
