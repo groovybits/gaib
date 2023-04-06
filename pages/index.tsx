@@ -201,6 +201,8 @@ export default function Home() {
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
+      recognition.continuous = true;
+      recognition.timeout = 30000;
 
       // Add a delay before starting the recognition
       setTimeout(() => {
@@ -250,8 +252,8 @@ export default function Home() {
                       <Image
                         src="/bot-image.png"
                         alt="GAIB"
-                        width="40"
-                        height="40"
+                        width="60"
+                        height="60"
                         className={styles.boticon}
                         priority
                       />
@@ -262,8 +264,8 @@ export default function Home() {
                       <Image
                         src="/usericon.png"
                         alt="Human"
-                        width="40"
-                        height="40"
+                        width="60"
+                        height="60"
                         className={styles.usericon}
                         priority
                       />
