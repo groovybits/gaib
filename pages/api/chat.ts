@@ -5,6 +5,7 @@ import { makeChain } from '@/utils/makechain';
 import { pinecone } from '@/utils/pinecone-client';
 import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
 
+
 const MAX_INPUT_LENGTH = 4096;
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000; // Set the initial retry delay in milliseconds
@@ -75,6 +76,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         question: sanitizedQuestion,
         chat_history: history || [],
       });
+
+      if (!response) {
+        console.error('No response from GPT');
+        retries++;
+        continue;
+      }
 
       console.log('History: ', history ? history : '');
       console.log('Reponse: ', response.text);

@@ -7,6 +7,7 @@ import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
+import { speakText } from '@/utils/speakText';
 
 
 export default function Home() {
@@ -38,6 +39,12 @@ export default function Home() {
     textAreaRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    if (messages.length > 0 && messages[messages.length - 1].type === 'apiMessage') {
+      speakText(messages[messages.length - 1].message);
+    }
+  }, [messages]);
+  
   //handle form submission
   async function handleSubmit(e: any) {
     e.preventDefault();
@@ -162,27 +169,6 @@ export default function Home() {
       console.error('Failed to copy text: ', err);
     }
   }
-
-  async function speakText(text: string) {
-    try {
-      const response = await fetch('/api/synthesizeSpeech', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-  
-      if (!response.ok) {
-        throw new Error('Error in synthesizing speech');
-      }
-  
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.play();
-    } catch (error) {
-      console.error('Error in synthesizing speech:', error);
-    }
-  }  
   
   return (
     <>

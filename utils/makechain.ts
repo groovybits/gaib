@@ -10,7 +10,9 @@ const CONDENSE_PROMPT =
 
 Story History:
 {chat_history}
+=========
 Follow Up Input: {question}
+=========
 Standalone title:`);
 
 const QA_PROMPT = PromptTemplate.fromTemplate(
@@ -20,8 +22,10 @@ Story Direction: {question}
 =========
 Context: {context}
 =========
-Story Title and Script as Markdown:`,
+Story Title and Screen Play format with cues in Markdown format:`,
 );
+
+let accumulatedTokens = '';
 
 export const makeChain = (
   vectorstore: PineconeStore,
@@ -42,7 +46,11 @@ export const makeChain = (
       callbackManager: onTokenStream
         ? CallbackManager.fromHandlers({
             async handleLLMNewToken(token) {
+              accumulatedTokens += token;
               onTokenStream(token);
+            },
+            async handleLLMEnd() {
+              console.log('accumulatedTokens: ', accumulatedTokens)
             },
           })
         : undefined,
@@ -59,6 +67,6 @@ export const makeChain = (
     combineDocumentsChain: docChain,
     questionGeneratorChain: questionGenerator,
     returnSourceDocuments: false,
-    k: 8, //number of source documents to return
+    k: 2, //number of source documents to return
   });
 };
