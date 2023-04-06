@@ -203,31 +203,35 @@ export default function Home() {
       recognition.maxAlternatives = 1;
       recognition.continuous = true;
       recognition.timeout = 30000;
-
+  
+      let recognitionText = '';
+  
       // Add a delay before starting the recognition
       setTimeout(() => {
         recognition.start();
         setSpeechRecognitionComplete(true);
       }, 500);
-
+  
       recognition.onstart = () => {
         setListening(true);
       };
-
+  
       recognition.onend = () => {
         setListening(false);
-        if (!stoppedManually) {
-          handleSubmit({ preventDefault: () => { } }, recognition);
+        if (!stoppedManually && recognitionText.trim() !== '') {
+          setQuery(recognitionText.trim());
+          handleSubmit({ preventDefault: () => {} });
         }
+        recognitionText = '';
       };
-
+  
       recognition.onresult = (event: { results: string | any[]; }) => {
         const last = event.results.length - 1;
         const text = event.results[last][0].transcript;
-        setQuery(text); // concatenate the new text with the old text
+        recognitionText += text;
         setRecognitionComplete(true); // Update recognitionComplete state
       };
-    
+  
       recognition.onerror = (event: { error: any; }) => {
         console.error('Error occurred in recognition:', event.error);
       };
@@ -235,7 +239,7 @@ export default function Home() {
       alert('Speech Recognition API is not supported in this browser.');
     }
   };
-
+  
 
   return (
     <>
