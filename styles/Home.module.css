@@ -54,21 +54,19 @@
   border-color: #FFA500;
   /*width: 15;
   height: 5;*/
-  /*font-size: 6px;*/
   font-weight: bold;
   border-radius: 8px;
   border: double;
 }
 
 .speakbutton{
-  position: top;
+  position: right;
   color: #ffffff;
   background: #000000;
   padding: 1rem;
   border-color: #FFA500;
   /*width: 15;
   height: 5;*/
-  /*font-size: 6px;*/
   font-weight: bold;
   border-radius: 8px;
   border: double;
@@ -76,8 +74,8 @@
 
 .generatebutton {
   position: absolute;
-  top: 0.87rem;
-  right: 1rem;
+  top: 0.2rem;
+  right: 0.2rem;
   color: #000000;
   background: #FFA500;
   padding: 0.3rem;
@@ -85,8 +83,8 @@
   display: flex;
   border-radius: 8px;
   border: double;
-  width: 20;
-  height: 20;
+  width: 40;
+  height: 40;
 }
 
 .loadingwheel {
@@ -98,7 +96,7 @@
 
 .svgicon {
   transform: rotate(90deg);
-  width: 1.2em;
+  width: 2.0em;
   height: 1.2em;
   fill: currentColor;
 }

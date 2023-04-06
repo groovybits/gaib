@@ -224,10 +224,10 @@ export default function Home() {
       recognition.onresult = (event: { results: string | any[]; }) => {
         const last = event.results.length - 1;
         const text = event.results[last][0].transcript;
-        setQuery(text);
+        setQuery(text); // concatenate the new text with the old text
         setRecognitionComplete(true); // Update recognitionComplete state
       };
-
+    
       recognition.onerror = (event: { error: any; }) => {
         console.error('Error occurred in recognition:', event.error);
       };
@@ -289,8 +289,6 @@ export default function Home() {
                       <div className={className}>
                         <table cellSpacing={0} cellPadding={1} border={0} className={className} width="100%"><tr>
                           <td>
-                            <button type="button" disabled={loading} className={styles.speakbutton} id="playButton" onClick={() => speakText(message.message, 0.8)}>Speak Text</button>&nbsp;&nbsp;
-                          </td><td>
                             <button
                               type="button"
                               disabled={loading}
@@ -299,8 +297,6 @@ export default function Home() {
                             >
                               Voice Input
                             </button>&nbsp;&nbsp;
-                          </td><td>
-                            <button type="button" disabled={loading} className={styles.copybutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Text</button>&nbsp;&nbsp;
                           </td></tr>
                         </table>
                       </div>
@@ -317,8 +313,8 @@ export default function Home() {
                     onKeyDown={handleEnter}
                     ref={textAreaRef}
                     autoFocus={true}
-                    rows={4}
-                    maxLength={400}
+                    rows={3}
+                    maxLength={300}
                     id="userInput"
                     name="userInput"
                     placeholder={
