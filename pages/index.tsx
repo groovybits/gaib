@@ -31,6 +31,9 @@ export default function Home() {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
+  const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(false);
+  const [recognitionComplete, setRecognitionComplete] = useState(false);
+
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -44,15 +47,34 @@ export default function Home() {
       speakText(messages[messages.length - 1].message);
     }
   }, [messages]);
-  
-  //handle form submission
-  async function handleSubmit(e: any) {
+
+  type SpeechRecognition = typeof window.SpeechRecognition;
+
+  // Modify the handleSubmit function
+  async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
     e.preventDefault();
 
     setError(null);
 
+    if (listening && recognitionInstance) {
+      setStoppedManually(true);
+      recognitionInstance.stop();
+      return;
+    }
+
+    // Return early if recognitionComplete is false
+    if (!recognitionComplete) {
+      return;
+    }
+
+    // Return early if speechRecognitionComplete is false
+    if (!speechRecognitionComplete) {
+      return;
+    }
+
     if (!query) {
-      alert('[GAIB] Specify an Anime plotline to generate!');
+      //alert('[GAIB] Specify an Anime plotline to generate!');
+      console.log('[GAIB] Specify an Anime plotline to generate!');
       return;
     }
 
@@ -126,11 +148,9 @@ export default function Home() {
       console.log('error', error);
     }
   }
-
-  //prevent empty submissions
   const handleEnter = useCallback(
     (e: any) => {
-      if (e.key === 'Enter' && query) {
+      if (e.key === 'Enter' && !e.shiftKey && query) {
         handleSubmit(e);
       } else if (e.key == 'Enter') {
         e.preventDefault();
@@ -144,12 +164,12 @@ export default function Home() {
       ...messages,
       ...(pending
         ? [
-            {
-              type: 'apiMessage',
-              message: pending,
-              sourceDocs: pendingSourceDocs,
-            },
-          ]
+          {
+            type: 'apiMessage',
+            message: pending,
+            sourceDocs: pendingSourceDocs,
+          },
+        ]
         : []),
     ];
   }, [messages, pending, pendingSourceDocs]);
@@ -170,32 +190,51 @@ export default function Home() {
     }
   }
 
+  const [listening, setListening] = useState<boolean>(false);
+  const [stoppedManually, setStoppedManually] = useState<boolean>(false);
+
   const startSpeechRecognition = () => {
+    setStoppedManually(false);
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
-  
+
+      // Add a delay before starting the recognition
+      setTimeout(() => {
+        recognition.start();
+        setSpeechRecognitionComplete(true);
+      }, 500);
+
+      recognition.onstart = () => {
+        setListening(true);
+      };
+
+      recognition.onend = () => {
+        setListening(false);
+        if (!stoppedManually) {
+          handleSubmit({ preventDefault: () => { } }, recognition);
+        }
+      };
+
       recognition.onresult = (event: { results: string | any[]; }) => {
         const last = event.results.length - 1;
         const text = event.results[last][0].transcript;
         setQuery(text);
-        handleSubmit({ preventDefault: () => {} });
+        setRecognitionComplete(true); // Update recognitionComplete state
       };
-  
+
       recognition.onerror = (event: { error: any; }) => {
         console.error('Error occurred in recognition:', event.error);
       };
-  
-      recognition.start();
     } else {
       alert('Speech Recognition API is not supported in this browser.');
     }
   };
-  
-  
+
+
   return (
     <>
       <Layout>
@@ -236,7 +275,7 @@ export default function Home() {
                         : styles.usermessage;
                   }
                   return (
-                    <> 
+                    <>
                       <div key={`chatMessage-${index}`} className={className}>
                         {icon}
                         <div className={styles.markdownanswer}>
@@ -246,23 +285,22 @@ export default function Home() {
                         </div>
                       </div>
                       <div className={className}>
-                      <table cellSpacing={0} cellPadding={1} border={0} className={className} width="100%"><tr>
-                        <td>
-                          <button type="button" disabled={loading} className={styles.speakbutton} id="playButton" onClick={() => speakText(message.message)}>Speak Text</button>&nbsp;&nbsp;
-                        </td><td>                      
-                          <button type="button" disabled={loading} className={styles.copybutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Text</button>&nbsp;&nbsp; 
-                        </td><td>
+                        <table cellSpacing={0} cellPadding={1} border={0} className={className} width="100%"><tr>
+                          <td>
+                            <button type="button" disabled={loading} className={styles.speakbutton} id="playButton" onClick={() => speakText(message.message)}>Speak Text</button>&nbsp;&nbsp;
+                          </td><td>
                             <button
                               type="button"
                               disabled={loading}
-                              className={styles.copybutton}
+                              className={`${styles.copybutton} ${listening ? styles.listening : ''}`}
                               onClick={startSpeechRecognition}
                             >
                               Voice Input
-                            </button>
-                    
-                        </td></tr>
-                      </table>
+                            </button>&nbsp;&nbsp;
+                          </td><td>
+                            <button type="button" disabled={loading} className={styles.copybutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Text</button>&nbsp;&nbsp;
+                          </td></tr>
+                        </table>
                       </div>
                     </>
                   );

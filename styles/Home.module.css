@@ -273,6 +273,11 @@
   color: #7a7d81;
 }
 
+.listening {
+  background-color: #4caf50; /* Change to your desired color */
+  color: white; /* Change to your desired text color */
+}
+
 .footer a:hover {
   opacity: 0.8;
 }
