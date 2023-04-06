@@ -203,17 +203,17 @@ export default function Home() {
       recognition.maxAlternatives = 1;
       recognition.continuous = true;
       recognition.timeout = 30000;
-
+  
       // Add a delay before starting the recognition
       setTimeout(() => {
         recognition.start();
         setSpeechRecognitionComplete(true);
       }, 500);
-
+  
       recognition.onstart = () => {
         setListening(true);
       };
-
+  
       recognition.onend = () => {
         setListening(false);
         if (!stoppedManually) {
@@ -221,21 +221,40 @@ export default function Home() {
         }
       };
 
+      function removeDuplicateWords(text: string): string {
+        const words = text.split(" ");
+        const dedupedWords: string[] = [];
+      
+        for (let i = 0; i < words.length; i++) {
+          const currentWord = words[i];
+          if (!dedupedWords.includes(currentWord)) {
+            dedupedWords.push(currentWord);
+          } else if (i < words.length - 1) {
+            const nextWord = words[i + 1];
+            if (`${currentWord} ${nextWord}` !== dedupedWords[dedupedWords.length - 1]) {
+              dedupedWords.push(`${currentWord} ${nextWord}`);
+            }
+          }
+        }
+      
+        return dedupedWords.join(" ");
+      }
+  
       recognition.onresult = (event: { results: string | any[]; }) => {
-        const last = event.results.length - 1;
-        const text = event.results[last][0].transcript;
-        setQuery(text); // concatenate the new text with the old text
+        let last = event.results.length - 1;
+        let text = event.results[last][0].transcript;
+        setQuery((prevQuery) => prevQuery + ' ' + text); // concatenate the new text with the old text
+        text = setQuery(removeDuplicateWords(text)); // remove duplicate words
         setRecognitionComplete(true); // Update recognitionComplete state
       };
-    
+  
       recognition.onerror = (event: { error: any; }) => {
         console.error('Error occurred in recognition:', event.error);
       };
     } else {
       alert('Speech Recognition API is not supported in this browser.');
     }
-  };
-
+  };  
 
   return (
     <>
