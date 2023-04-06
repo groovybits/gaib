@@ -29,7 +29,7 @@
   color: #000000; /* Changed font color to yellow-green */
   background: #ffffff; /* Changed background color to a darker color */
   outline: none;
-  font-family: "Courier New", monospace; /* Added font family */
+  font-family: "Trebuchet MS", monospace; /* Added font family */
 }
 
 .textarea:disabled {
@@ -52,9 +52,9 @@
   background: #000000;
   padding: 1rem;
   border-color: #FFA500;
-  width: 15;
-  height: 5;
-  font-size: 6px;
+  /*width: 15;
+  height: 5;*/
+  /*font-size: 6px;*/
   font-weight: bold;
   border-radius: 8px;
   border: double;
@@ -66,9 +66,9 @@
   background: #000000;
   padding: 1rem;
   border-color: #FFA500;
-  width: 15;
-  height: 5;
-  font-size: 6px;
+  /*width: 15;
+  height: 5;*/
+  /*font-size: 6px;*/
   font-weight: bold;
   border-radius: 8px;
   border: double;
@@ -143,7 +143,7 @@
   animation: loading-gradient 2s ease-in-out infinite;
   animation-direction: alternate;
   animation-name: loading-gradient;
-  font-family: "Courier New", monospace; /* Added font family */
+  font-family: "Trebuchet MS", monospace; /* Added font family */
 }
 
 @keyframes loading-gradient {
@@ -161,7 +161,7 @@
   color: #e5f810;
   animation: fadein 0.5s;
   white-space: pre-wrap !important;
-  font-family: "Courier New", monospace; /* Added font family */
+  font-family: "Trebuchet MS", monospace; /* Added font family */
 }
 
 @keyframes fadein {
@@ -186,8 +186,8 @@
   color: #e5f810;
   background: #1E1E1E;
   animation: fadein 0.5s;
-  font-family: "Courier New", monospace; /* Added font family */
-  font-size: 12px;
+  font-family: "Trebuchet MS", monospace; /* Added font family */
+  font-size: 18px;
   font-weight: 300;
 }
 
@@ -198,7 +198,7 @@
 .markdownanswer a {
   color: #ffffff;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .markdownanswer code {
@@ -206,8 +206,9 @@
   white-space: pre-wrap !important;
   color: #BADA55; /* Changed font color to yellow-green */
   background: #1E1E1E; /* Changed background color to a darker color */
-  font-family: "Courier New", monospace; /* Added font family */
+  font-family: "Trebuchet MS", monospace; /* Added font family */
   animation: fadein 0.5s;
+  font-size: 16px;
 }
 
 .markdownanswer ol,
@@ -227,7 +228,7 @@
 .markdownanswer h1,
 .markdownanswer h2,
 .markdownanswer h3 {
-  font-size: 18;
+  font-size: 20px;
 }
 
 .center {
@@ -291,7 +292,7 @@
     width: 22rem;
     color: #000000; /* Changed font color to yellow-green */
     background: #ffffff; /* Changed background color to a darker color */
-    font-family: "Courier New", monospace; /* Added font family */
+    font-family: "Trebuchet MS", monospace; /* Added font family */
   }
   .topnav {
     border: 1px solid black;
@@ -308,7 +309,7 @@
     white-space: pre-wrap !important;
     color: #e5f810;
     background: #1E1E1E;
-    font-family: "Courier New", monospace; /* Added font family */
+    font-family: "Trebuchet MS", monospace; /* Added font family */
   }
 
   .footer {

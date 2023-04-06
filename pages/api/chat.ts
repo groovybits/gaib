@@ -5,8 +5,13 @@ import { makeChain } from '@/utils/makechain';
 import { pinecone } from '@/utils/pinecone-client';
 import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
 
-const MAX_INPUT_LENGTH = 4096; // Set the maximum input length allowed
-const MAX_RETRIES = 3; // Set the maximum number of retries
+const MAX_INPUT_LENGTH = 4096;
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // Set the initial retry delay in milliseconds
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { question, history } = req.body;
@@ -72,8 +77,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       console.log('History: ', history ? history : '');
       console.log('Reponse: ', response.text);
-      //console.log('Source Documents: ', response.sourceDocuments);
-      //sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;
     } catch (error) {
       if (error instanceof Error) {
@@ -82,15 +85,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.error('Unknown error:', error);
       }
       retries++;
-      // Clear the history
-      history.length = 0;
-      if (retries >= MAX_RETRIES) {
-        sendData(JSON.stringify({ error: 'An error occurred while processing the request. Maximum retries reached.' }));
+
+      if (retries < MAX_RETRIES) {
+        const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retries - 1);
+        console.log(`Retrying in ${retryDelay} ms...`);
+        await sleep(retryDelay);
+      } else {
+        sendData(JSON.stringify({ error: 'Could not contact GPT after multiple retries, giving up. Please try again later.' }));
       }
     }
   }
+  console.log('-- END SESSION ---');
 
   sendData('[DONE]');
   res.end();
-  console.log('-- END SESSION ---');
 }

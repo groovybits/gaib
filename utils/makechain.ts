@@ -50,6 +50,10 @@ export const makeChain = (
     { prompt: QA_PROMPT },
   );
 
+  if (! docChain ) {
+    throw new Error('Failure with GPT API, please try again later.');
+  }
+
   return new ChatVectorDBQAChain({
     vectorstore,
     combineDocumentsChain: docChain,
