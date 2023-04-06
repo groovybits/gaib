@@ -169,6 +169,32 @@ export default function Home() {
       console.error('Failed to copy text: ', err);
     }
   }
+
+  const startSpeechRecognition = () => {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+  
+      recognition.onresult = (event: { results: string | any[]; }) => {
+        const last = event.results.length - 1;
+        const text = event.results[last][0].transcript;
+        setQuery(text);
+        handleSubmit({ preventDefault: () => {} });
+      };
+  
+      recognition.onerror = (event: { error: any; }) => {
+        console.error('Error occurred in recognition:', event.error);
+      };
+  
+      recognition.start();
+    } else {
+      alert('Speech Recognition API is not supported in this browser.');
+    }
+  };
+  
   
   return (
     <>
@@ -224,7 +250,17 @@ export default function Home() {
                         <td>
                           <button type="button" disabled={loading} className={styles.speakbutton} id="playButton" onClick={() => speakText(message.message)}>Speak Text</button>&nbsp;&nbsp;
                         </td><td>                      
-                          <button type="button" disabled={loading} className={styles.copybutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Text</button>&nbsp;&nbsp;             
+                          <button type="button" disabled={loading} className={styles.copybutton} id="copyButton" onClick={() => copyToClipboard(message.message)}>Copy Text</button>&nbsp;&nbsp; 
+                        </td><td>
+                            <button
+                              type="button"
+                              disabled={loading}
+                              className={styles.copybutton}
+                              onClick={startSpeechRecognition}
+                            >
+                              Voice Input
+                            </button>
+                    
                         </td></tr>
                       </table>
                       </div>
