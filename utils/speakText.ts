@@ -1,7 +1,8 @@
 // Description: This file contains the function to speak text using the Google Text-to-Speech API
 // 
   
-export const speakText = async (text: string) => {
+
+export const speakText = async (text: string, rate: number = 1) => {
     try {
       let apiBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       if (!apiBaseUrl || apiBaseUrl === '') {
@@ -14,7 +15,7 @@ export const speakText = async (text: string) => {
       const response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, rate }),
       });
   
       if (!response.ok) {

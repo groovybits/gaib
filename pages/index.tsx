@@ -44,7 +44,7 @@ export default function Home() {
 
   useEffect(() => {
     if (messages.length > 0 && messages[messages.length - 1].type === 'apiMessage') {
-      speakText(messages[messages.length - 1].message);
+      speakText(messages[messages.length - 1].message, 0.8);
     }
   }, [messages]);
 
@@ -289,7 +289,7 @@ export default function Home() {
                       <div className={className}>
                         <table cellSpacing={0} cellPadding={1} border={0} className={className} width="100%"><tr>
                           <td>
-                            <button type="button" disabled={loading} className={styles.speakbutton} id="playButton" onClick={() => speakText(message.message)}>Speak Text</button>&nbsp;&nbsp;
+                            <button type="button" disabled={loading} className={styles.speakbutton} id="playButton" onClick={() => speakText(message.message, 0.8)}>Speak Text</button>&nbsp;&nbsp;
                           </td><td>
                             <button
                               type="button"
