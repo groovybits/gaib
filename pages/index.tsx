@@ -318,8 +318,8 @@ export default function Home() {
                     onKeyDown={handleEnter}
                     ref={textAreaRef}
                     autoFocus={true}
-                    rows={3}
-                    maxLength={300}
+                    rows={2}
+                    maxLength={200}
                     id="userInput"
                     name="userInput"
                     placeholder={
