@@ -49,7 +49,7 @@ export default function Home() {
       messages.length > 0 &&
       messages[messages.length - 1].type === 'apiMessage'
     ) {
-      speakText(messages[messages.length - 1].message, 0.8);
+      speakText(messages[messages.length - 1].message, 0.6);
     }
   }, [messages, speechOutputEnabled]); // Add the speechOutputEnabled dependency
 
