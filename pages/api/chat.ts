@@ -15,7 +15,7 @@ function sleep(ms: number) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { question, history } = req.body;
+  const { question, personality, history } = req.body;
 
   console.log('-- START SESSION ---');
   console.log('Original Question: ', question);
@@ -61,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   sendData(JSON.stringify({ data: '' }));
 
   // Create chain
-  const chain = makeChain(vectorStore, (token: string) => {
+  const chain = makeChain(vectorStore, personality, (token: string) => {
     sendData(JSON.stringify({ data: token }));
   });
 

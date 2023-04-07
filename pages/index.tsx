@@ -8,6 +8,8 @@ import ReactMarkdown from 'react-markdown';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
+import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
+
 
 export default function Home() {
   const [query, setQuery] = useState<string>('');
@@ -30,6 +32,7 @@ export default function Home() {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
+  const { speakText, stopSpeaking } = useSpeakText();
 
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
@@ -37,11 +40,9 @@ export default function Home() {
   const [speechOutputEnabled, setSpeechOutputEnabled] = useState(false);
   const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
+  
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const { speakText, stopSpeaking } = useSpeakText();
-
-
 
   useEffect(() => {
     if (
@@ -51,7 +52,7 @@ export default function Home() {
     ) {
       speakText(messages[messages.length - 1].message, 0.6);
     }
-  }, [messages, speechOutputEnabled]); // Add the speechOutputEnabled dependency
+  }, [messages, speechOutputEnabled, speakText]); // Add the speechOutputEnabled dependency
 
   type SpeechRecognition = typeof window.SpeechRecognition;
 
@@ -64,7 +65,7 @@ export default function Home() {
   };
 
   // Modify the handleSubmit function
-  async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
+  async function handleSubmit(e: any, personality: keyof typeof PERSONALITY_PROMPTS = 'GAIB', recognitionInstance?: SpeechRecognition) {
     e.preventDefault();
 
     setError(null);
@@ -88,7 +89,6 @@ export default function Home() {
     }
 
     if (!query) {
-      //alert('[GAIB] Specify an Anime plotline to generate!');
       console.log('[GAIB] Prompt Query submission was empty!');
       return;
     }
@@ -101,6 +101,7 @@ export default function Home() {
         ...state.messages,
         {
           type: 'userMessage',
+          personality,
           message: question,
         },
       ],
@@ -121,6 +122,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           question,
+          personality,
           history,
         }),
         signal: ctrl.signal,
@@ -163,6 +165,7 @@ export default function Home() {
       console.log('error', error);
     }
   }
+
   const handleEnter = useCallback(
     (e: any) => {
       if (e.key === 'Enter' && !e.shiftKey && query) {
@@ -195,15 +198,6 @@ export default function Home() {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   }, [chatMessages]);
-
-  async function copyToClipboard(message: string) {
-    try {
-      await navigator.clipboard.writeText(message);
-      console.log('Text copied to clipboard');
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-    }
-  }
 
   // Update the startSpeechRecognition function
   const startSpeechRecognition = () => {
@@ -421,6 +415,21 @@ export default function Home() {
                           <path d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                       </button>
+                    </div>
+                    <div className={styles.buttoncontainer}>
+                      {Object.keys(PERSONALITY_PROMPTS).map((key) => (
+                        <button
+                          type="submit"
+                          key={key}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSubmit(e, key as keyof typeof PERSONALITY_PROMPTS);
+                          }}
+                          className={styles.personalityButton}
+                        >
+                          {key}
+                        </button>
+                      ))}
                     </div>
                   </div>
                   <label>

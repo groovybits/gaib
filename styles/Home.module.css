@@ -46,6 +46,31 @@
   color: #6b7280;
 }
 
+.personalityButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.personalityButton {
+  background-color: rgb(64, 24, 222);
+  color: white;
+  font-weight: bold;
+  border: 2px double #000;
+  border-radius: 8px;
+  border-color: #ffffff;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.personalityButton:hover {
+  background-color: #000;
+  border: 2px solid #000;
+  color: #fff;
+}
+
 .copybutton {
   position: top;
   color: #ffffff;

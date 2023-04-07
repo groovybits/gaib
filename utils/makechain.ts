@@ -3,37 +3,23 @@ import { LLMChain, ChatVectorDBQAChain, loadQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { PromptTemplate } from 'langchain/prompts';
 import { CallbackManager } from 'langchain/callbacks';
-import { PINECONE_PROMPT, PINECONE_CONDENSE_PROMPT } from '@/config/pinecone';
+import { CONDENSE_PROMPT } from '@/config/pinecone';
+import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
 
-const CONDENSE_PROMPT =
-  PromptTemplate.fromTemplate(PINECONE_CONDENSE_PROMPT + `
-
-Story History:
-{chat_history}
-=========
-Follow Up Input: {question}
-=========
-Standalone title:`);
-
-const QA_PROMPT = PromptTemplate.fromTemplate(
-  PINECONE_PROMPT + `
-
-=========
-Context: {context}
-=========
-Story Direction: {question}
-Story Title and Screen Play format with cues in Markdown format:`,
-);
+const CONDENSE_PROMPT_TEMPLATE =
+  PromptTemplate.fromTemplate(CONDENSE_PROMPT);
 
 let accumulatedTokens = '';
 
 export const makeChain = (
   vectorstore: PineconeStore,
+  personality: keyof typeof PERSONALITY_PROMPTS = 'GAIB', // Set a default personality
   onTokenStream?: (token: string) => void,
 ) => {
+  const QA_PROMPT = PromptTemplate.fromTemplate(PERSONALITY_PROMPTS[personality]);
   const questionGenerator = new LLMChain({
     llm: new OpenAIChat({ temperature: 0.3, presencePenalty: 0, frequencyPenalty: 0, maxTokens: 200, modelName: 'gpt-3.5-turbo' }),
-    prompt: CONDENSE_PROMPT,
+    prompt: CONDENSE_PROMPT_TEMPLATE,
   });
   const docChain = loadQAChain(
     new OpenAIChat({
