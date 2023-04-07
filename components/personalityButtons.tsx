@@ -7,7 +7,6 @@ interface PersonalityButtonsProps {
   onSelect: (value: string) => void;
 }
 
-const space = '&nbsp;&nbsp;';
 const PersonalityButtons: React.FC<PersonalityButtonsProps> = ({ onSelect }) => {
   return (
     <div className={styles.buttonWrapper}>
@@ -15,7 +14,7 @@ const PersonalityButtons: React.FC<PersonalityButtonsProps> = ({ onSelect }) => 
         <button className={styles.personalitybuttons} key={key} onClick={() => onSelect(key)}>
           {key}
         </button>
-      ))}{space}
+      ))}
     </div>
   );
 };
