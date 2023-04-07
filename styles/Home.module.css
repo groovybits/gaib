@@ -63,7 +63,7 @@
   padding: 4px 8px;
   cursor: pointer;
   transition: 0.3s;
-  margin: 0 5px; /* Add this line to add space between buttons */
+  margin: 0 4px; /* Add this line to add space between buttons */
 }
 
 .personalityButton:hover {
