@@ -87,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('Reponse: ', response.text);
       success = true;
     } catch (error) {
-      if (error instanceof Error) {
+      if (error instanceof Error && error.message) {
         console.error('API error: ', error.message ? error.message : error);
       } else {
         console.error('Unknown error:', error);

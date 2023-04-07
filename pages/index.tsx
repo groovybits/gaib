@@ -32,8 +32,13 @@ export default function Home() {
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
 
+  const [listening, setListening] = useState<boolean>(false);
+  const [stoppedManually, setStoppedManually] = useState<boolean>(false);
   const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(true);
-  const [recognitionComplete, setRecognitionComplete] = useState(true);
+  const [speechOutputEnabled, setSpeechOutputEnabled] = useState(false);
+  const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
+  const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
+
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -43,12 +48,24 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (messages.length > 0 && messages[messages.length - 1].type === 'apiMessage') {
+    if (
+      speechOutputEnabled &&
+      messages.length > 0 &&
+      messages[messages.length - 1].type === 'apiMessage'
+    ) {
       speakText(messages[messages.length - 1].message, 0.8);
     }
-  }, [messages]);
+  }, [messages, speechOutputEnabled]); // Add the speechOutputEnabled dependency
 
   type SpeechRecognition = typeof window.SpeechRecognition;
+
+  const handleSpeechOutputToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSpeechOutputEnabled(event.target.checked);
+  };
+
+  const handleCheckboxChange = (e: { target: { checked: boolean | ((prevState: boolean) => boolean); }; }) => {
+    setListenForGAIB(e.target.checked);
+  };
 
   // Modify the handleSubmit function
   async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
@@ -56,15 +73,17 @@ export default function Home() {
 
     setError(null);
 
-    if (listening && recognitionInstance) {
+    if (listening) {
       setStoppedManually(true);
-      recognitionInstance.stop();
+      if (recognitionInstance) {
+        recognitionInstance.stop();
+      }
       return;
     }
 
-    // Return early if recognitionComplete is false
-    if (!recognitionComplete) {
-      return;
+    if (timeoutID) {
+      clearTimeout(timeoutID);
+      setTimeoutID(null);
     }
 
     // Return early if speechRecognitionComplete is false
@@ -74,7 +93,7 @@ export default function Home() {
 
     if (!query) {
       //alert('[GAIB] Specify an Anime plotline to generate!');
-      console.log('[GAIB] Specify an Anime plotline to generate!');
+      console.log('[GAIB] Prompt Query submission was empty!');
       return;
     }
 
@@ -190,71 +209,76 @@ export default function Home() {
     }
   }
 
-  const [listening, setListening] = useState<boolean>(false);
-  const [stoppedManually, setStoppedManually] = useState<boolean>(false);
-
+  // Update the startSpeechRecognition function
   const startSpeechRecognition = () => {
-    setStoppedManually(false);
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
-      recognition.continuous = false;
-      recognition.timeout = 30000;
-  
-      // Add a delay before starting the recognition
-      setTimeout(() => {
+      recognition.continuous = true;
+
+      if (listening) {
+        setStoppedManually(false);
+        recognition.stop();
+      } else {
+        setSpeechRecognitionComplete(false);
         recognition.start();
-        setSpeechRecognitionComplete(true);
-      }, 0);
-  
+      }
+
       recognition.onstart = () => {
         setListening(true);
       };
-  
+
       recognition.onend = () => {
         setListening(false);
+        setSpeechRecognitionComplete(true);
+
         if (!stoppedManually) {
           handleSubmit({ preventDefault: () => { } }, recognition);
         }
       };
 
-      function removeDuplicateWords(text: string): string {
-        const words = text.split(" ");
-        const dedupedWords: string[] = [];
-      
-        for (let i = 0; i < words.length; i++) {
-          const currentWord = words[i];
-          if (!dedupedWords.includes(currentWord)) {
-            dedupedWords.push(currentWord);
-          } else if (i < words.length - 1) {
-            const nextWord = words[i + 1];
-            if (`${currentWord} ${nextWord}` !== dedupedWords[dedupedWords.length - 1]) {
-              dedupedWords.push(`${currentWord} ${nextWord}`);
-            }
-          }
-        }
-      
-        return dedupedWords.join(" ");
-      }
-  
       recognition.onresult = (event: { results: string | any[]; }) => {
         let last = event.results.length - 1;
         let text = event.results[last][0].transcript;
-        setQuery((prevQuery) => prevQuery + ' ' + text); // concatenate the new text with the old text
-        text = setQuery(removeDuplicateWords(text)); // remove duplicate words
-        setRecognitionComplete(true); // Update recognitionComplete state
+        let transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+
+        setQuery(text); // Set the query to the new text
+
+        if (listenForGAIB && (transcript.includes("gabe") || transcript.includes("game"))) {
+          setStoppedManually(false);
+          recognition.stop();
+        } else {
+          // Clear the previous timeout if there's an active timeout
+          if (timeoutID) {
+            clearTimeout(timeoutID);
+          }
+
+          // Set a new timeout
+          const newTimeoutID = setTimeout(() => {
+            setStoppedManually(false);
+            recognition.stop();
+          }, 3000); // Timeout after 3 seconds of no more speaking
+          setTimeoutID(newTimeoutID);
+        }
       };
-  
+
       recognition.onerror = (event: { error: any; }) => {
         console.error('Error occurred in recognition:', event.error);
+        setStoppedManually(true);
+        recognition.stop();
       };
     } else {
       alert('Speech Recognition API is not supported in this browser.');
     }
-  };  
+  };
+
+  // Add a new function to handle the GAIB listening toggle
+  const handleGAIBListeningToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setListenForGAIB(event.target.checked);
+  };
 
   return (
     <>
@@ -325,61 +349,77 @@ export default function Home() {
                     placeholder={
                       loading
                         ? 'GAIB is generating your Anime...'
-                        : '[GAIB] Give me an Anime plotline to generate?'
+                        : '[GAIB] Give me an Anime plotline to generate? Please end all spoken commands with \"GAIB\"'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     className={styles.textarea}
                   />
                   <div className={styles.buttonWrapper}>
-                  <div className={styles.buttoncontainer}>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={styles.generatebutton}
-                  >
-                    {loading ? (
-                      <div className={styles.loadingwheel}>
-                        <LoadingDots color="#FFA500" />
-                      </div>
-                    ) : (
-                      // Send icon SVG in input field
-                      <svg
-                        viewBox="0 0 20 20"
-                        className={styles.svgicon}
-                        xmlns="http://www.w3.org/2000/svg"
+                    <div className={styles.buttoncontainer}>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className={styles.generatebutton}
                       >
-                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-                      </svg>
-                    )}
-                  </button>
+                        {loading ? (
+                          <div className={styles.loadingwheel}>
+                            <LoadingDots color="#FFA500" />
+                          </div>
+                        ) : (
+                          // Send icon SVG in input field
+                          <svg
+                            viewBox="0 0 20 20"
+                            className={styles.svgicon}
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <div className={styles.buttoncontainer}>
+                      <button
+                        type="button"
+                        disabled={loading}
+                        className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
+                        onClick={startSpeechRecognition}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          height="24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className={styles.svgicon}
+                        >
+                          <path d="M12 1v6m0 0v6m-6-6h12"></path>
+                          <path d="M21 12v6a3 3 0 01-3 3h-12a3 3 0 01-3-3v-6"></path>
+                          <path d="M3 15l1.8-1.8c1.1-1.1 2.8-1.1 3.9 0l1.2 1.2 1.2-1.2c1.1-1.1 2.8-1.1 3.9 0L21 15"></path>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                  <div className={styles.buttoncontainer}>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
-                    onClick={startSpeechRecognition}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className={styles.svgicon}
-                    >
-                      <path d="M12 1v6m0 0v6m-6-6h12"></path>
-                      <path d="M21 12v6a3 3 0 01-3 3h-12a3 3 0 01-3-3v-6"></path>
-                      <path d="M3 15l1.8-1.8c1.1-1.1 2.8-1.1 3.9 0l1.2 1.2 1.2-1.2c1.1-1.1 2.8-1.1 3.9 0L21 15"></path>
-                    </svg>
-                  </button>
-                  </div>
-                  </div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={speechOutputEnabled}
+                      onChange={handleSpeechOutputToggle}
+                    />
+                    &nbsp;&nbsp; <b>Enable speech output</b> &nbsp;&nbsp;
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={listenForGAIB}
+                      onChange={handleGAIBListeningToggle}
+                    />
+                    &nbsp;&nbsp; <b>Listen for GAIB</b>
+                  </label>
                 </form>
               </div>
             </div>
