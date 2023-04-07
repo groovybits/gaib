@@ -43,9 +43,9 @@ export default function Home() {
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  /*useEffect(() => {
     textAreaRef.current?.focus();
-  }, []);
+  }, []);*/
 
   useEffect(() => {
     if (
