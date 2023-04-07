@@ -7,8 +7,7 @@ import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
-import { speakText } from '@/utils/speakText';
-
+import { useSpeakText } from '@/utils/speakText';
 
 export default function Home() {
   const [query, setQuery] = useState<string>('');
@@ -38,14 +37,11 @@ export default function Home() {
   const [speechOutputEnabled, setSpeechOutputEnabled] = useState(false);
   const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
-
-
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const { speakText, stopSpeaking } = useSpeakText();
 
-  /*useEffect(() => {
-    textAreaRef.current?.focus();
-  }, []);*/
+
 
   useEffect(() => {
     if (
@@ -400,6 +396,29 @@ export default function Home() {
                           <path d="M12 1v6m0 0v6m-6-6h12"></path>
                           <path d="M21 12v6a3 3 0 01-3 3h-12a3 3 0 01-3-3v-6"></path>
                           <path d="M3 15l1.8-1.8c1.1-1.1 2.8-1.1 3.9 0l1.2 1.2 1.2-1.2c1.1-1.1 2.8-1.1 3.9 0L21 15"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div className={styles.buttoncontainer}>
+                      <button
+                        type="button"
+                        disabled={!speechOutputEnabled}
+                        className={styles.stopvoicebutton}
+                        onClick={stopSpeaking}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          height="24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className={styles.svgicon}
+                        >
+                          <path d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                       </button>
                     </div>

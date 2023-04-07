@@ -1,8 +1,21 @@
 // Description: This file contains the function to speak text using the Google Text-to-Speech API
 // 
-  
+// Import useRef from React
+import { useRef } from 'react';
 
-export const speakText = async (text: string, rate: number = 1) => {
+export const useSpeakText = () => {
+  // Create a variable to store the Audio instance
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Create a new stop function
+  const stopSpeaking = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  const speakText = async (text: string, rate: number = 1) => {
     try {
       let apiBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       if (!apiBaseUrl || apiBaseUrl === '') {
@@ -17,16 +30,20 @@ export const speakText = async (text: string, rate: number = 1) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, rate }),
       });
-  
+
       if (!response.ok) {
         throw new Error('Error in synthesizing speech, statusText: ' + response.statusText);
       }
-  
+
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      audioRef.current = audio;
       audio.play();
     } catch (error) {
       console.error('Error in synthesizing speech, error:', error);
     }
-  }  
+  };
+
+  return { speakText, stopSpeaking };
+};

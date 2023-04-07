@@ -107,6 +107,21 @@
   transition-duration: 0.4s;
 }
 
+.stopvoicebutton {
+  background-color: #ff4500;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
+  cursor: pointer;
+  transition-duration: 0.4s;
+}
+
 .loadingwheel {
   position: absolute;
   top: 0.2rem;
