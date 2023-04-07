@@ -18,10 +18,10 @@ Standalone title:`);
 const QA_PROMPT = PromptTemplate.fromTemplate(
   PINECONE_PROMPT + `
 
-Story Direction: {question}
 =========
 Context: {context}
 =========
+Story Direction: {question}
 Story Title and Screen Play format with cues in Markdown format:`,
 );
 
