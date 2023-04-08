@@ -3,9 +3,6 @@ import Layout from '@/components/layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import Image from 'next/image';
-import ReactMarkdown from 'react-markdown';
-import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
@@ -32,13 +29,11 @@ export default function Home() {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
-  const { speakText, stopSpeaking, isSpeaking } = useSpeakText();
+  const { speakText, stopSpeaking } = useSpeakText();
 
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
   const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(true);
-  const [speechOutputEnabled, setSpeechOutputEnabled] = useState(true);
-  const [listenForGAIB, setListenForGAIB] = useState<boolean>(false);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
   const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
   
@@ -54,16 +49,15 @@ export default function Home() {
     const lastMessageIndex = messages.length - 1;
   
     if (
-      speechOutputEnabled &&
       lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
-      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US');
+      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US', 'en-US-Neural2-H');
       setLastSpokenMessageIndex(lastMessageIndex);
     } else {
       stopSpeaking();
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex]);
+  }, [messages, speakText, stopSpeaking, lastSpokenMessageIndex]);
   
 
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -241,7 +235,7 @@ export default function Home() {
 
         setQuery(text); // Set the query to the new text
 
-        if (listenForGAIB && (transcript.includes("gabe") || transcript.includes("game"))) {
+        if (transcript.includes("gabe") || transcript.includes("game")) {
           setStoppedManually(false);
           recognition.stop();
         } else {

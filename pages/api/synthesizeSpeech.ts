@@ -21,7 +21,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return finalText;
   }  
 
-  let { text, ssmlGender, languageCode } = req.body;
+  let { text, ssmlGender, languageCode, name } = req.body;
 
   // Validate and set the default value for ssmlGender
   if (!['MALE', 'FEMALE', 'NEUTRAL'].includes(ssmlGender)) {
@@ -39,7 +39,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   const request = {
     input: { text },
-    voice: { name: 'en-US-Neural2-H', languageCode: languageCode, ssmlGender: ssmlGender as protos.google.cloud.texttospeech.v1.SsmlVoiceGender },
+    voice: { name: name, languageCode: languageCode, ssmlGender: ssmlGender as protos.google.cloud.texttospeech.v1.SsmlVoiceGender },
     audioConfig: { audioEncoding: 'MP3' as const },
   };
 
