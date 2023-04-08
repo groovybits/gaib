@@ -6,8 +6,8 @@
 }
 
 .anime-character img {
-    display: block;
-    width: 100%;
+    display: flex;
+    width: fit-content;
     border: #FFA500;
     border-style: double;
     border-width: 8px;
@@ -31,7 +31,7 @@
     color: white;
     padding: 0px;
     bottom: 10%;
-    left: 5%;
+    left: 2%;
     font-size: 28px;
     text-align: left;
     border-width: 0px;
