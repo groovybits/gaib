@@ -373,20 +373,20 @@
 }
 
 /* Mobile optimization */
-@media (max-width: 500px) {
+@media (max-width: 400px) {
   .main {
     padding: 0rem;
   }
 
   .cloud {
-    width: 32rem;
-    height: 40rem;
+    max-width: 100%;
+    height: auto;
   }
   .textarea {
-    width: 32rem;
-    color: #000000; /* Changed font color to yellow-green */
-    background: #ffffff; /* Changed background color to a darker color */
-    font-family: "Trebuchet MS", monospace; /* Added font family */
+    max-width: 100%;
+    color: #000000;
+    background: #ffffff;
+    font-family: "Trebuchet MS", monospace;
   }
   .topnav {
     border: 1px solid black;
@@ -403,7 +403,7 @@
     white-space: pre-wrap !important;
     color: #e5f810;
     background: #1E1E1E;
-    font-family: "Trebuchet MS", monospace; /* Added font family */
+    font-family: "Trebuchet MS", monospace;
   }
 
   .footer {
