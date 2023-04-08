@@ -31,6 +31,7 @@
   background: #ffffff; /* Changed background color to a darker color */
   outline: none;
   font-family: "Trebuchet MS", monospace; /* Added font family */
+  align-items: center;
 }
 
 .textarea:disabled {
