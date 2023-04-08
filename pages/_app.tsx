@@ -1,7 +1,7 @@
 import '@/styles/base.css';
 import type { AppProps } from 'next/app';
 import { Inter } from 'next/font/google';
-import '@/styles/AnimeCharacter.css'; // Add this line
+import '@/styles/animeCharacter.css'; // Add this line
 
 const inter = Inter({
   variable: '--font-inter',
