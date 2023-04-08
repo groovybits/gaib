@@ -187,8 +187,6 @@
 }
 
 .messagelist {
-  width: 1121px;
-  height: 780px;
   overflow-y: scroll;
   border-radius: 0.5rem;
 }
