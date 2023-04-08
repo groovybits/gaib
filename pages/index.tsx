@@ -9,12 +9,19 @@ import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
+/*import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+  } from '@/components/ui/accordion';*/
 
 
 export default function Home() {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  //const [sourceDocs, setSourceDocs] = useState<Document[]>([]);
   const [messageState, setMessageState] = useState<{
     messages: Message[];
     pending?: string;
@@ -37,31 +44,34 @@ export default function Home() {
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
   const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(true);
-  const [speechOutputEnabled, setSpeechOutputEnabled] = useState(false);
+  const [speechOutputEnabled, setSpeechOutputEnabled] = useState(true);
   const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
+  const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
   
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    const lastMessageIndex = messages.length - 1;
+  
     if (
       speechOutputEnabled &&
-      messages.length > 0 &&
-      messages[messages.length - 1].type === 'apiMessage'
+      lastMessageIndex > lastSpokenMessageIndex &&
+      messages[lastMessageIndex].type === 'apiMessage'
     ) {
-      speakText(messages[messages.length - 1].message, 0.6);
+      speakText(messages[lastMessageIndex].message, 0.6);
+      setLastSpokenMessageIndex(lastMessageIndex);
+    } else {
+      stopSpeaking();
     }
-  }, [messages, speechOutputEnabled, speakText]); // Add the speechOutputEnabled dependency
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex]);
+  
 
   type SpeechRecognition = typeof window.SpeechRecognition;
 
   const handleSpeechOutputToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSpeechOutputEnabled(event.target.checked);
-  };
-
-  const handleCheckboxChange = (e: { target: { checked: boolean | ((prevState: boolean) => boolean); }; }) => {
-    setListenForGAIB(e.target.checked);
   };
 
   // Modify the handleSubmit function
@@ -396,7 +406,6 @@ export default function Home() {
                     <div className={styles.buttoncontainer}>
                       <button
                         type="button"
-                        disabled={!speechOutputEnabled}
                         className={styles.stopvoicebutton}
                         onClick={stopSpeaking}
                       >

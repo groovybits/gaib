@@ -52,7 +52,7 @@ export const makeChain = (
     vectorstore,
     combineDocumentsChain: docChain,
     questionGeneratorChain: questionGenerator,
-    returnSourceDocuments: false,
-    k: 8, //number of source documents to return
+    returnSourceDocuments: true,
+    k: 3, //number of source documents to return
   });
 };

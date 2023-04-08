@@ -7,7 +7,7 @@ import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
 
 
 const MAX_INPUT_LENGTH = 4096;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 10;
 const INITIAL_RETRY_DELAY = 1000; // Set the initial retry delay in milliseconds
 
 function sleep(ms: number) {
@@ -85,6 +85,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       console.log('History: ', history ? history : '');
       console.log('Reponse: ', response.text);
+      console.log('Source Documents: ', response.sourceDocuments);
+      sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;
     } catch (error) {
       if (error instanceof Error && error.message) {
