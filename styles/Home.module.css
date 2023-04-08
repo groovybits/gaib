@@ -1,4 +1,5 @@
 .main {
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -15,6 +16,7 @@
 }
 
 .cloudform {
+  display: flex;
   position: relative;
   justify-content: center;
   align-items: center;
@@ -23,6 +25,7 @@
 }
 
 .textarea {
+  display: flex;
   position: center;
   resize: none;
   font-size: 1.1rem;
@@ -315,6 +318,7 @@
 }
 
 .cloud {
+  display: flex;
   width: 59vw;
   height: 80vh;
   background: #1E1E1E; /* Changed background color to a darker color */
