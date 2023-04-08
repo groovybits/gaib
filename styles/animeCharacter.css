@@ -1,13 +1,12 @@
 .anime-character {
     position: relative;
     display: inline-block;
-    width: 100%;
-    height: 100%;
+    /* Updated display property */
 }
 
 .anime-character img {
-    display: flex;
-    width: fit-content;
+    display: block;
+    width: 100%;
     border: #FFA500;
     border-style: double;
     border-width: 8px;
@@ -31,7 +30,7 @@
     color: white;
     padding: 0px;
     bottom: 10%;
-    left: 2%;
+    left: 5%;
     font-size: 28px;
     text-align: left;
     border-width: 0px;
