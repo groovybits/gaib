@@ -25,7 +25,7 @@
     white-space: pre-wrap !important;
 }
 
-.anime-character p {
+.subtitle-container p {
     white-space: pre-wrap !important;
     position: absolute;
     background: rgba(0, 0, 0, 0.0);
@@ -36,15 +36,51 @@
     font-size: 24px;
     text-align: left;
     border-width: 0px;
-    font-weight: bold;
+    font-weight: 1000;
     font-family: "Trebuchet MS";
     /* Added font family */
     line-height: 1.1;
     margin: 0px;
     justify-content: bottom;
     text-shadow:
-    -1px -1px 0 #000, /* top left */
-    1px -1px 0 #000, /* top right */
-    -1px 1px 0 #000, /* bottom left */
-    3px 3px 0 #000; /* bottom right */
+    -2px -2px 2px #000, /* top left */
+    2px -2px 2px #000,  /* top right */
+    -2px 2px 2px #000,  /* bottom left */
+    2px 2px 2px #000;   /* bottom right */
 }
+
+.popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    border: #000000;
+    border-style: double;
+    border-width: 8px;
+    border-radius: 8px;
+  }
+  
+  .popup-content {
+    background-color: white;
+    padding: 18px;
+    border-radius: 4px;
+    max-width: 80%;
+    max-height: 80%;
+    overflow-y: auto;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
+    border-style: double;
+    border-width: 8px;
+    border-radius: 8px; 
+    border-color:rgba(0, 0, 0, 1)
+  }
+
+  .preWrap {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }

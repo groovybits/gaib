@@ -7,7 +7,7 @@ interface AnimeCharacterProps {
 
 export const AnimeCharacter: React.FC<AnimeCharacterProps> = ({ text, speaking }) => {
   const [mouthOpen, setMouthOpen] = useState(false);
-
+  
   useEffect(() => {
     if (speaking && text.length > 0) {
       const interval = setInterval(() => {

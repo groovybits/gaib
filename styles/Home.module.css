@@ -87,14 +87,16 @@
 }
 
 .copybutton {
-  position: top;
-  color: #ffffff;
-  background: #000000;
-  padding: 1rem;
-  border-color: #FFA500;
+  background-color: #FFA500;
+  color: white;
   font-weight: bold;
+  border: 0px double #000;
   border-radius: 8px;
-  border: double;
+  border-color: #ffffff;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: 0.3s;
+  margin: 0 4px; /* Add this line to add space between buttons */
 }
 
 .speakbutton{

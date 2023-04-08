@@ -23,7 +23,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: "Hi I am GAIB The Groovy AI Bot.\nI am here for your entertainment or enlightenment!\nPush the Blue Mic button and speak ending with my name \"GAIB\" and then press Return.",
+        message: "Hi I am GAIB The Groovy AI Bot.\nPush the Blue button and say what you would like to know.\nPush Return to hear my answer.",
         type: 'apiMessage',
       },
     ],
@@ -38,12 +38,17 @@ export default function Home() {
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
   const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(true);
   const [speechOutputEnabled, setSpeechOutputEnabled] = useState(true);
-  const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
+  const [listenForGAIB, setListenForGAIB] = useState<boolean>(false);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
   const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
   
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [showPopup, setShowPopup] = useState(false);
+
+  const togglePopup = () => {
+    setShowPopup(!showPopup);
+  };
 
   useEffect(() => {
     const lastMessageIndex = messages.length - 1;
@@ -268,11 +273,6 @@ export default function Home() {
     }
   };
 
-  // Add a new function to handle the GAIB listening toggle
-  const handleGAIBListeningToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setListenForGAIB(event.target.checked);
-  };
-
   const gaibIsSpeaking = () => {
     if (chatMessages.length > 0) {
       const lastMessage = chatMessages[chatMessages.length - 1];
@@ -284,7 +284,7 @@ export default function Home() {
     }
     return true;
   };
-
+  
   const latestMessage = chatMessages[chatMessages.length - 1];
 
   return (
@@ -294,7 +294,7 @@ export default function Home() {
           <main className={styles.main}>
             <div className={styles.cloud}>
             {latestMessage && (
-              <div className="styles.markdownanswer">
+              <div className={styles.markdownanswer}>
                 {latestMessage.type === "apiMessage" ? (
                   <AnimeCharacter
                     text={latestMessage.message}
@@ -307,7 +307,7 @@ export default function Home() {
                   />
                 )}
               </div>
-            )}
+              )}
             </div>
             <div className={styles.center}>
               <div className={styles.cloudform}>
@@ -392,6 +392,22 @@ export default function Home() {
                           {key}
                         </button>
                       ))}
+                    </div>
+                    <div className={styles.buttoncontainer}>
+                      <button onClick={togglePopup} className={styles.copybutton}>View Raw Transcript</button>
+
+                      {showPopup && (
+                        <div className="popup" onClick={togglePopup}>
+                          <div
+                            className="popup-content"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <pre className={styles.preWrap}>{latestMessage.message}</pre>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </form>
