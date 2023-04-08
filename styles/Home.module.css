@@ -8,6 +8,7 @@
 
 .header {
   width: auto;
+  height: auto;
 }
 
 .header p {
@@ -78,8 +79,6 @@
   background: #000000;
   padding: 1rem;
   border-color: #FFA500;
-  /*width: 15;
-  height: 5;*/
   font-weight: bold;
   border-radius: 8px;
   border: double;
@@ -91,8 +90,6 @@
   background: #000000;
   padding: 1rem;
   border-color: #FFA500;
-  /*width: 15;
-  height: 5;*/
   font-weight: bold;
   border-radius: 8px;
   border: double;
@@ -199,14 +196,14 @@
 }
 
 .usermessage {
-  padding: 0.5rem;
+  padding: 0rem;
   color: #BADA55; /* Changed font color to yellow-green */
   background: #1E1E1E; /* Changed background color to a darker color */
   font-size: 28px;
 }
 
 .usermessagewaiting {
-  padding: 1.0rem;
+  padding: 0rem;
   color: #BADA55; /* Changed font color to yellow-green */
   background: #1E1E1E; /* Changed background color to a darker color */
   background: linear-gradient(to left, #07080938, #1a1c2024, #07080936);
@@ -230,7 +227,7 @@
 
 .apimessage {
   background: #1E1E1E;
-  padding: 0.5rem;
+  padding: 0rem;
   color: #e5f810;
   animation: fadein 0.5s;
   white-space: pre-wrap !important;
@@ -315,10 +312,10 @@
 
 .cloud {
   width: 75vw;
-  height: 65vh;
+  height: 80vh;
   background: #1E1E1E; /* Changed background color to a darker color */
   border-radius: 0.5rem;
-  border: 1px solid #d9d9e3;
+  border: 1px solid #000004;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -358,8 +355,7 @@
 /* Mobile optimization */
 @media (max-width: 300px) {
   .main {
-    padding: 0.5rem;
-    max-height: 60vh;
+    padding: 0rem;
   }
 
   .cloud {

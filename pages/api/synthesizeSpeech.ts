@@ -34,7 +34,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   const request = {
     input: { text },
-    voice: { languageCode: 'en-US', ssmlGender: 'NEUTRAL' as const },
+    voice: { languageCode: 'en-US', ssmlGender: 'FEMALE' as const },
     audioConfig: { audioEncoding: 'MP3' as const },
   };
 

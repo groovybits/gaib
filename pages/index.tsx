@@ -9,19 +9,12 @@ import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
-/*import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-  } from '@/components/ui/accordion';*/
-
+import { AnimeCharacter } from '@/components/animeCharacter';
 
 export default function Home() {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  //const [sourceDocs, setSourceDocs] = useState<Document[]>([]);
   const [messageState, setMessageState] = useState<{
     messages: Message[];
     pending?: string;
@@ -30,7 +23,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: '[GAIB] Groovy AI Bot: Nice to meet you!',
+        message: 'Hi I am GAIB The Groovy AI Bot, I am here for your entertainment or enlightenment!',
         type: 'apiMessage',
       },
     ],
@@ -99,7 +92,7 @@ export default function Home() {
     }
 
     if (!query) {
-      console.log('[GAIB] Prompt Query submission was empty!');
+      console.log('Warning: Prompt Query submission was empty!');
       return;
     }
 
@@ -289,30 +282,19 @@ export default function Home() {
               <div ref={messageListRef} className={styles.messagelist}>
                 {chatMessages.map((message, index) => {
                   let icon;
+                  let message_text;
                   let className;
                   if (message.type === 'apiMessage') {
                     icon = (
-                      <Image
-                        src="/bot-image.png"
-                        alt="GAIB"
-                        width="60"
-                        height="60"
-                        className={styles.boticon}
-                        priority
-                      />
+                      <AnimeCharacter text={message.message} speaking={true} />
                     );
+                    message_text = "GAIB";
                     className = styles.apimessage;
                   } else {
                     icon = (
-                      <Image
-                        src="/usericon.png"
-                        alt="Human"
-                        width="60"
-                        height="60"
-                        className={styles.usericon}
-                        priority
-                      />
+                      <AnimeCharacter text={message.message} speaking={true} />
                     );
+                    message_text = "Human Otaku (You)"
                     // The latest message sent by the user will be animated while waiting for a response
                     className =
                       loading && index === chatMessages.length - 1
@@ -322,12 +304,7 @@ export default function Home() {
                   return (
                     <>
                       <div key={`chatMessage-${index}`} className={className}>
-                        {icon}
-                        <div className={styles.markdownanswer}>
-                          <ReactMarkdown linkTarget="_blank">
-                            {message.message}
-                          </ReactMarkdown>
-                        </div>
+                          {icon}
                       </div>
                     </>
                   );

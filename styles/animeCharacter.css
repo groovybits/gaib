@@ -1,0 +1,48 @@
+.anime-character {
+    position: relative;
+    display: inline-block;
+    /* Updated display property */
+}
+
+.anime-character img {
+    display: block;
+    width: 100%;
+    border: #FFA500;
+    border-style: double;
+    border-width: 8px;
+    border-radius: 8px;
+}
+
+.subtitle-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    justify-content: bottom;
+    align-items: flex-end;
+}
+
+.anime-character p {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.0);
+    color: white;
+    padding: 0px;
+    bottom: 10%;
+    left: 5%;
+    font-size: 28px;
+    text-align: left;
+    border-width: 0px;
+    font-weight: bold;
+    font-family: "Trebuchet MS";
+    /* Added font family */
+    line-height: 1.1;
+    margin: 0px;
+    justify-content: bottom;
+    text-shadow:
+    -1px -1px 0 #000, /* top left */
+    1px -1px 0 #000, /* top right */
+    -1px 1px 0 #000, /* bottom left */
+    3px 3px 0 #000; /* bottom right */
+}
