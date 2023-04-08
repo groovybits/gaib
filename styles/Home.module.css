@@ -21,7 +21,6 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
-
 }
 
 .textarea {
@@ -62,16 +61,18 @@
 }
 
 .personalityButton {
-  background-color: rgb(64, 24, 222);
+  background-color: #3ea125;
+  border: none;
+  border-radius: 5px;
   color: white;
-  font-weight: bold;
-  border: 2px double #000;
-  border-radius: 8px;
-  border-color: #ffffff;
-  padding: 4px 8px;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
   cursor: pointer;
-  transition: 0.3s;
-  margin: 0 4px; /* Add this line to add space between buttons */
+  transition-duration: 0.4s;
 }
 
 .personalityButton:hover {
