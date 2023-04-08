@@ -1,7 +1,7 @@
 .main {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 0.5rem;
 }
@@ -17,15 +17,14 @@
 
 .cloudform {
   position: relative;
-  display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  
+
 }
 
 .textarea {
-  position: relative;
+  position: center;
   resize: none;
   font-size: 1.1rem;
   padding: 0.5rem 1rem 0.5rem 1rem;
