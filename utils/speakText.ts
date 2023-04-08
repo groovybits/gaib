@@ -1,7 +1,7 @@
 // Description: This file contains the function to speak text using the Google Text-to-Speech API
 // 
 // Import useRef from React
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 
 
 export const useSpeakText = () => {
@@ -24,7 +24,7 @@ export const useSpeakText = () => {
     return false;
   };
 
-  const speakText = async (text: string, rate: number = 1) => {
+  const speakText = async (text: string, rate: number = 1, ssmlGender: string = 'FEMALE', languageCode: string = 'en-US') => {
     try {
       if (audioRef.current && !audioRef.current.paused) {
         console.log('Audio is already playing');
@@ -42,7 +42,7 @@ export const useSpeakText = () => {
       const response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, rate }),
+        body: JSON.stringify({ text, rate, ssmlGender, languageCode }),
       });
   
       if (!response.ok) {

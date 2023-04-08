@@ -365,7 +365,7 @@
 
 .listening {
   background-color: #4caf50; /* Change to your desired color */
-  color: white; /* Change to your desired text color */
+  color: rgb(245, 4, 4); /* Change to your desired text color */
 }
 
 .footer a:hover {
@@ -373,9 +373,10 @@
 }
 
 /* Mobile optimization */
-@media (max-width: 400px) {
+@media (max-width: 600px) {
   .main {
     padding: 0rem;
+    width: 100%;
   }
   .messagelist {
     height: 70vh;
@@ -402,6 +403,10 @@
   .markdownanswer h2,
   .markdownanswer h3 {
     font-size: 1.2rem;
+  }
+  .subtitle-container {
+    padding: 0rem;
+    font-size: 0.8rem;
   }
   .subtitle-container p {
     padding: 0rem;

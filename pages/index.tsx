@@ -58,7 +58,7 @@ export default function Home() {
       lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
-      speakText(messages[lastMessageIndex].message, 0.6);
+      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US');
       setLastSpokenMessageIndex(lastMessageIndex);
     } else {
       stopSpeaking();
@@ -67,10 +67,6 @@ export default function Home() {
   
 
   type SpeechRecognition = typeof window.SpeechRecognition;
-
-  const handleSpeechOutputToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSpeechOutputEnabled(event.target.checked);
-  };
 
   // Modify the handleSubmit function
   async function handleSubmit(e: any, personality: keyof typeof PERSONALITY_PROMPTS = 'GAIB', recognitionInstance?: SpeechRecognition) {
@@ -396,7 +392,6 @@ export default function Home() {
                     </div>
                   </div>
                   <div className={styles.buttoncontainer}>
-                  <div className={styles.buttoncontainer}>
                       {Object.keys(PERSONALITY_PROMPTS).map((key) => (
                         <button
                           type="submit"
@@ -411,7 +406,6 @@ export default function Home() {
                         </button>
                       ))}
                     </div>
-                  </div>
                 </form>
               </div>
             </div>
