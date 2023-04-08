@@ -1,6 +1,7 @@
 .main {
   flex-direction: column;
   justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 0rem;
 }

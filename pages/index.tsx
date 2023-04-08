@@ -379,21 +379,6 @@ export default function Home() {
                       </button>
                     </div>
                     <div className={styles.buttoncontainer}>
-                      {Object.keys(PERSONALITY_PROMPTS).map((key) => (
-                        <button
-                          type="submit"
-                          key={key}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleSubmit(e, key as keyof typeof PERSONALITY_PROMPTS);
-                          }}
-                          className={styles.personalityButton}
-                        >
-                          {key}
-                        </button>
-                      ))}
-                    </div>
-                    <div className={styles.buttoncontainer}>
                       <button onClick={togglePopup} className={styles.copybutton}>View Raw Transcript</button>
 
                       {showPopup && (
@@ -408,6 +393,23 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                  <div className={styles.buttoncontainer}>
+                  <div className={styles.buttoncontainer}>
+                      {Object.keys(PERSONALITY_PROMPTS).map((key) => (
+                        <button
+                          type="submit"
+                          key={key}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSubmit(e, key as keyof typeof PERSONALITY_PROMPTS);
+                          }}
+                          className={styles.personalityButton}
+                        >
+                          {key}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </form>
