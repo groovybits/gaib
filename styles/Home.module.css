@@ -373,17 +373,17 @@
 }
 
 /* Mobile optimization */
-@media (max-width: 300px) {
+@media (max-width: 500px) {
   .main {
     padding: 0rem;
   }
 
   .cloud {
-    width: 22rem;
-    height: 28rem;
+    width: 32rem;
+    height: 40rem;
   }
   .textarea {
-    width: 22rem;
+    width: 32rem;
     color: #000000; /* Changed font color to yellow-green */
     background: #ffffff; /* Changed background color to a darker color */
     font-family: "Trebuchet MS", monospace; /* Added font family */
