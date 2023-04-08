@@ -303,9 +303,7 @@ export default function Home() {
                     message_text = "GAIB";
                     className = styles.apimessage;
                   } else {
-                    icon = (
-                      <AnimeCharacter text={message.message} speaking={gaibIsSpeaking()} />
-                    );
+                    icon = "";
                     message_text = "Human Otaku (You)"
                     // The latest message sent by the user will be animated while waiting for a response
                     className =
