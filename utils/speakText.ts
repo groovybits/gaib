@@ -12,7 +12,15 @@ export const useSpeakText = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
+  };
+
+  const isSpeaking = () => {
+    if (audioRef.current) {
+      return true;
+    }
+    return false;
   };
 
   const speakText = async (text: string, rate: number = 1) => {
@@ -53,7 +61,7 @@ export const useSpeakText = () => {
       console.error('Error in synthesizing speech, error:', error);
     }
   }
-  return { speakText, stopSpeaking };
+  return { speakText, stopSpeaking, isSpeaking };
 };
 
   

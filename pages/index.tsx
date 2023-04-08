@@ -23,7 +23,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: 'Hi I am GAIB The Groovy AI Bot, I am here for your entertainment or enlightenment!',
+        message: "Hi I am GAIB The Groovy AI Bot.\nI am here for your entertainment or enlightenment!\nPush the Blue Mic button and speak ending with my name \"GAIB\" and then press Return.",
         type: 'apiMessage',
       },
     ],
@@ -32,7 +32,7 @@ export default function Home() {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
-  const { speakText, stopSpeaking } = useSpeakText();
+  const { speakText, stopSpeaking, isSpeaking } = useSpeakText();
 
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
@@ -273,6 +273,18 @@ export default function Home() {
     setListenForGAIB(event.target.checked);
   };
 
+  const gaibIsSpeaking = () => {
+    if (chatMessages.length > 0) {
+      const lastMessage = chatMessages[chatMessages.length - 1];
+      if (lastMessage.type === 'apiMessage') {
+        if ((chatMessages.length - 1) > lastSpokenMessageIndex) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
   return (
     <>
       <Layout>
@@ -286,13 +298,13 @@ export default function Home() {
                   let className;
                   if (message.type === 'apiMessage') {
                     icon = (
-                      <AnimeCharacter text={message.message} speaking={true} />
+                      <AnimeCharacter text={message.message} speaking={gaibIsSpeaking()} />
                     );
                     message_text = "GAIB";
                     className = styles.apimessage;
                   } else {
                     icon = (
-                      <AnimeCharacter text={message.message} speaking={true} />
+                      <AnimeCharacter text={message.message} speaking={gaibIsSpeaking()} />
                     );
                     message_text = "Human Otaku (You)"
                     // The latest message sent by the user will be animated while waiting for a response
@@ -326,7 +338,7 @@ export default function Home() {
                     placeholder={
                       loading
                         ? 'GAIB is generating your Anime...'
-                        : '[GAIB] Give me an Anime plotline to generate? Please end all spoken commands with \"GAIB\"'
+                        : 'Give me an Anime plotline to generate...'
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}

@@ -24,7 +24,7 @@
   resize: none;
   font-size: 1.1rem;
   padding: 0.5rem 1rem 0.5rem 1rem;
-  width: 75vw;
+  width: 59vw;
   border-radius: 0.5rem;
   border: 2px solid #d9d9e3;
   color: #000000; /* Changed font color to yellow-green */
@@ -311,7 +311,7 @@
 }
 
 .cloud {
-  width: 75vw;
+  width: 59vw;
   height: 80vh;
   background: #1E1E1E; /* Changed background color to a darker color */
   border-radius: 0.5rem;
