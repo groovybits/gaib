@@ -394,22 +394,6 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={speechOutputEnabled}
-                      onChange={handleSpeechOutputToggle}
-                    />
-                    &nbsp;&nbsp; <b>Enable speech output</b> &nbsp;&nbsp;
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={listenForGAIB}
-                      onChange={handleGAIBListeningToggle}
-                    />
-                    &nbsp;&nbsp; <b>Listen for GAIB</b>
-                  </label>
                 </form>
               </div>
             </div>

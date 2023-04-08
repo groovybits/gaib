@@ -25,11 +25,11 @@
   padding: 0.5rem 1rem 0.5rem 1rem;
   width: 59vw;
   color: #000000; 
-  background: #eef0f3; 
+  background: #f1f492c9; 
   outline: none;
   font-family: "Trebuchet MS"; 
 
-  border: #FFA500;
+  border: #000000;
   border-style: double;
   border-width: 8px;
   border-radius: 8px;
@@ -40,9 +40,20 @@
 }
 
 .textarea:focus {
+  position: relative;
+  resize: none;
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem 0.5rem 1rem;
+  width: 59vw;
+  color: #000000; 
+  background: #f1f492c9; 
   outline: none;
-  border-color: #FFA500;
-  box-shadow: 0 0 0 1px #000000;
+  font-family: "Trebuchet MS"; 
+
+  border: #000000;
+  border-style: double;
+  border-width: 8px;
+  border-radius: 8px;
 }
 
 .textarea::placeholder {
