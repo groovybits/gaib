@@ -377,7 +377,36 @@
   .main {
     padding: 0rem;
   }
-
+  .messagelist {
+    height: 70vh;
+  }
+  .usermessage {
+    font-size: 1.2rem;
+  }
+  .usermessagewaiting {
+    font-size: 1.2rem;
+  }
+  .apimessage {
+    font-size: 1.2rem;
+  }
+  .markdownanswer {
+    font-size: 1.2rem;
+  }
+  .markdownanswer code {
+    font-size: 1.2rem;
+  }
+  .markdownanswer a {
+    font-size: 1.2rem;
+  }
+  .markdownanswer h1,
+  .markdownanswer h2,
+  .markdownanswer h3 {
+    font-size: 1.2rem;
+  }
+  .subtitle-container p {
+    padding: 0rem;
+    font-size: 0.8rem;
+  }
   .cloud {
     max-width: 100%;
     height: auto;
@@ -410,5 +439,13 @@
     font-size: 0.7rem;
     width: 100%;
     text-align: center;
+  }
+  .anime-character {
+    width: 100%;
+    height: auto;
+  }
+  .anime-character img {
+    width: 100%;
+    height: auto;
   }
 }
