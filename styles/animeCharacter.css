@@ -22,16 +22,18 @@
     display: flex;
     justify-content: bottom;
     align-items: flex-end;
+    white-space: pre-wrap !important;
 }
 
 .anime-character p {
+    white-space: pre-wrap !important;
     position: absolute;
     background: rgba(0, 0, 0, 0.0);
     color: white;
     padding: 0px;
-    bottom: 10%;
-    left: 5%;
-    font-size: 28px;
+    bottom: 12%;
+    left: 1%;
+    font-size: 24px;
     text-align: left;
     border-width: 0px;
     font-weight: bold;

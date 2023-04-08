@@ -1,7 +1,8 @@
 // Description: This file contains the function to speak text using the Google Text-to-Speech API
 // 
 // Import useRef from React
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+
 
 export const useSpeakText = () => {
   // Create a variable to store the Audio instance
