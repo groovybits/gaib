@@ -20,7 +20,7 @@ export default function Home() {
   }>({
     messages: [
       {
-        message: "Hi I am GAIB The Groovy AI Bot.\nPush the Blue button and say what you would like to know.\nPush Return to hear my answer.",
+        message: "Hi I am GAIB The Groovy AI Bot.\nYou can use the blue microphone button to ask me questions.",
         type: 'apiMessage',
       },
     ],
@@ -52,7 +52,7 @@ export default function Home() {
       lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
-      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US', 'en-US-Neural2-H');
+      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US', ''/*'en-US-Neural2-H'*/);
       setLastSpokenMessageIndex(lastMessageIndex);
     } else {
       stopSpeaking();

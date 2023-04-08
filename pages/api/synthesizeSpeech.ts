@@ -15,7 +15,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const cleanedText = text.replace(markdownRegex, '');
   
     // Remove special symbols (including periods)
-    const specialSymbolsRegex = /[!@#$%^&*(),.?":{}|<>]/g;
+    const specialSymbolsRegex = /[@#$%^&*()":{}|<>]/g;
     const finalText = cleanedText.replace(specialSymbolsRegex, '');
   
     return finalText;
