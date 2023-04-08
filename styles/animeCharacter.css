@@ -1,7 +1,8 @@
 .anime-character {
     position: relative;
     display: inline-block;
-    /* Updated display property */
+    width: 100%;
+    height: 100%;
 }
 
 .anime-character img {
