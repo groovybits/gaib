@@ -8,6 +8,13 @@ import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
 import { AnimeCharacter } from '@/components/animeCharacter';
 
+type PendingMessage = {
+  type: string;
+  message: string;
+  sourceDocs?: Document[];
+};
+type ChatMessage = Message | PendingMessage;
+
 export default function Home() {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -29,7 +36,7 @@ export default function Home() {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
-  const { speakText, stopSpeaking } = useSpeakText();
+  const { stopSpeaking } = useSpeakText();
 
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
@@ -45,21 +52,6 @@ export default function Home() {
     setShowPopup(!showPopup);
   };
 
-  useEffect(() => {
-    const lastMessageIndex = messages.length - 1;
-  
-    if (
-      lastMessageIndex > lastSpokenMessageIndex &&
-      messages[lastMessageIndex].type === 'apiMessage'
-    ) {
-      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US', ''/*'en-US-Neural2-H'*/);
-      setLastSpokenMessageIndex(lastMessageIndex);
-    } else {
-      stopSpeaking();
-    }
-  }, [messages, speakText, stopSpeaking, lastSpokenMessageIndex]);
-  
-
   type SpeechRecognition = typeof window.SpeechRecognition;
 
   // Modify the handleSubmit function
@@ -73,7 +65,7 @@ export default function Home() {
       if (recognitionInstance) {
         recognitionInstance.stop();
       }
-      return;
+      //return;
     }
 
     if (timeoutID) {
@@ -82,9 +74,9 @@ export default function Home() {
     }
 
     // Return early if speechRecognitionComplete is false
-    if (!speechRecognitionComplete) {
+    /*if (!speechRecognitionComplete) {
       return;
-    }
+    }*/
 
     if (!query) {
       console.log('Warning: Prompt Query submission was empty!');
@@ -166,13 +158,13 @@ export default function Home() {
 
   const handleEnter = useCallback(
     (e: any) => {
-      if (e.key === 'Enter' && !e.shiftKey && query) {
+      if (e.key === 'Enter' && !e.shiftKey && query && speechRecognitionComplete) {
         handleSubmit(e);
       } else if (e.key == 'Enter') {
         e.preventDefault();
       }
     },
-    [query],
+    [query, speechRecognitionComplete],
   );
 
   const chatMessages = useMemo(() => {
@@ -190,14 +182,32 @@ export default function Home() {
     ];
   }, [messages, pending, pendingSourceDocs]);
 
+  const latestMessage: Message | PendingMessage | undefined = chatMessages[chatMessages.length - 1];
+  const [animeCharacterText, setAnimeCharacterText] = useState(latestMessage?.message ?? '');
+
   //scroll to bottom of chat
   useEffect(() => {
     if (messageListRef.current) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
-  }, [chatMessages]);
+    if (latestMessage) {
+      const lastMessageIndex = messages.length - 1;
 
-  // Update the startSpeechRecognition function
+      if (animeCharacterText !== latestMessage?.message) {
+        setAnimeCharacterText(latestMessage?.message ?? '');
+      }
+
+      if (latestMessage.message.length > 0 &&
+        lastMessageIndex > lastSpokenMessageIndex &&
+        messages[lastMessageIndex].type === 'apiMessage'
+      ) {
+        setLastSpokenMessageIndex(lastMessageIndex);
+        setAnimeCharacterText(latestMessage.message);
+        console.log("latestMessage for Anime Character: ", latestMessage.message)
+      }
+    }
+  }, [chatMessages, latestMessage, messages, lastSpokenMessageIndex, animeCharacterText]);
+
   const startSpeechRecognition = () => {
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -222,10 +232,6 @@ export default function Home() {
       recognition.onend = () => {
         setListening(false);
         setSpeechRecognitionComplete(true);
-
-        if (!stoppedManually) {
-          handleSubmit({ preventDefault: () => { } }, recognition);
-        }
       };
 
       recognition.onresult = (event: { results: string | any[]; }) => {
@@ -267,16 +273,12 @@ export default function Home() {
     if (chatMessages.length > 0) {
       const lastMessage = chatMessages[chatMessages.length - 1];
       if (lastMessage.type === 'apiMessage') {
-        if ((chatMessages.length - 1) > lastSpokenMessageIndex) {
-          return false;
-        }
+        return (chatMessages.length - 1) === lastSpokenMessageIndex;
       }
     }
-    return true;
+    return false;
   };
   
-  const latestMessage = chatMessages[chatMessages.length - 1];
-
   return (
     <>
       <Layout>

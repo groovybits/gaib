@@ -1,61 +1,53 @@
-// Description: This file contains the function to speak text using the Google Text-to-Speech API
-// 
-// Import useRef from React
-import { useRef } from 'react';
-
+import { useState, useRef } from 'react';
 
 export const useSpeakText = () => {
-  // Create a variable to store the Audio instance
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const queue = useRef<string[]>([]);
+  const stopFlag = useRef<boolean>(false);
 
-  // Create a new stop function
-  const stopSpeaking = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
+  const playNextInQueue = async () => {
+    if (queue.current.length === 0 || stopFlag.current) {
+      stopFlag.current = false;
+      return;
     }
-  };
 
-  const speakText = async (text: string, rate: number = 1, ssmlGender: string = 'FEMALE', languageCode: string = 'en-US', name: string = 'en-US-Neural2-H') => {
+    const text = queue.current.shift() as string;
+
     try {
-      if (audioRef.current && !audioRef.current.paused) {
-        console.log('Audio is already playing');
-        return;
-      }
-  
-      let apiBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      if (!apiBaseUrl || apiBaseUrl === '') {
-        apiBaseUrl = 'http://127.0.0.1:3000';
-      }
-      if (typeof window === 'undefined') {
-        console.log('Audio playback is not available in this environment');
-        return;
-      }
-      const response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
+      const response = await fetch('/api/synthesizeSpeech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, rate, ssmlGender, languageCode, name }),
+        body: JSON.stringify({ text, rate: 1, ssmlGender: 'FEMALE',  languageCode: 'en-US', name: ''  }),
       });
-  
+
       if (!response.ok) {
-        throw new Error('Error in synthesizing speech, statusText: ' + response.statusText);
+        throw new Error('Error in synthesizing speech');
       }
   
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
-      audioRef.current = audio;
       audio.play();
-      audio.addEventListener('ended', () => {
-        stopSpeaking();
-        URL.revokeObjectURL(audioUrl);
-      }, false);
     } catch (error) {
-      console.error('Error in synthesizing speech, error:', error);
+      console.error('Error in synthesizing speech:', error);
     }
-  }
+  };
+
+  const speakText = async (text: string, rate: number = 1, ssmlGender: string = 'FEMALE', languageCode: string = 'en-US', name: string = '') => {
+    queue.current.push(text);
+
+    if (!audio) {
+      playNextInQueue();
+    }
+  };
+
+  const stopSpeaking = () => {
+    stopFlag.current = true;
+    if (audio) {
+      //audio.pause();
+      //setAudio(null);
+    }
+  };
+
   return { speakText, stopSpeaking };
 };
-
-  
