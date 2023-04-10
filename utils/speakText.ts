@@ -15,7 +15,7 @@ export const useSpeakText = () => {
     }
   };
 
-  const speakText = async (text: string, rate: number = 1) => {
+  const speakText = async (text: string, rate: number = 1, ssmlGender: string = 'FEMALE', languageCode: string = 'en-US', name: string = '') => {
     try {
       if (audioRef.current && !audioRef.current.paused) {
         console.log('Audio is already playing');
@@ -33,7 +33,7 @@ export const useSpeakText = () => {
       const response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, rate }),
+        body: JSON.stringify({ text, rate, ssmlGender, languageCode, name }),
       });
   
       if (!response.ok) {

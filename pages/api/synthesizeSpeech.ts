@@ -15,13 +15,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const cleanedText = text.replace(markdownRegex, '');
   
     // Remove special symbols (including periods)
-    const specialSymbolsRegex = /[!@#$%^&*(),.?":{}|<>]/g;
+    const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
     const finalText = cleanedText.replace(specialSymbolsRegex, '');
   
     return finalText;
   }  
 
-  let { text } = req.body;
+  let { text, ssmlGender, languageCode, name } = req.body;
+
+  // Validate and set the default value for ssmlGender
+  if (!['MALE', 'FEMALE', 'NEUTRAL'].includes(ssmlGender)) {
+    ssmlGender = 'FEMALE';
+  }
 
   text = removeMarkdownAndSpecialSymbols(text);
 
@@ -34,7 +39,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   const request = {
     input: { text },
-    voice: { languageCode: 'en-US', ssmlGender: 'NEUTRAL' as const },
+    voice: { name: name, languageCode: languageCode, ssmlGender: ssmlGender as protos.google.cloud.texttospeech.v1.SsmlVoiceGender },
     audioConfig: { audioEncoding: 'MP3' as const },
   };
 

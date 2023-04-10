@@ -16,6 +16,12 @@ import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
     AccordionTrigger,
   } from '@/components/ui/accordion';*/
 
+type PendingMessage = {
+  type: string;
+  message: string;
+  sourceDocs?: Document[];
+};
+type ChatMessage = Message | PendingMessage;
 
 export default function Home() {
   const [query, setQuery] = useState<string>('');
@@ -48,25 +54,30 @@ export default function Home() {
   const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
   const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
-  
+
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [showPopup, setShowPopup] = useState(false);
+
+  const togglePopup = () => {
+    setShowPopup(!showPopup);
+  };
 
   useEffect(() => {
     const lastMessageIndex = messages.length - 1;
-  
+
     if (
       speechOutputEnabled &&
       lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
-      speakText(messages[lastMessageIndex].message, 0.6);
+      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US', 'en-US-Neural2-H');
       setLastSpokenMessageIndex(lastMessageIndex);
     } else {
       stopSpeaking();
     }
   }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex]);
-  
+
 
   type SpeechRecognition = typeof window.SpeechRecognition;
 
@@ -201,6 +212,9 @@ export default function Home() {
         : []),
     ];
   }, [messages, pending, pendingSourceDocs]);
+
+  const latestMessage: Message | PendingMessage | undefined = chatMessages[chatMessages.length - 1];
+  const [animeCharacterText, setAnimeCharacterText] = useState(latestMessage?.message ?? '');
 
   //scroll to bottom of chat
   useEffect(() => {
@@ -440,6 +454,24 @@ export default function Home() {
                         </button>
                       ))}
                     </div>
+
+                    <div className={styles.buttoncontainer}>
+                      <button onClick={togglePopup} className={styles.copybutton}>View Raw Transcript</button>
+
+                      {showPopup && (
+                        <div className="popup" onClick={togglePopup}>
+                          <div
+                            className="popup-content"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <pre className={styles.preWrap}>{latestMessage.message}</pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                   <label>
                     <input
