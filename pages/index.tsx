@@ -72,15 +72,26 @@ export default function Home() {
   
   function splitSentence(sentence : any, maxLength = 80) {
     const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
-    return sentence.match(regex) || [];
+    try {
+      return sentence.match(regex) || [];
+    } catch (e) {
+      console.log('Error splitting sentence: ', sentence, ': ', e);
+      return [sentence];
+    }
   }  
   
   useEffect(() => {
     const lastMessageIndex : any = messages.length - 1;
 
     async function displayImagesAndSubtitles() {
-      // Split the text into sentences
-      const sentences = messages[lastMessageIndex].message.split(/(?<=\.|\?|!)\s+/);
+      let sentences : string[];
+      try {
+        // Split the message into sentences
+        sentences = messages[lastMessageIndex].message.split(/(?<=\.|\?|!)\s+/);
+      } catch (e) {
+        console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
+        sentences = [messages[lastMessageIndex].message];
+      }
   
       for (const sentence of sentences) {
         // TODO: Generate an image based on the sentence
