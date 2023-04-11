@@ -4,11 +4,18 @@ import { PineconeStore } from 'langchain/vectorstores';
 import { makeChain } from '@/utils/makechain';
 import { pinecone } from '@/utils/pinecone-client';
 import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
-
+import logger from '@/utils/logger';
 
 const MAX_INPUT_LENGTH = 4096;
 const MAX_RETRIES = 10;
 const INITIAL_RETRY_DELAY = 1000; // Set the initial retry delay in milliseconds
+
+// Use this function in your frontend components when you want to send a log message
+async function consoleLog(level: string, ...args: any[]) {
+  const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
+
+  logger.log(level, message);
+}
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -16,9 +23,6 @@ function sleep(ms: number) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { question, personality, history } = req.body;
-
-  console.log('-- START SESSION ---');
-  console.log('Original Question: ', question);
 
   if (!question) {
     return res.status(400).json({ message: 'No question in the request' });
@@ -28,10 +32,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Truncate the input if it exceeds the maximum length
   if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {
-    console.log(`Question exceeds maximum length of ${MAX_INPUT_LENGTH} characters, truncating...`)
+    consoleLog('error', `Question ${sanitizedQuestion} exceeds maximum length of ${MAX_INPUT_LENGTH} characters, truncating...`)
     sanitizedQuestion = sanitizedQuestion.substring(0, MAX_INPUT_LENGTH);
   }
-  console.log('Sanitized Question: ', sanitizedQuestion);
+  consoleLog('info', "\nPersonality: ", personality, "\nHistory: ", history, "\nQuestion: ", question, "\nSanitized Question: ", sanitizedQuestion, "\nRequest Body: ", req.body);
 
   const index = pinecone.Index(PINECONE_INDEX_NAME);
 
@@ -44,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       namespace: PINECONE_NAME_SPACE,
     });
   } catch (error) {
-    console.error('Error creating vector store:', error);
+    consoleLog('error', 'Error creating vector store:', error);
     return res.status(500).json({ message: 'Internal server error VS001.' });
   }
 
@@ -83,31 +87,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      console.log('History: ', history ? history : '');
-      console.log('Reponse: ', response.text);
-      console.log('Source Documents: ', response.sourceDocuments);
+      consoleLog('info', "History: \n", history ? history : '', "Response: \n", response);
+
       sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;
     } catch (error) {
       if (error instanceof Error && error.message) {
-        console.error('API error: ', error.message ? error.message : error);
+        consoleLog('error', 'API error: ', error.message ? error.message : error);
       } else {
-        console.error('Unknown error:', error);
+        consoleLog('error', 'Unknown error:', error);
       }
       retries++;
 
       if (retries < MAX_RETRIES) {
         const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retries - 1);
-        console.log(`Retrying in ${retryDelay} ms...`);
+        console.log('info', `Failed to connect to the GPT API after ${retries}, Retrying in ${retryDelay} ms...`);
         await sleep(retryDelay);
       } else {
-        console.log('Could not contact GPT after multiple retries, giving up. Please try again later.');
+        console.log('error', 'Could not contact GPT after multiple retries, giving up. Please try again later.');
         sendData(JSON.stringify({ error: 'Could not contact GPT after multiple retries, giving up. Please try again later.' }));
         break;
       }
     }
   }
-  console.log('-- END SESSION ---');
 
   sendData('[DONE]');
   res.end();

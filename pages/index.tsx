@@ -3,19 +3,17 @@ import Layout from '@/components/layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import Image from 'next/image';
-import ReactMarkdown from 'react-markdown';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
+
 
 type PendingMessage = {
   type: string;
   message: string;
   sourceDocs?: Document[];
 };
-type ChatMessage = Message | PendingMessage;
 
 export default function Home() {
   const [query, setQuery] = useState<string>('');
@@ -55,32 +53,71 @@ export default function Home() {
   const [subtitle, setSubtitle] = useState<string>('');
   const [imageUrl, setImageUrl] = useState<string>('gaib_c.png');
   const [language, setLanguage] = useState('ja-JP');
+  const [gender, setGender] = useState('FEMALE');
+  const [textLanguage, setTextLanguage] = useState('en-US');
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
   };
 
-  async function fetchGptGeneratedImageUrl(sentence: string, index: number): Promise<string> {
-    const keywords = encodeURIComponent(sentence);
-    const gaibOpen = `gaib_o.png?${keywords}`;
-    const gaibClosed = `gaib_c.png?${keywords}`;
-  
-    const selectedImage = index % 2 === 0 ? gaibOpen : gaibClosed;
-    return selectedImage;
-  }
-  
-  function splitSentence(sentence : any, maxLength = 80) {
-    const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
+  // Use this function in your frontend components when you want to send a log message
+  async function consoleLog(level : string, ...args: any[]) {
+    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
+
     try {
-      return sentence.match(regex) || [];
-    } catch (e) {
-      console.log('Error splitting sentence: ', sentence, ': ', e);
-      return [sentence];
-    }
-  }  
+      const response = await fetch('/api/log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ level: level, message }),
+      });
   
+      if (!response.ok) {
+        throw new Error('Failed to send log message');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   useEffect(() => {
     const lastMessageIndex : any = messages.length - 1;
+
+    // TODO - use image generation API in the future when it is available
+    async function fetchGptGeneratedImageUrl(sentence: string, index: number): Promise<string> {
+      const keywords = encodeURIComponent(sentence);
+      const gaibOpen = `gaib_o.png?${keywords}`;
+      const gaibClosed = `gaib_c.png?${keywords}`;
+    
+      const selectedImage = index % 2 === 0 ? gaibOpen : gaibClosed;
+      return selectedImage;
+    }
+    
+    function splitSentence(sentence : any, maxLength = 80) {
+      const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
+      try {
+        return sentence.match(regex) || [];
+      } catch (e) {
+        consoleLog('error', 'Error splitting sentence: ', sentence, ': ', e);
+        return [sentence];
+      }
+    }  
+
+    async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLanguage }),
+      });
+    
+      if (!response.ok) {
+        throw new Error('Error in translating text, statusText: ' + response.statusText);
+      }
+    
+      const data = await response.json();
+      return data.translatedText;
+    }
 
     async function displayImagesAndSubtitles() {
       let sentences : string[];
@@ -88,33 +125,69 @@ export default function Home() {
         // Split the message into sentences
         sentences = messages[lastMessageIndex].message.split(/(?<=\.|\?|!)\s+/);
       } catch (e) {
-        console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
+        consoleLog('error', 'Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
       }
   
       for (const sentence of sentences) {
-        // TODO: Generate an image based on the sentence
-        //const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex);
+        const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex);
 
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
-          // Reset the subtitle
-          setImageUrl('gaib_o.png'); // Set the image to the open mouth
-          setSubtitle('');
-          // Set the subtitle
-          setSubtitle(splitSentence(sentence));
-          console.log('Speech starting for sentence: ', sentence, 'at ', new Date().toLocaleTimeString('en-US'));
-          // Speak the sentence
+          setImageUrl(generatedImageUrl); // Set the image to the open mouth
+          setSubtitle(''); // Clear the subtitle
+
+          // Set the subtitle to the translated text if the text is not in English
+          let translatedText = '';
+          if (textLanguage !== 'en-US') {
+            translatedText = await fetchTranslation(sentence, textLanguage);
+            setSubtitle(splitSentence(translatedText));
+          } else {
+            setSubtitle(splitSentence(sentence));
+          }
+
+          // determine the model to use
           let model = "en-US-Neural2-H";
           if (language === 'en-US') {
-            model = "en-US-Neural2-H";
+            if (gender === 'MALE') {
+              model = "en-US-Neural2-i";
+            } else if (gender === 'FEMALE'){
+              model = "en-US-Neural2-H";
+            } else {
+              model = "";
+            }
+          } else if (language === 'ja-JP') {
+            if (gender === 'MALE') {
+              model = "ja-JP-Neural2-C";
+            } else if (gender === 'FEMALE'){
+              model = "ja-JP-Neural2-B";
+            } else {
+              model = "";
+            }
           } else {
-            console.log('No model found for language: ', language);
             model = "";
           }
 
-          await speakText(sentence, 1, 'FEMALE', language, model);
-          console.log('Speech complete for sentence: ', sentence, 'at ', new Date().toLocaleTimeString('en-US'));
+          consoleLog('info', 'Using speakText with values - gender: ', gender, ' model: ', model, ' language: ', language);
+
+          // Speak the sentence
+          if (language === 'en-US') {
+            // Speak the original text
+            consoleLog('info', 'speaking untranslated from text: ', sentence);
+            await speakText(sentence, 1, gender, language, model);
+          } else {
+            // Speak the translated text
+            let translationEntry : string = '';
+            if (translatedText !== '') {
+              // Use the previously translated text
+              translationEntry = translatedText;
+            } else {
+              // Translate the text
+              translationEntry = await fetchTranslation(sentence, language);
+            }
+            consoleLog('info', 'speaking translated from text: ', sentence, ' to text: ', translationEntry);
+            await speakText(translationEntry, 1, gender, language, model);
+          }
           setImageUrl('gaib_c.png'); // Set the image to the closed mouth
           // Set the last message displayed
           setLastMessageDisplayed(lastMessageIndex);
@@ -135,7 +208,7 @@ export default function Home() {
     } else {
       stopSpeaking();
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, fetchGptGeneratedImageUrl, lastMessageDisplayed]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, language, textLanguage]);
   
 
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -169,7 +242,7 @@ export default function Home() {
     }
 
     if (!query) {
-      console.log('[GAIB] Prompt Query submission was empty!');
+      consoleLog('debug', '[GAIB] Prompt Query submission was empty!');
       return;
     }
 
@@ -206,7 +279,7 @@ export default function Home() {
           history,
         }),
         signal: ctrl.signal,
-        onmessage: (event) => {
+        onmessage: (event: { data: string; }) => {
           if (event.data === '[DONE]') {
             setMessageState((state) => ({
               history: [...state.history, [question, state.pending ?? '']],
@@ -242,7 +315,7 @@ export default function Home() {
     } catch (error) {
       setLoading(false);
       setError('An error occurred while fetching the data. Please try again.');
-      console.log('error', error);
+      consoleLog('error', error);
     }
   }
 
@@ -273,7 +346,6 @@ export default function Home() {
   }, [messages, pending, pendingSourceDocs]);
 
   const latestMessage: Message | PendingMessage | undefined = chatMessages[chatMessages.length - 1];
-  const [animeCharacterText, setAnimeCharacterText] = useState(latestMessage?.message ?? '');
 
   //scroll to bottom of chat
   useEffect(() => {
@@ -361,7 +433,9 @@ export default function Home() {
           <main className={styles.main}>
             <div className={styles.cloud}>
               <div className={styles.imageContainer}>
-                <img src={imageUrl} alt="GAIB" className={styles.generatedImage} height="480" width="720" />
+                <div className={styles.generatedImage}>
+                <img src={imageUrl} alt="GAIB" height="480" width="720" />
+                </div>
                 <div className={styles.subtitle}>{subtitle}</div>
               </div>
             </div>
@@ -530,7 +604,58 @@ export default function Home() {
                             <option value="ms-MY">Malay (ms-MY)</option>
                             </select>
                         </form>
+                        <form>
+                          <label htmlFor="text-language-select">Subtitle language:</label>
+                          <select
+                            id="text-language-select"
+                            value={textLanguage}
+                            onChange={(e) => setTextLanguage(e.target.value)}
+                          >
+                            <option value="en-US">English (en-US)</option>
+                            <option value="ja-JP">Japanese (ja-JP)</option>
+                            <option value="en-GB">English Great Britain (en-GB)</option>
+                            <option value="zh-CN">Chinese (zh-CN)</option>
+                            <option value="au-AU">English Australia (au-AU)</option>
+                            <option value="es-ES">Spanish (es-ES)</option>
+                            <option value="fr-FR">French (fr-FR)</option>
+                            <option value="it-IT">Italian (it-IT)</option>
+                            <option value="de-DE">German (de-DE)</option>
+                            <option value="pt-BR">Portuguese (pt-PT)</option>
+                            <option value="ru-RU">Russian (ru-RU)</option>
+                            <option value="ko-KR">Korean (ko-KR)</option>
+                            <option value="ar-SA">Arabic (ar-SA)</option>
+                            <option value="hi-IN">Hindi (hi-IN)</option>
+                            <option value="nl-NL">Dutch (nl-NL)</option>
+                            <option value="pl-PL">Polish (pl-PL)</option>
+                            <option value="tr-TR">Turkish (tr-TR)</option>
+                            <option value="sv-SE">Swedish (sv-SE)</option>
+                            <option value="da-DK">Danish (da-DK)</option>
+                            <option value="nb-NO">Norwegian (nb-NO)</option>
+                            <option value="fi-FI">Finnish (fi-FI)</option>
+                            <option value="cs-CZ">Czech (cs-CZ)</option>
+                            <option value="el-GR">Greek (el-GR)</option>
+                            <option value="hu-HU">Hungarian (hu-HU)</option>
+                            <option value="ro-RO">Romanian (ro-RO)</option>
+                            <option value="sk-SK">Slovak (sk-SK)</option>
+                            <option value="th-TH">Thai (th-TH)</option>
+                            <option value="vi-VN">Vietnamese (vi-VN)</option>
+                            <option value="id-ID">Indonesian (id-ID)</option>
+                            <option value="ms-MY">Malay (ms-MY)</option>
+                            </select>
+                        </form>
                       </label>
+                      <div className={styles.buttonContainer}>
+                        <label htmlFor="gender-select">Choose a gender:</label>
+                        <select
+                          id="gender-select"
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                          >
+                          <option value="FEMALE">Female</option>
+                          <option value="MALE">Male</option>
+                          <option value="NEUTRAL">Neutral</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                   <div className={styles.buttonContainer}>

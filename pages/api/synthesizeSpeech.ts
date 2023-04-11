@@ -23,11 +23,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   let { text, ssmlGender, languageCode, name } = req.body;
 
-  // Validate and set the default value for ssmlGender
-  if (!['MALE', 'FEMALE', 'NEUTRAL'].includes(ssmlGender)) {
-    ssmlGender = 'FEMALE';
-  }
-
   text = removeMarkdownAndSpecialSymbols(text);
 
   if (!text) {

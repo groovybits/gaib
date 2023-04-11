@@ -14,7 +14,7 @@ export const useSpeakText = () => {
     text: string,
     rate: number = 1,
     ssmlGender: string = 'FEMALE',
-    languageCode: string = 'en-US',
+    languageCode: string = 'ja-JP',
     name: string = ''
   ): Promise<void> => {
     return new Promise(async (resolve) => {
@@ -29,13 +29,13 @@ export const useSpeakText = () => {
         if (!apiBaseUrl || apiBaseUrl === '') {
           apiBaseUrl = 'http://127.0.0.1:3000';
         }
+
         if (typeof window === 'undefined') {
           console.log('Audio playback is not available in this environment');
           resolve();
           return;
         }
-        console.log('languageCode: ', languageCode);
-        console.log('name: ', name);
+
         let response = null;
         if (name === '') {
           response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {

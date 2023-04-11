@@ -14,10 +14,16 @@ if (!process.env.CONDENSE_PROMPT) {
   throw new Error('Missing GPT condense prompt in .env file');
 }
 
+if (!process.env.GOOGLE_TRANSLATE_API_KEY) {
+  throw new Error('Missing Google Text Translation API Key in .env file');
+}
+
 const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME ?? '';
 
 const PINECONE_NAME_SPACE = process.env.PINECONE_NAME_SPACE ?? '';;
 
 const CONDENSE_PROMPT = process.env.CONDENSE_PROMPT ?? '';
 
-export { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE, CONDENSE_PROMPT };
+const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY ?? '';
+
+export { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE, CONDENSE_PROMPT, GOOGLE_TRANSLATE_API_KEY };
