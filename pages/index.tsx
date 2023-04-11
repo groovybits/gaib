@@ -150,17 +150,17 @@ export default function Home() {
           let model = "en-US-Neural2-H";
           if (language === 'en-US') {
             if (gender === 'MALE') {
-              model = "en-US-Neural2-i";
+              model = 'en-US-Wavenet-A';
             } else if (gender === 'FEMALE'){
-              model = "en-US-Neural2-H";
+              model = 'en-US-Wavenet-C';
             } else {
               model = "";
             }
           } else if (language === 'ja-JP') {
             if (gender === 'MALE') {
-              model = "ja-JP-Neural2-C";
+              model = "ja-JP-Wavenet-B";
             } else if (gender === 'FEMALE'){
-              model = "ja-JP-Neural2-B";
+              model = 'ja-JP-Wavenet-A';
             } else {
               model = "";
             }
