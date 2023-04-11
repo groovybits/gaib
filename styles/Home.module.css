@@ -71,27 +71,12 @@
   color: #fff;
 }
 
-.copybutton {
-  position: top;
-  color: #ffffff;
-  background: #000000;
-  padding: 1rem;
-  border-color: #FFA500;
-  /*width: 15;
-  height: 5;*/
-  font-weight: bold;
-  border-radius: 8px;
-  border: double;
-}
-
 .speakbutton{
   position: right;
   color: #ffffff;
   background: #000000;
   padding: 1rem;
   border-color: #FFA500;
-  /*width: 15;
-  height: 5;*/
   font-weight: bold;
   border-radius: 8px;
   border: double;
@@ -100,6 +85,11 @@
 .buttoncontainer {
   display: inline-block;
   margin-right: 8px;
+  background-color: transparent;
+  border: 1;
+  border-radius: 8px;
+  border-color: #000000;
+  border-style: double;
 }
 
 .voicebutton {

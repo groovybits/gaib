@@ -10,7 +10,6 @@ import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
 
-
 type PendingMessage = {
   type: string;
   message: string;
@@ -55,7 +54,7 @@ export default function Home() {
   const [showPopup, setShowPopup] = useState(false);
   const [subtitle, setSubtitle] = useState<string>('');
   const [imageUrl, setImageUrl] = useState<string>('gaib_c.png');
-
+  const [language, setLanguage] = useState('ja-JP');
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -106,7 +105,15 @@ export default function Home() {
           setSubtitle(splitSentence(sentence));
           console.log('Speech starting for sentence: ', sentence, 'at ', new Date().toLocaleTimeString('en-US'));
           // Speak the sentence
-          await speakText(sentence, 1, 'FEMALE', 'en-US', 'en-US-Neural2-H');
+          let model = "en-US-Neural2-H";
+          if (language === 'en-US') {
+            model = "en-US-Neural2-H";
+          } else {
+            console.log('No model found for language: ', language);
+            model = "";
+          }
+
+          await speakText(sentence, 1, 'FEMALE', language, model);
           console.log('Speech complete for sentence: ', sentence, 'at ', new Date().toLocaleTimeString('en-US'));
           setImageUrl('gaib_c.png'); // Set the image to the closed mouth
           // Set the last message displayed
@@ -483,6 +490,47 @@ export default function Home() {
                     />
                     &nbsp;&nbsp; <b>Listen for GAIB</b>
                   </label>
+                  <label>
+                        <form>
+                          <label htmlFor="language-select">Audio language:</label>
+                          <select
+                            id="language-select"
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                          >
+                            <option value="ja-JP">Japanese (ja-JP)</option>
+                            <option value="en-US">English (en-US)</option>
+                            <option value="en-GB">English Great Britain (en-GB)</option>
+                            <option value="zh-CN">Chinese (zh-CN)</option>
+                            <option value="au-AU">English Australia (au-AU)</option>
+                            <option value="es-ES">Spanish (es-ES)</option>
+                            <option value="fr-FR">French (fr-FR)</option>
+                            <option value="it-IT">Italian (it-IT)</option>
+                            <option value="de-DE">German (de-DE)</option>
+                            <option value="pt-BR">Portuguese (pt-PT)</option>
+                            <option value="ru-RU">Russian (ru-RU)</option>
+                            <option value="ko-KR">Korean (ko-KR)</option>
+                            <option value="ar-SA">Arabic (ar-SA)</option>
+                            <option value="hi-IN">Hindi (hi-IN)</option>
+                            <option value="nl-NL">Dutch (nl-NL)</option>
+                            <option value="pl-PL">Polish (pl-PL)</option>
+                            <option value="tr-TR">Turkish (tr-TR)</option>
+                            <option value="sv-SE">Swedish (sv-SE)</option>
+                            <option value="da-DK">Danish (da-DK)</option>
+                            <option value="nb-NO">Norwegian (nb-NO)</option>
+                            <option value="fi-FI">Finnish (fi-FI)</option>
+                            <option value="cs-CZ">Czech (cs-CZ)</option>
+                            <option value="el-GR">Greek (el-GR)</option>
+                            <option value="hu-HU">Hungarian (hu-HU)</option>
+                            <option value="ro-RO">Romanian (ro-RO)</option>
+                            <option value="sk-SK">Slovak (sk-SK)</option>
+                            <option value="th-TH">Thai (th-TH)</option>
+                            <option value="vi-VN">Vietnamese (vi-VN)</option>
+                            <option value="id-ID">Indonesian (id-ID)</option>
+                            <option value="ms-MY">Malay (ms-MY)</option>
+                            </select>
+                        </form>
+                      </label>
                     </div>
                   </div>
                   <div className={styles.buttonContainer}>

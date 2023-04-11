@@ -34,11 +34,22 @@ export const useSpeakText = () => {
           resolve();
           return;
         }
-        const response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, rate, ssmlGender, languageCode, name }),
-        });
+        console.log('languageCode: ', languageCode);
+        console.log('name: ', name);
+        let response = null;
+        if (name === '') {
+          response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, rate, ssmlGender, languageCode }),
+          });
+        } else {
+          response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, rate, ssmlGender, languageCode, name }),
+          });
+        }
 
         if (!response.ok) {
           throw new Error('Error in synthesizing speech, statusText: ' + response.statusText);
