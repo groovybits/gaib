@@ -1,13 +1,8 @@
-// Description: This file contains the function to speak text using the Google Text-to-Speech API
-// 
-// Import useRef from React
 import { useRef } from 'react';
 
 export const useSpeakText = () => {
-  // Create a variable to store the Audio instance
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Create a new stop function
   const stopSpeaking = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -15,45 +10,60 @@ export const useSpeakText = () => {
     }
   };
 
-  const speakText = async (text: string, rate: number = 1, ssmlGender: string = 'FEMALE', languageCode: string = 'en-US', name: string = '') => {
-    try {
-      if (audioRef.current && !audioRef.current.paused) {
-        console.log('Audio is already playing');
-        return;
+  const speakText = async (
+    text: string,
+    rate: number = 1,
+    ssmlGender: string = 'FEMALE',
+    languageCode: string = 'en-US',
+    name: string = ''
+  ): Promise<void> => {
+    return new Promise(async (resolve) => {
+      try {
+        if (audioRef.current && !audioRef.current.paused) {
+          console.log('Audio is already playing');
+          resolve();
+          return;
+        }
+
+        let apiBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+        if (!apiBaseUrl || apiBaseUrl === '') {
+          apiBaseUrl = 'http://127.0.0.1:3000';
+        }
+        if (typeof window === 'undefined') {
+          console.log('Audio playback is not available in this environment');
+          resolve();
+          return;
+        }
+        const response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, rate, ssmlGender, languageCode, name }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Error in synthesizing speech, statusText: ' + response.statusText);
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        audio.play();
+        audio.addEventListener(
+          'ended',
+          () => {
+            stopSpeaking();
+            URL.revokeObjectURL(audioUrl);
+            resolve();
+          },
+          false
+        );
+      } catch (error) {
+        console.error('Error in synthesizing speech, error:', error);
+        resolve();
       }
-  
-      let apiBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      if (!apiBaseUrl || apiBaseUrl === '') {
-        apiBaseUrl = 'http://127.0.0.1:3000';
-      }
-      if (typeof window === 'undefined') {
-        console.log('Audio playback is not available in this environment');
-        return;
-      }
-      const response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, rate, ssmlGender, languageCode, name }),
-      });
-  
-      if (!response.ok) {
-        throw new Error('Error in synthesizing speech, statusText: ' + response.statusText);
-      }
-  
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.play();
-      audio.addEventListener('ended', () => {
-        stopSpeaking();
-        URL.revokeObjectURL(audioUrl);
-      }, false);
-    } catch (error) {
-      console.error('Error in synthesizing speech, error:', error);
-    }
-  }
+    });
+  };
+
   return { speakText, stopSpeaking };
 };
-
-  

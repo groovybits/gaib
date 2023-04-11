@@ -9,12 +9,7 @@ import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
-/*import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-  } from '@/components/ui/accordion';*/
+
 
 type PendingMessage = {
   type: string;
@@ -27,7 +22,6 @@ export default function Home() {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  //const [sourceDocs, setSourceDocs] = useState<Document[]>([]);
   const [messageState, setMessageState] = useState<{
     messages: Message[];
     pending?: string;
@@ -54,30 +48,77 @@ export default function Home() {
   const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
   const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
+  const [lastMessageDisplayed, setLastMessageDisplayed] = useState(-1);
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [subtitle, setSubtitle] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string>('gaib_c.png');
+
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
   };
 
+  async function fetchGptGeneratedImageUrl(sentence: string, index: number): Promise<string> {
+    const keywords = encodeURIComponent(sentence);
+    const gaibOpen = `gaib_o.png?${keywords}`;
+    const gaibClosed = `gaib_c.png?${keywords}`;
+  
+    const selectedImage = index % 2 === 0 ? gaibOpen : gaibClosed;
+    return selectedImage;
+  }
+  
+  function splitSentence(sentence : any, maxLength = 80) {
+    const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
+    return sentence.match(regex) || [];
+  }  
+  
   useEffect(() => {
-    const lastMessageIndex = messages.length - 1;
+    const lastMessageIndex : any = messages.length - 1;
 
+    async function displayImagesAndSubtitles() {
+      // Split the text into sentences
+      const sentences = messages[lastMessageIndex].message.split(/(?<=\.|\?|!)\s+/);
+  
+      for (const sentence of sentences) {
+        // TODO: Generate an image based on the sentence
+        //const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex);
+
+        // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
+        if (lastMessageDisplayed != lastMessageIndex) {
+          // Reset the subtitle
+          setImageUrl('gaib_o.png'); // Set the image to the open mouth
+          setSubtitle('');
+          // Set the subtitle
+          setSubtitle(splitSentence(sentence));
+          console.log('Speech starting for sentence: ', sentence, 'at ', new Date().toLocaleTimeString('en-US'));
+          // Speak the sentence
+          await speakText(sentence, 1, 'FEMALE', 'en-US', 'en-US-Neural2-H');
+          console.log('Speech complete for sentence: ', sentence, 'at ', new Date().toLocaleTimeString('en-US'));
+          setImageUrl('gaib_c.png'); // Set the image to the closed mouth
+          // Set the last message displayed
+          setLastMessageDisplayed(lastMessageIndex);
+        }
+      }
+      // Reset the subtitle after all sentences have been spoken
+      setSubtitle('');
+      setImageUrl('gaib_c.png');
+    }
+  
     if (
       speechOutputEnabled &&
       lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
-      speakText(messages[lastMessageIndex].message, 1, 'FEMALE', 'en-US', 'en-US-Neural2-H');
+      displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
     } else {
       stopSpeaking();
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex]);
-
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, fetchGptGeneratedImageUrl, lastMessageDisplayed]);
+  
 
   type SpeechRecognition = typeof window.SpeechRecognition;
 
@@ -297,55 +338,12 @@ export default function Home() {
   return (
     <>
       <Layout>
-        <div className="mx-auto flex flex-col gap-4">
+        <div className="mx-auto flex flex-col gap-4 bg-#3b82f6">
           <main className={styles.main}>
             <div className={styles.cloud}>
-              <div ref={messageListRef} className={styles.messagelist}>
-                {chatMessages.map((message, index) => {
-                  let icon;
-                  let className;
-                  if (message.type === 'apiMessage') {
-                    icon = (
-                      <Image
-                        src="/bot-image.png"
-                        alt="GAIB"
-                        width="60"
-                        height="60"
-                        className={styles.boticon}
-                        priority
-                      />
-                    );
-                    className = styles.apimessage;
-                  } else {
-                    icon = (
-                      <Image
-                        src="/usericon.png"
-                        alt="Human"
-                        width="60"
-                        height="60"
-                        className={styles.usericon}
-                        priority
-                      />
-                    );
-                    // The latest message sent by the user will be animated while waiting for a response
-                    className =
-                      loading && index === chatMessages.length - 1
-                        ? styles.usermessagewaiting
-                        : styles.usermessage;
-                  }
-                  return (
-                    <>
-                      <div key={`chatMessage-${index}`} className={className}>
-                        {icon}
-                        <div className={styles.markdownanswer}>
-                          <ReactMarkdown linkTarget="_blank">
-                            {message.message}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })}
+              <div className={styles.imageContainer}>
+                <img src={imageUrl} alt="GAIB" className={styles.generatedImage} height="480" width="720" />
+                <div className={styles.subtitle}>{subtitle}</div>
               </div>
             </div>
             <div className={styles.center}>
@@ -454,25 +452,9 @@ export default function Home() {
                         </button>
                       ))}
                     </div>
-
-                    <div className={styles.buttoncontainer}>
-                      <button onClick={togglePopup} className={styles.copybutton}>View Raw Transcript</button>
-
-                      {showPopup && (
-                        <div className="popup" onClick={togglePopup}>
-                          <div
-                            className="popup-content"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                          >
-                            <pre className={styles.preWrap}>{latestMessage.message}</pre>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
                   </div>
+                  <div className={styles.buttonWrapper}>
+                    <div className={styles.buttoncontainer}>
                   <label>
                     <input
                       type="checkbox"
@@ -489,6 +471,39 @@ export default function Home() {
                     />
                     &nbsp;&nbsp; <b>Listen for GAIB</b>
                   </label>
+                    </div>
+                  </div>
+                  <div className={styles.buttonContainer}>
+                    <button onClick={togglePopup} className={styles.copyButton}>
+                      <svg
+                        className={styles.documentIcon}
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      Transcript View
+                    </button>
+
+                    {showPopup && (
+                      <div className="popup" onClick={togglePopup}>
+                        <div
+                          className="popup-content"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <pre className={styles.preWrap}>{latestMessage.message}</pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </form>
               </div>
             </div>
