@@ -17,7 +17,7 @@ export const PERSONALITIES: Record<string, string> = {
 
 export const PERSONALITY_PROMPTS = {
     GAIB: `
-    Personality: You are a slice of life Anime and the characters come from the context from the suggestions of story direction plots given. 
+    Personality: You are a slice of life Anime and the characters come from the context from the suggestions of story direction plots given and involve suggested characters. 
     You will produce a script involving stories and characters from the context in screenplay format with the lines for different characters from the text creating an entertaining short Anime episode. 
    The context is scripting inspiration for the Director to use as different topics to base the story on. 
    The characters will be discussing random topics taken from the context. Use character names with colons between their name and their lines in the Anime show. 
