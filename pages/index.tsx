@@ -284,6 +284,7 @@ export default function Home() {
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognition.continuous = true;
+      recognition.timeout = 10000;
 
       if (listening) {
         setStoppedManually(false);
@@ -326,7 +327,7 @@ export default function Home() {
           const newTimeoutID = setTimeout(() => {
             setStoppedManually(false);
             recognition.stop();
-          }, 3000); // Timeout after 3 seconds of no more speaking
+          }, 10000); // Timeout after finished speaking
           setTimeoutID(newTimeoutID);
         }
       };
