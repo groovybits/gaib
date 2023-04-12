@@ -37,7 +37,7 @@ export interface Language {
     { code: "fil-PH", name: "Filipino (fil-PH)" },
     { code: "uk-UA", name: "Ukrainian (uk-UA)" },
     { code: "he-IL", name: "Hebrew (he-IL)" },
-    { code: "bo", name: "Tibetan (bo)" },
+    /*{ code: "bo", name: "Tibetan (bo)" },*/
     { code: "sa", name: "Sanskrit (sa)" },
   ];
   
@@ -75,7 +75,7 @@ export interface Language {
     { code: "fil-PH", name: "Filipino (fil-PH)" },
     { code: "uk-UA", name: "Ukrainian (uk-UA)" },
     { code: "he-IL", name: "Hebrew (he-IL)" },  
-    { code: "bo", name: "Tibetan (bo)" },
+    /*{ code: "bo", name: "Tibetan (bo)" },*/ // Google has this in research, not public yet
     { code: "sa", name: "Sanskrit (sa)" },
 ];
   
