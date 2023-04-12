@@ -28,7 +28,7 @@
   color: #000000; /* Changed font color to yellow-green */
   background: #ffffff; /* Changed background color to a darker color */
   outline: none;
-  font-family: "Trebuchet MS", monospace; /* Added font family */
+  font-family: 'Trebuchet MS', monospace; /* Added font family */
 }
 
 .textarea:disabled {
@@ -71,12 +71,12 @@
   color: #fff;
 }
 
-.speakbutton{
+.speakbutton {
   position: right;
   color: #ffffff;
   background: #000000;
   padding: 1rem;
-  border-color: #FFA500;
+  border-color: #ffa500;
   font-weight: bold;
   border-radius: 8px;
   border: double;
@@ -141,12 +141,12 @@
   position: absolute;
   top: 0.2rem;
   right: 0.25rem;
-  color: #FFA500; /* Changed font color to yellow-green */
+  color: #ffa500; /* Changed font color to yellow-green */
 }
 
 .svgicon {
   transform: rotate(90deg);
-  width: 2.0em;
+  width: 2em;
   height: 1.2em;
   fill: currentColor;
 }
@@ -189,22 +189,22 @@
 
 .usermessage {
   padding: 0.5rem;
-  color: #BADA55; /* Changed font color to yellow-green */
-  background: #1E1E1E; /* Changed background color to a darker color */
+  color: #bada55; /* Changed font color to yellow-green */
+  background: #1e1e1e; /* Changed background color to a darker color */
   font-size: 28px;
 }
 
 .usermessagewaiting {
-  padding: 1.0rem;
-  color: #BADA55; /* Changed font color to yellow-green */
-  background: #1E1E1E; /* Changed background color to a darker color */
+  padding: 1rem;
+  color: #bada55; /* Changed font color to yellow-green */
+  background: #1e1e1e; /* Changed background color to a darker color */
   background: linear-gradient(to left, #07080938, #1a1c2024, #07080936);
   background-size: 200% 200%;
   background-position: -100% 0;
   animation: loading-gradient 2s ease-in-out infinite;
   animation-direction: alternate;
   animation-name: loading-gradient;
-  font-family: "Trebuchet MS", monospace; /* Added font family */
+  font-family: 'Trebuchet MS', monospace; /* Added font family */
   font-size: 28px;
 }
 
@@ -218,12 +218,12 @@
 }
 
 .apimessage {
-  background: #1E1E1E;
+  background: #1e1e1e;
   padding: 0.5rem;
   color: #e5f810;
   animation: fadein 0.5s;
   white-space: pre-wrap !important;
-  font-family: "Trebuchet MS", monospace; /* Added font family */
+  font-family: 'Trebuchet MS', monospace; /* Added font family */
 }
 
 @keyframes fadein {
@@ -239,7 +239,7 @@
 .usermessage,
 .usermessagewaiting {
   display: flex;
-  background: #1E1E1E;
+  background: #1e1e1e;
 }
 
 .markdownanswer {
@@ -248,7 +248,7 @@
   color: #e5f810;
   background: transparent;
   animation: fadein 0.5s;
-  font-family: "Trebuchet MS", monospace; /* Added font family */
+  font-family: 'Trebuchet MS', monospace; /* Added font family */
   font-size: 20px;
   font-weight: 300;
 }
@@ -266,9 +266,9 @@
 .markdownanswer code {
   font-weight: 500;
   white-space: pre-wrap !important;
-  color: #BADA55; /* Changed font color to yellow-green */
-  background: #1E1E1E; /* Changed background color to a darker color */
-  font-family: "Trebuchet MS", monospace; /* Added font family */
+  color: #bada55; /* Changed font color to yellow-green */
+  background: #1e1e1e; /* Changed background color to a darker color */
+  font-family: 'Trebuchet MS', monospace; /* Added font family */
   animation: fadein 0.5s;
   font-size: 18px;
 }
@@ -283,8 +283,8 @@
   margin-right: 1rem;
   border-radius: 1rem;
   height: 100%;
-  color: #FFFFFF;
-  background: #FFFFFF;
+  color: #ffffff;
+  background: #ffffff;
 }
 
 .markdownanswer h1,
@@ -305,7 +305,7 @@
 .cloud {
   width: 75vw;
   height: 65vh;
-  background: #1E1E1E; /* Changed background color to a darker color */
+  background: #1e1e1e; /* Changed background color to a darker color */
   border-radius: 0.5rem;
   border: 1px solid #d9d9e3;
   display: flex;
@@ -327,7 +327,7 @@
 .footer {
   color: #5f6368;
   font-size: 0.8rem;
-  margin: 1.0rem;
+  margin: 1rem;
 }
 
 .footer a {
@@ -345,7 +345,7 @@
 }
 
 /* Mobile optimization */
-@media (max-width: 300px) {
+@media (max-width: 400px) {
   .main {
     padding: 0.5rem;
     max-height: 60vh;
@@ -359,7 +359,7 @@
     width: 22rem;
     color: #000000; /* Changed font color to yellow-green */
     background: #ffffff; /* Changed background color to a darker color */
-    font-family: "Trebuchet MS", monospace; /* Added font family */
+    font-family: 'Trebuchet MS', monospace; /* Added font family */
   }
   .topnav {
     border: 1px solid black;
@@ -375,8 +375,8 @@
   .markdownanswer code {
     white-space: pre-wrap !important;
     color: #e5f810;
-    background: #1E1E1E;
-    font-family: "Trebuchet MS", monospace; /* Added font family */
+    background: #1e1e1e;
+    font-family: 'Trebuchet MS', monospace; /* Added font family */
   }
 
   .footer {
@@ -387,74 +387,71 @@
 }
 
 .popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 999;
-    border: #000000;
-    border-style: double;
-    border-width: 8px;
-    border-radius: 8px;
-  }
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  border: #000000;
+  border-style: double;
+  border-width: 8px;
+  border-radius: 8px;
+}
 
-  .popup-content {
-    background-color: white;
-    padding: 8px;
-    border-radius: 4px;
-    max-width: 80%;
-    max-height: 80%;
-    overflow-y: auto;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
-    border-style: double;
-    border-width: 8px;
-    border-radius: 8px;
-    border-color:rgba(0, 0, 0, 1)
-  }
+.popup-content {
+  background-color: white;
+  padding: 8px;
+  border-radius: 4px;
+  max-width: 80%;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
+  border-style: double;
+  border-width: 8px;
+  border-radius: 8px;
+  border-color: rgba(0, 0, 0, 1);
+}
 
-  .preWrap {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    background-color: white;
-    padding: 8px;
-    border-radius: 4px;
-    max-width: 80%;
-    max-height: 80%;
-    overflow-y: auto;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
-    border-style: double;
-    border-width: 8px;
-    border-radius: 8px;
-    border-color:rgba(0, 0, 0, 1)
-  }
+.preWrap {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background-color: white;
+  padding: 8px;
+  border-radius: 4px;
+  max-width: 80%;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
+  border-style: double;
+  border-width: 8px;
+  border-radius: 8px;
+  border-color: rgba(0, 0, 0, 1);
+}
 
-  .animesubtitles {
-    align-items: flex-end;
-    white-space: pre-wrap !important;
-    background: transparent;
-    color: white;
-    padding: 0px;
-    bottom: 12%;
-    left: 2%;
-    font-size: 24px;
-    text-align: left;
-    border-width: 0px;
-    font-weight: bolder;
-    font-family: "Trebuchet MS";
-    /* Added font family */
-    line-height: 1.2;
-    margin: 0px;
-    justify-content: bottom;
-    text-shadow:
-    -2px -2px 2px #000000, /* top left */
-    2px -2px 2px #000000,  /* top right */
-    -2px 2px 2px #000000,  /* bottom left */
-    3px 3px 3px #000000;   /* bottom right */
+.animesubtitles {
+  align-items: flex-end;
+  white-space: pre-wrap !important;
+  background: transparent;
+  color: white;
+  padding: 0px;
+  bottom: 12%;
+  left: 2%;
+  font-size: 24px;
+  text-align: left;
+  border-width: 0px;
+  font-weight: bolder;
+  font-family: 'Trebuchet MS';
+  /* Added font family */
+  line-height: 1.2;
+  margin: 0px;
+  justify-content: bottom;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
 .copyButton {
@@ -493,14 +490,86 @@
   text-align: left;
   border-width: 0px;
   font-weight: bolder;
-  font-family: "Trebuchet MS";
+  font-family: 'Trebuchet MS';
   /* Added font family */
   line-height: 1.2;
   margin: 0px;
   justify-content: bottom;
-  text-shadow:
-  -2px -2px 2px #000000, /* top left */
-  2px -2px 2px #000000,  /* top right */
-  -2px 2px 2px #000000,  /* bottom left */
-  3px 3px 3px #000000;   /* bottom right */
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
+
+.dropdowncontainer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1px;
+}
+
+.dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: transparent;
+  outline: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  color: #000000;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 2px solid #000000;
+}
+
+.dropdownContainer::after {
+  content: '▼';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.dropdowncontainer label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.label {
+  font-weight: bold;
+  display: inline-block;
+  margin-right: 8px;
+  margin-left: 8px;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.label-container {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.styles-dropdown {
+  border: 1px solid #000;
+  background-color: #fff;
+  font-weight: bold;
+  color: #000;
+  appearance: none;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.select {
+  border: 1px solid #ccc;
+  background-color: #fff;
+  padding: 4px 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+}
+

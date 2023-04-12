@@ -6,7 +6,8 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
-import { PERSONALITY_PROMPTS } from '../config/personalityPrompts';
+import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
+import { audioLanguages, subtitleLanguages, Language } from "@/config/textLanguages";
 
 
 type PendingMessage = {
@@ -42,7 +43,6 @@ export default function Home() {
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
   const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(true);
   const [speechOutputEnabled, setSpeechOutputEnabled] = useState(true);
-  const [listenForGAIB, setListenForGAIB] = useState<boolean>(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
   const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
   const [lastMessageDisplayed, setLastMessageDisplayed] = useState(-1);
@@ -52,16 +52,18 @@ export default function Home() {
   const [showPopup, setShowPopup] = useState(false);
   const [subtitle, setSubtitle] = useState<string>('');
   const [imageUrl, setImageUrl] = useState<string>('gaib_c.png');
-  const [language, setLanguage] = useState('ja-JP');
   const [gender, setGender] = useState('FEMALE');
-  const [textLanguage, setTextLanguage] = useState('en-US');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
+  const [audioLanguage, setAudioLanguage] = useState<string>("ja-JP");
+  const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
+
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
   };
 
   // Use this function in your frontend components when you want to send a log message
-  async function consoleLog(level : string, ...args: any[]) {
+  async function consoleLog(level: string, ...args: any[]) {
     const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
 
     try {
@@ -72,7 +74,7 @@ export default function Home() {
         },
         body: JSON.stringify({ level: level, message }),
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to send log message');
       }
@@ -82,19 +84,19 @@ export default function Home() {
   }
 
   useEffect(() => {
-    const lastMessageIndex : any = messages.length - 1;
+    const lastMessageIndex: any = messages.length - 1;
 
     // TODO - use image generation API in the future when it is available
     async function fetchGptGeneratedImageUrl(sentence: string, index: number): Promise<string> {
       const keywords = encodeURIComponent(sentence);
       const gaibOpen = `gaib_o.png?${keywords}`;
       const gaibClosed = `gaib_c.png?${keywords}`;
-    
+
       const selectedImage = index % 2 === 0 ? gaibOpen : gaibClosed;
       return selectedImage;
     }
-    
-    function splitSentence(sentence : any, maxLength = 80) {
+
+    function splitSentence(sentence: any, maxLength = 80) {
       const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
       try {
         return sentence.match(regex) || [];
@@ -102,7 +104,7 @@ export default function Home() {
         consoleLog('error', 'Error splitting sentence: ', sentence, ': ', e);
         return [sentence];
       }
-    }  
+    }
 
     async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
       const response = await fetch('/api/translate', {
@@ -110,17 +112,17 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, targetLanguage }),
       });
-    
+
       if (!response.ok) {
         throw new Error('Error in translating text, statusText: ' + response.statusText);
       }
-    
+
       const data = await response.json();
       return data.translatedText;
     }
 
     async function displayImagesAndSubtitles() {
-      let sentences : string[];
+      let sentences: string[];
       try {
         // Split the message into sentences
         sentences = messages[lastMessageIndex].message.split(/(?<=\.|\?|!)\s+/);
@@ -128,7 +130,7 @@ export default function Home() {
         consoleLog('error', 'Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
       }
-  
+
       for (const sentence of sentences) {
         const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex);
 
@@ -139,8 +141,8 @@ export default function Home() {
 
           // Set the subtitle to the translated text if the text is not in English
           let translatedText = '';
-          if (textLanguage !== 'en-US') {
-            translatedText = await fetchTranslation(sentence, textLanguage);
+          if (subtitleLanguage !== 'en-US') {
+            translatedText = await fetchTranslation(sentence, subtitleLanguage);
             setSubtitle(splitSentence(translatedText));
           } else {
             setSubtitle(splitSentence(sentence));
@@ -148,18 +150,18 @@ export default function Home() {
 
           // determine the model to use
           let model = "en-US-Neural2-H";
-          if (language === 'en-US') {
+          if (audioLanguage === 'en-US') {
             if (gender === 'MALE') {
               model = 'en-US-Wavenet-A';
-            } else if (gender === 'FEMALE'){
+            } else if (gender === 'FEMALE') {
               model = 'en-US-Wavenet-C';
             } else {
               model = "";
             }
-          } else if (language === 'ja-JP') {
+          } else if (audioLanguage === 'ja-JP') {
             if (gender === 'MALE') {
               model = "ja-JP-Wavenet-B";
-            } else if (gender === 'FEMALE'){
+            } else if (gender === 'FEMALE') {
               model = 'ja-JP-Wavenet-A';
             } else {
               model = "";
@@ -168,25 +170,25 @@ export default function Home() {
             model = "";
           }
 
-          consoleLog('info', 'Using speakText with values - gender: ', gender, ' model: ', model, ' language: ', language);
+          consoleLog('info', 'Using speakText with values - gender: ', gender, ' model: ', model, ' language: ', audioLanguage);
 
           // Speak the sentence
-          if (language === 'en-US') {
+          if (audioLanguage === 'en-US') {
             // Speak the original text
             consoleLog('info', 'speaking untranslated from text: ', sentence);
-            await speakText(sentence, 1, gender, language, model);
+            await speakText(sentence, 1, gender, audioLanguage, model);
           } else {
             // Speak the translated text
-            let translationEntry : string = '';
-            if (translatedText !== '') {
+            let translationEntry: string = '';
+            if (translatedText !== '' && audioLanguage == subtitleLanguage) {
               // Use the previously translated text
               translationEntry = translatedText;
             } else {
               // Translate the text
-              translationEntry = await fetchTranslation(sentence, language);
+              translationEntry = await fetchTranslation(sentence, audioLanguage);
             }
             consoleLog('info', 'speaking translated from text: ', sentence, ' to text: ', translationEntry);
-            await speakText(translationEntry, 1, gender, language, model);
+            await speakText(translationEntry, 1, gender, audioLanguage, model);
           }
           setImageUrl('gaib_c.png'); // Set the image to the closed mouth
           // Set the last message displayed
@@ -197,7 +199,7 @@ export default function Home() {
       setSubtitle('');
       setImageUrl('gaib_c.png');
     }
-  
+
     if (
       speechOutputEnabled &&
       lastMessageIndex > lastSpokenMessageIndex &&
@@ -208,8 +210,8 @@ export default function Home() {
     } else {
       stopSpeaking();
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, language, textLanguage]);
-  
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage]);
+
 
   type SpeechRecognition = typeof window.SpeechRecognition;
 
@@ -242,7 +244,7 @@ export default function Home() {
     }
 
     if (!query) {
-      consoleLog('debug', '[GAIB] Prompt Query submission was empty!');
+      consoleLog('debug', 'Entry Prompt Query submission was empty!');
       return;
     }
 
@@ -365,6 +367,7 @@ export default function Home() {
       recognition.continuous = true;
       recognition.timeout = 10000;
 
+      // Update the listening state
       if (listening) {
         setStoppedManually(false);
         recognition.stop();
@@ -373,10 +376,12 @@ export default function Home() {
         recognition.start();
       }
 
+      // Update the onstart function
       recognition.onstart = () => {
         setListening(true);
       };
 
+      // Update the onend function
       recognition.onend = () => {
         setListening(false);
         setSpeechRecognitionComplete(true);
@@ -386,6 +391,7 @@ export default function Home() {
         }
       };
 
+      // Update the onresult function
       recognition.onresult = (event: { results: string | any[]; }) => {
         let last = event.results.length - 1;
         let text = event.results[last][0].transcript;
@@ -393,7 +399,8 @@ export default function Home() {
 
         setQuery(text); // Set the query to the new text
 
-        if (listenForGAIB && (transcript.includes("gabe") || transcript.includes("game"))) {
+        // If the transcript includes the word "game" or "gabe", stop the recognition
+        if (transcript.includes("gabe") || transcript.includes("game")) {
           setStoppedManually(false);
           recognition.stop();
         } else {
@@ -420,11 +427,7 @@ export default function Home() {
       alert('Speech Recognition API is not supported in this browser.');
     }
   };
-
-  // Add a new function to handle the GAIB listening toggle
-  const handleGAIBListeningToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setListenForGAIB(event.target.checked);
-  };
+  
 
   return (
     <>
@@ -434,7 +437,7 @@ export default function Home() {
             <div className={styles.cloud}>
               <div className={styles.imageContainer}>
                 <div className={styles.generatedImage}>
-                <img src={imageUrl} alt="GAIB" height="480" width="720" />
+                  <img src={imageUrl} alt="GAIB" height="480" width="720" />
                 </div>
                 <div className={styles.subtitle}>{subtitle}</div>
               </div>
@@ -442,29 +445,41 @@ export default function Home() {
             <div className={styles.center}>
               <div className={styles.cloudform}>
                 <form onSubmit={handleSubmit}>
-                  <textarea
-                    disabled={loading}
-                    onKeyDown={handleEnter}
-                    ref={textAreaRef}
-                    autoFocus={true}
-                    rows={3}
-                    maxLength={600}
-                    id="userInput"
-                    name="userInput"
-                    placeholder={
-                      loading
-                        ? 'GAIB is generating your Anime...'
-                        : '[GAIB] Give me an Anime plotline to generate? Please end all spoken commands with \"GAIB\"'
-                    }
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className={styles.textarea}
-                  />
-                  <div className={styles.buttonWrapper}>
+                  <div className={styles.cloudform}>
+                    <textarea
+                      disabled={loading}
+                      onKeyDown={handleEnter}
+                      ref={textAreaRef}
+                      autoFocus={true}
+                      rows={3}
+                      maxLength={600}
+                      id="userInput"
+                      name="userInput"
+                      placeholder={
+                        loading
+                          ? selectedPersonality === 'GAIB'
+                            ? 'GAIB is generating your Anime...'
+                            : 'Meditating upon your question...'
+                          : selectedPersonality === 'GAIB'
+                          ? 'Give me an Anime plotline to generate? Please end all spoken commands with "GAIB".'
+                          : 'Give me a question to answer? Please end all spoken commands with "GAIB".'
+                      }
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      className={styles.textarea}
+                    />
+                  </div>
+                  <div className={styles.buttoncontainer}>
                     <div className={styles.buttoncontainer}>
                       <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !selectedPersonality}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (selectedPersonality) {
+                            handleSubmit(e, selectedPersonality);
+                          }
+                        }}
                         className={styles.generatebutton}
                       >
                         {loading ? (
@@ -530,127 +545,83 @@ export default function Home() {
                         </svg>
                       </button>
                     </div>
+                  </div>
+                  <div className={styles.buttoncontainer}>
                     <div className={styles.buttoncontainer}>
-                      {Object.keys(PERSONALITY_PROMPTS).map((key) => (
-                        <button
-                          type="submit"
-                          key={key}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleSubmit(e, key as keyof typeof PERSONALITY_PROMPTS);
-                          }}
-                          className={styles.personalityButton}
-                        >
-                          {key}
-                        </button>
-                      ))}
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={speechOutputEnabled}
+                          onChange={handleSpeechOutputToggle}
+                        />
+                        &nbsp;&nbsp; <b>Speaking Enabled</b>
+                      </label>
                     </div>
                   </div>
-                  <div className={styles.buttonWrapper}>
-                    <div className={styles.buttoncontainer}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={speechOutputEnabled}
-                      onChange={handleSpeechOutputToggle}
-                    />
-                    &nbsp;&nbsp; <b>Enable speech output</b> &nbsp;&nbsp;
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={listenForGAIB}
-                      onChange={handleGAIBListeningToggle}
-                    />
-                    &nbsp;&nbsp; <b>Listen for GAIB</b>
-                  </label>
-                  <label>
-                        <form>
-                          <label htmlFor="language-select">Audio language:</label>
-                          <select
-                            id="language-select"
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
-                          >
-                            <option value="ja-JP">Japanese (ja-JP)</option>
-                            <option value="en-US">English (en-US)</option>
-                            <option value="en-GB">English Great Britain (en-GB)</option>
-                            <option value="zh-CN">Chinese (zh-CN)</option>
-                            <option value="au-AU">English Australia (au-AU)</option>
-                            <option value="es-ES">Spanish (es-ES)</option>
-                            <option value="fr-FR">French (fr-FR)</option>
-                            <option value="it-IT">Italian (it-IT)</option>
-                            <option value="de-DE">German (de-DE)</option>
-                            <option value="pt-BR">Portuguese (pt-PT)</option>
-                            <option value="ru-RU">Russian (ru-RU)</option>
-                            <option value="ko-KR">Korean (ko-KR)</option>
-                            <option value="ar-SA">Arabic (ar-SA)</option>
-                            <option value="hi-IN">Hindi (hi-IN)</option>
-                            <option value="nl-NL">Dutch (nl-NL)</option>
-                            <option value="pl-PL">Polish (pl-PL)</option>
-                            <option value="tr-TR">Turkish (tr-TR)</option>
-                            <option value="sv-SE">Swedish (sv-SE)</option>
-                            <option value="da-DK">Danish (da-DK)</option>
-                            <option value="nb-NO">Norwegian (nb-NO)</option>
-                            <option value="fi-FI">Finnish (fi-FI)</option>
-                            <option value="cs-CZ">Czech (cs-CZ)</option>
-                            <option value="el-GR">Greek (el-GR)</option>
-                            <option value="hu-HU">Hungarian (hu-HU)</option>
-                            <option value="ro-RO">Romanian (ro-RO)</option>
-                            <option value="sk-SK">Slovak (sk-SK)</option>
-                            <option value="th-TH">Thai (th-TH)</option>
-                            <option value="vi-VN">Vietnamese (vi-VN)</option>
-                            <option value="id-ID">Indonesian (id-ID)</option>
-                            <option value="ms-MY">Malay (ms-MY)</option>
-                            </select>
-                        </form>
-                        <form>
-                          <label htmlFor="text-language-select">Subtitle language:</label>
-                          <select
-                            id="text-language-select"
-                            value={textLanguage}
-                            onChange={(e) => setTextLanguage(e.target.value)}
-                          >
-                            <option value="en-US">English (en-US)</option>
-                            <option value="ja-JP">Japanese (ja-JP)</option>
-                            <option value="en-GB">English Great Britain (en-GB)</option>
-                            <option value="zh-CN">Chinese (zh-CN)</option>
-                            <option value="au-AU">English Australia (au-AU)</option>
-                            <option value="es-ES">Spanish (es-ES)</option>
-                            <option value="fr-FR">French (fr-FR)</option>
-                            <option value="it-IT">Italian (it-IT)</option>
-                            <option value="de-DE">German (de-DE)</option>
-                            <option value="pt-BR">Portuguese (pt-PT)</option>
-                            <option value="ru-RU">Russian (ru-RU)</option>
-                            <option value="ko-KR">Korean (ko-KR)</option>
-                            <option value="ar-SA">Arabic (ar-SA)</option>
-                            <option value="hi-IN">Hindi (hi-IN)</option>
-                            <option value="nl-NL">Dutch (nl-NL)</option>
-                            <option value="pl-PL">Polish (pl-PL)</option>
-                            <option value="tr-TR">Turkish (tr-TR)</option>
-                            <option value="sv-SE">Swedish (sv-SE)</option>
-                            <option value="da-DK">Danish (da-DK)</option>
-                            <option value="nb-NO">Norwegian (nb-NO)</option>
-                            <option value="fi-FI">Finnish (fi-FI)</option>
-                            <option value="cs-CZ">Czech (cs-CZ)</option>
-                            <option value="el-GR">Greek (el-GR)</option>
-                            <option value="hu-HU">Hungarian (hu-HU)</option>
-                            <option value="ro-RO">Romanian (ro-RO)</option>
-                            <option value="sk-SK">Slovak (sk-SK)</option>
-                            <option value="th-TH">Thai (th-TH)</option>
-                            <option value="vi-VN">Vietnamese (vi-VN)</option>
-                            <option value="id-ID">Indonesian (id-ID)</option>
-                            <option value="ms-MY">Malay (ms-MY)</option>
-                            </select>
-                        </form>
-                      </label>
-                      <div className={styles.buttonContainer}>
-                        <label htmlFor="gender-select">Choose a gender:</label>
+                  <div className={styles.dropdowncontainer}>
+                    <div className={styles.dropdowncontainer}>
+                      <div className={styles.labelContainer}>
+                        <span className={styles.label} >Personality:</span>
+                        <select
+                          className={styles.dropdown}
+                          value={selectedPersonality}
+                          onChange={(e) => {
+                            setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
+                          }}
+                        >
+                          <option value="" disabled>
+                            Choose Personality
+                          </option>
+                          {Object.keys(PERSONALITY_PROMPTS).map((key) => (
+                            <option key={key} value={key}>
+                              {key}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.labelContainer}>
+                        <span className={styles.label}>Audio:</span>
+                        <select
+                          id="audio-language-select"
+                          className={styles.dropdown}
+                          value={audioLanguage}
+                          onChange={(e) => setAudioLanguage(e.target.value)}
+                        >
+                          <option value="" disabled>
+                            Choose Audio Language
+                          </option>
+                          {audioLanguages.map((lang: Language) => (
+                            <option key={lang.code} value={lang.code}>{lang.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.labelContainer}>
+                        <span className={styles.label}>Subtitles:</span>
+                        <select
+                          id="subtitle-language-select"
+                          className={styles.dropdown}
+                          value={subtitleLanguage}
+                          onChange={(e) => setSubtitleLanguage(e.target.value)}
+                        >
+                          <option value="" disabled>
+                            Choose Subtitle Language
+                          </option>
+                          {subtitleLanguages.map((lang: Language) => (
+                            <option key={lang.code} value={lang.code}>{lang.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.labelContainer}>
+                        <span className={styles.label}>Gender:</span>
                         <select
                           id="gender-select"
+                          className={styles.dropdown}
                           value={gender}
                           onChange={(e) => setGender(e.target.value)}
-                          >
+                        >
+                          <option value="" disabled>
+                            Choose Voice Gender
+                          </option>
                           <option value="FEMALE">Female</option>
                           <option value="MALE">Male</option>
                           <option value="NEUTRAL">Neutral</option>
@@ -675,7 +646,6 @@ export default function Home() {
                       </svg>
                       Transcript View
                     </button>
-
                     {showPopup && (
                       <div className="popup" onClick={togglePopup}>
                         <div
