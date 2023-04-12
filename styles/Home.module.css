@@ -138,11 +138,56 @@
   transition-duration: 0.4s;
 }
 
+.pausebutton {
+  background-color: #e2f10e;
+  border: none;
+  border-radius: 5px;
+  color: rgb(255, 0, 0);
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
+  cursor: pointer;
+  transition-duration: 0.4s;
+}
+
+.clearbutton {
+  background-color: #55010b;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
+  cursor: pointer;
+  transition-duration: 0.4s;
+}
+
+.replaybutton {
+  background-color: #f1ae11;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
+  cursor: pointer;
+  transition-duration: 0.4s;
+}
+
 .loadingwheel {
   position: absolute;
   top: 0.2rem;
   right: 0.25rem;
-  color: #ffa500; /* Changed font color to yellow-green */
+  color: #ff0000; /* Changed font color to yellow-green */
 }
 
 .svgicon {
@@ -399,9 +444,10 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 800px;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
+  color:rgb(12, 234, 4);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -410,13 +456,15 @@
   border-style: double;
   border-width: 8px;
   border-radius: 8px;
+  max-width: 800px;
+  margin: 30px;
 }
 
 .popup-content {
-  background-color: white;
+  color: rgb(12, 234, 4);
+  background-color:rgba(0, 0, 0, 1);
   padding: 8px;
   border-radius: 4px;
-  max-width: 80%;
   max-height: 80%;
   overflow-y: auto;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
@@ -424,22 +472,28 @@
   border-width: 8px;
   border-radius: 8px;
   border-color: rgba(0, 0, 0, 1);
+  width: 800px;
+  max-width: 800px;
+  margin: 10px;
 }
 
 .preWrap {
   white-space: pre-wrap;
   word-wrap: break-word;
-  background-color: white;
+  background-color: rgba(0, 0, 0, 1);
+  color: rgb(12, 234, 4);
   padding: 8px;
   border-radius: 4px;
-  max-width: 80%;
+  width: 800px;
+  max-width: 800px;
   max-height: 80%;
   overflow-y: auto;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
   border-style: double;
   border-width: 8px;
   border-radius: 8px;
-  border-color: rgba(0, 0, 0, 1);
+  border-color: rgb(226, 163, 16);
+  margin-top: 30px;
 }
 
 .animesubtitles {
@@ -517,18 +571,19 @@
   -moz-appearance: none;
   background-color: transparent;
   outline: none;
-  padding: 2px 4px;
-  font-size: 12px;
+  padding: 1px 2px;
+  font-size: 8px;
   color: #000000;
   cursor: pointer;
-  border-radius: 4px;
-  border: 2px solid #000000;
+  border-radius: 6px;
+  border: 1px solid #000000;
+  max-width: 120px;
 }
 
 .dropdownContainer::after {
   content: '▼';
   position: absolute;
-  right: 8px;
+  right: 2px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
@@ -561,16 +616,17 @@
   font-weight: bold;
   color: #000;
   appearance: none;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 2px;
+  border-radius: 2px;
+  font-size: 8px;
 }
 
 .select {
   border: 1px solid #ccc;
   background-color: #fff;
-  padding: 4px 8px;
-  font-size: 14px;
-  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 8px;
+  border-radius: 2px;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;

@@ -56,7 +56,7 @@ export default function Home() {
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
   const [audioLanguage, setAudioLanguage] = useState<string>("ja-JP");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
-
+  const [isPaused, setIsPaused] = useState(false);
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -123,6 +123,10 @@ export default function Home() {
 
     async function displayImagesAndSubtitles() {
       let sentences: string[];
+      if (isPaused) {
+        stopSpeaking();
+        return;
+      }
       try {
         // Split the message into sentences
         sentences = messages[lastMessageIndex].message.split(/(?<=\.|\?|!)\s+/);
@@ -148,6 +152,7 @@ export default function Home() {
             setSubtitle(splitSentence(sentence));
           }
 
+          // Speak the sentence if speech output is enabled
           // determine the model to use
           let model = "en-US-Neural2-H";
           if (audioLanguage === 'en-US') {
@@ -210,7 +215,7 @@ export default function Home() {
     } else {
       stopSpeaking();
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused]);
 
 
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -249,6 +254,9 @@ export default function Home() {
     }
 
     const question = query.trim();
+
+    // make sure we are not paused
+    setIsPaused(false);
 
     setMessageState((state) => ({
       ...state,
@@ -427,7 +435,34 @@ export default function Home() {
       alert('Speech Recognition API is not supported in this browser.');
     }
   };
-  
+
+  const handlePause = () => {
+    setIsPaused(!isPaused);
+  };
+
+  const handleClear = () => {
+    for (let i = 0; i < messages.length; i++) {
+      if (messages[i].type === 'apiMessage') {
+        messages[i].message = '';
+      }
+    }
+  };
+
+  const handleReplay = () => {
+    // Find the last user message
+    const lastUserMessage = messages
+      .slice()
+      .reverse()
+      .find((message) => message.type === 'userMessage');
+
+    if (lastUserMessage) {
+      // Set the input value to the last user message
+      setQuery(lastUserMessage.message);
+
+      // Submit the form
+      handleSubmit({ preventDefault: () => { } }, selectedPersonality);
+    }
+  };
 
   return (
     <>
@@ -461,8 +496,8 @@ export default function Home() {
                             ? 'GAIB is generating your Anime...'
                             : 'Meditating upon your question...'
                           : selectedPersonality === 'GAIB'
-                          ? 'Give me an Anime plotline to generate? Please end all spoken commands with "GAIB".'
-                          : 'Give me a question to answer? Please end all spoken commands with "GAIB".'
+                            ? 'Give me an Anime plotline to generate? Please end all spoken commands with "GAIB".'
+                            : 'Give me a question to answer? Please end all spoken commands with "GAIB".'
                       }
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
@@ -471,113 +506,149 @@ export default function Home() {
                   </div>
                   <div className={styles.buttoncontainer}>
                     <div className={styles.buttoncontainer}>
-                      <button
-                        type="submit"
-                        disabled={loading || !selectedPersonality}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (selectedPersonality) {
-                            handleSubmit(e, selectedPersonality);
-                          }
-                        }}
-                        className={styles.generatebutton}
-                      >
-                        {loading ? (
-                          <div className={styles.loadingwheel}>
-                            <LoadingDots color="#FFA500" />
-                          </div>
-                        ) : (
-                          // Send icon SVG in input field
-                          <svg
-                            viewBox="0 0 20 20"
-                            className={styles.svgicon}
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    <div className={styles.buttoncontainer}>
-                      <button
-                        type="button"
-                        disabled={loading}
-                        className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
-                        onClick={startSpeechRecognition}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          width="24"
-                          height="24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className={styles.svgicon}
-                        >
-                          <path d="M12 1v6m0 0v6m-6-6h12"></path>
-                          <path d="M21 12v6a3 3 0 01-3 3h-12a3 3 0 01-3-3v-6"></path>
-                          <path d="M3 15l1.8-1.8c1.1-1.1 2.8-1.1 3.9 0l1.2 1.2 1.2-1.2c1.1-1.1 2.8-1.1 3.9 0L21 15"></path>
-                        </svg>
-                      </button>
-                    </div>
-                    <div className={styles.buttoncontainer}>
-                      <button
-                        type="button"
-                        className={styles.stopvoicebutton}
-                        onClick={stopSpeaking}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          width="24"
-                          height="24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className={styles.svgicon}
-                        >
-                          <path d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  <div className={styles.buttoncontainer}>
-                    <div className={styles.buttoncontainer}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={speechOutputEnabled}
-                          onChange={handleSpeechOutputToggle}
-                        />
-                        &nbsp;&nbsp; <b>Speaking Enabled</b>
-                      </label>
-                    </div>
-                  </div>
-                  <div className={styles.dropdowncontainer}>
-                    <div className={styles.dropdowncontainer}>
-                      <div className={styles.labelContainer}>
-                        <span className={styles.label} >Personality:</span>
-                        <select
-                          className={styles.dropdown}
-                          value={selectedPersonality}
-                          onChange={(e) => {
-                            setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
+                      <div className={styles.buttoncontainer}>
+                        <button
+                          type="submit"
+                          disabled={loading || !selectedPersonality}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (selectedPersonality) {
+                              handleSubmit(e, selectedPersonality);
+                            }
                           }}
+                          className={styles.generatebutton}
                         >
-                          <option value="" disabled>
-                            Choose Personality
-                          </option>
-                          {Object.keys(PERSONALITY_PROMPTS).map((key) => (
-                            <option key={key} value={key}>
-                              {key}
+                          {loading ? (
+                            <div className={styles.loadingwheel}>
+                              <LoadingDots color="#FFA500" />
+                            </div>
+                          ) : (
+                            // Send icon SVG in input field
+                            <svg
+                              viewBox="0 0 20 20"
+                              className={styles.svgicon}
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={loading}
+                          className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
+                          onClick={startSpeechRecognition}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            width="24"
+                            height="24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={styles.svgicon}
+                          >
+                            <path d="M12 1v6m0 0v6m-6-6h12"></path>
+                            <path d="M21 12v6a3 3 0 01-3 3h-12a3 3 0 01-3-3v-6"></path>
+                            <path d="M3 15l1.8-1.8c1.1-1.1 2.8-1.1 3.9 0l1.2 1.2 1.2-1.2c1.1-1.1 2.8-1.1 3.9 0L21 15"></path>
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={styles.stopvoicebutton}
+                          onClick={stopSpeaking}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            width="24"
+                            height="24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={styles.svgicon}
+                          >
+                            <path d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.replaybutton}
+                          onClick={handleReplay}
+                        >
+                          {<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.svgicon}>
+                            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.41 3.59 8 8 8s8-3.59 8-8-3.59-8-8-8z"></path>
+                          </svg>
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.clearbutton}
+                          onClick={handleClear}
+                        >
+                          {<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.svgicon}>
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M15 9l-6 6"></path>
+                            <path d="M9 9l6 6"></path>
+                          </svg>
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.pausebutton}
+                          onClick={handlePause}
+                        >
+                          {<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.svgicon}>
+                            <rect x="4" y="6" width="16" height="4"></rect>
+                            <rect x="4" y="14" width="16" height="4"></rect>
+                          </svg>
+                          }
+                        </button>
+                      </div>
+                    </div>
+                    <div className={styles.dropdowncontainer}>
+                      <div className={styles.dropdowncontainer}>
+                        <div className={styles.labelContainer}>
+                          <span className={styles.label} >Personality:</span>
+                          <select
+                            className={styles.dropdown}
+                            value={selectedPersonality}
+                            onChange={(e) => {
+                              setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
+                            }}
+                          >
+                            <option value="" disabled>
+                              Choose Personality
                             </option>
-                          ))}
-                        </select>
+                            {Object.keys(PERSONALITY_PROMPTS).map((key) => (
+                              <option key={key} value={key}>
+                                {key}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className={styles.labelContainer}>
+                          <span className={styles.label}>Gender:</span>
+                          <select
+                            id="gender-select"
+                            className={styles.dropdown}
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose Voice Gender
+                            </option>
+                            <option value="FEMALE">Female</option>
+                            <option value="MALE">Male</option>
+                            <option value="NEUTRAL">Neutral</option>
+                          </select>
+                        </div>
                       </div>
                       <div className={styles.labelContainer}>
                         <span className={styles.label}>Audio:</span>
@@ -611,21 +682,17 @@ export default function Home() {
                           ))}
                         </select>
                       </div>
-                      <div className={styles.labelContainer}>
-                        <span className={styles.label}>Gender:</span>
-                        <select
-                          id="gender-select"
-                          className={styles.dropdown}
-                          value={gender}
-                          onChange={(e) => setGender(e.target.value)}
-                        >
-                          <option value="" disabled>
-                            Choose Voice Gender
-                          </option>
-                          <option value="FEMALE">Female</option>
-                          <option value="MALE">Male</option>
-                          <option value="NEUTRAL">Neutral</option>
-                        </select>
+                    </div>
+                    <div className={styles.buttoncontainer}>
+                      <div className={styles.buttoncontainer}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={speechOutputEnabled}
+                            onChange={handleSpeechOutputToggle}
+                          />
+                          &nbsp;&nbsp; <b>Speaking Enabled</b>
+                        </label>
                       </div>
                     </div>
                   </div>
