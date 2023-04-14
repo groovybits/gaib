@@ -355,8 +355,6 @@
   align-items: center;
   border-radius: 1rem;
   padding: 33px; /* Adjust the padding to reduce the black area around the image */
-  width: 800px; /* Set a fixed width for the container */
-  height: 600px; /* Set a fixed height for the container */
 }
 
 .imageContainer {
@@ -396,48 +394,6 @@
 
 .footer a:hover {
   opacity: 0.8;
-}
-
-/* Mobile optimization */
-@media (max-width: 400px) {
-  .main {
-    padding: 0.5rem;
-    max-height: 60vh;
-  }
-
-  .cloud {
-    width: 22rem;
-    height: 28rem;
-  }
-  .textarea {
-    width: 22rem;
-    color: #000000; /* Changed font color to yellow-green */
-    background: #ffffff; /* Changed background color to a darker color */
-    font-family: 'Trebuchet MS', monospace; /* Added font family */
-  }
-  .topnav {
-    border: 1px solid black;
-    align-items: center;
-    padding: 0.85rem 0.75rem 0.85rem 0.75rem;
-  }
-
-  .navlogo {
-    font-size: 1.25rem;
-    width: 20rem;
-  }
-
-  .markdownanswer code {
-    white-space: pre-wrap !important;
-    color: #e5f810;
-    background: #1e1e1e;
-    font-family: 'Trebuchet MS', monospace; /* Added font family */
-  }
-
-  .footer {
-    font-size: 0.7rem;
-    width: 100%;
-    text-align: center;
-  }
 }
 
 .popup {
@@ -633,3 +589,45 @@
   cursor: pointer;
 }
 
+/* Mobile optimization */
+@media (max-width: 300px) {
+  .main {
+    padding: 0.5rem;
+    max-height: 60vh;
+    max-width: fit-content;
+  }
+
+  .cloud {
+    width: 22rem;
+    height: 28rem;
+  }
+  .textarea {
+    width: 22rem;
+    color: #000000; /* Changed font color to yellow-green */
+    background: #ffffff; /* Changed background color to a darker color */
+    font-family: 'Trebuchet MS', monospace; /* Added font family */
+  }
+  .topnav {
+    border: 1px solid black;
+    align-items: center;
+    padding: 0.85rem 0.75rem 0.85rem 0.75rem;
+  }
+
+  .navlogo {
+    font-size: 1.25rem;
+    width: 20rem;
+  }
+
+  .markdownanswer code {
+    white-space: pre-wrap !important;
+    color: #e5f810;
+    background: #1e1e1e;
+    font-family: 'Trebuchet MS', monospace; /* Added font family */
+  }
+
+  .footer {
+    font-size: 0.7rem;
+    width: 100%;
+    text-align: center;
+  }
+}
