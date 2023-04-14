@@ -54,7 +54,7 @@ export default function Home() {
   const [imageUrl, setImageUrl] = useState<string>('gaib_c.png');
   const [gender, setGender] = useState('FEMALE');
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
-  const [audioLanguage, setAudioLanguage] = useState<string>("ja-JP");
+  const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
   const [isPaused, setIsPaused] = useState(false);
 
@@ -87,14 +87,29 @@ export default function Home() {
     const lastMessageIndex: any = messages.length - 1;
 
     // TODO - use image generation API in the future when it is available
-    async function fetchGptGeneratedImageUrl(sentence: string, index: number): Promise<string> {
+    async function fetchGptGeneratedImageUrl(sentence: string, index: number, useImageAPI = false): Promise<string> {
+      /*if (useImageAPI) {
+        try {
+          const response = await openai.createImage({
+            prompt: sentence,
+            n: 1,
+            size: "1024x1024",
+          });
+          const imageUrl = response.data.data[0].url;
+          return imageUrl;
+        } catch (error) {
+          console.error('Error fetching image from API:', error);
+          // Fall back to the default static images
+        }
+      }*/
+    
       const keywords = encodeURIComponent(sentence);
       const gaibOpen = `gaib_o.png?${keywords}`;
       const gaibClosed = `gaib_c.png?${keywords}`;
-
+    
       const selectedImage = index % 2 === 0 ? gaibOpen : gaibClosed;
       return selectedImage;
-    }
+    }    
 
     function splitSentence(sentence: any, maxLength = 80) {
       const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
@@ -136,7 +151,7 @@ export default function Home() {
       }
 
       for (const sentence of sentences) {
-        const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex);
+        const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex, false);
 
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
