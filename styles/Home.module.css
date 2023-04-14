@@ -400,7 +400,6 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 800px;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   color:rgb(12, 234, 4);
@@ -428,7 +427,6 @@
   border-width: 8px;
   border-radius: 8px;
   border-color: rgba(0, 0, 0, 1);
-  width: 800px;
   max-width: 800px;
   margin: 10px;
 }
@@ -440,7 +438,6 @@
   color: rgb(12, 234, 4);
   padding: 8px;
   border-radius: 4px;
-  width: 800px;
   max-width: 800px;
   max-height: 80%;
   overflow-y: auto;
