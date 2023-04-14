@@ -5,7 +5,7 @@ const pexelsHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     const apiKey = process.env.PEXELS_API_KEY;
     if (!apiKey) {
-      console.error('Pexels API key not found, [', apiKey,  '] in environment variables ', process.env);
+      console.error('ERROR: Pexels API key not found in environment variables, setup .env with PEXELS_API_KEY.');
       res.status(500).json({ error: 'Pexels API key not found in environment variables' });
       return;
     }
