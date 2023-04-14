@@ -519,8 +519,15 @@ export default function Home() {
             <div className={styles.cloud}>
               <div className={styles.imageContainer}>
                 <div className={styles.generatedImage}>
-                  <img src={imageUrl} alt="GAIB" height="480" width="720" />
-                </div>
+                  <img
+                    src={imageUrl}
+                    alt="GAIB"
+                    style={{
+                      width: '720px',
+                      height: '480px',
+                      objectFit: 'scale-down',
+                    }}
+                  />                </div>
                 <div className={styles.subtitle}>{subtitle}</div>
               </div>
             </div>

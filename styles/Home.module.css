@@ -538,7 +538,7 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  background-color: transparent;
+  background-color: #f4f960;
   outline: none;
   padding: 1px 2px;
   font-size: 8px;
@@ -547,6 +547,7 @@
   border-radius: 6px;
   border: 1px solid #000000;
   max-width: 120px;
+  font-weight: 500;
 }
 
 .dropdownContainer::after {
