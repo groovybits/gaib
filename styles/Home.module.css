@@ -7,6 +7,13 @@
 
 .header {
   width: auto;
+  text-align: center;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 500;
+  font-family:'Trebuchet MS';
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
 .header p {
@@ -377,14 +384,23 @@
 }
 
 .footer {
-  color: #5f6368;
-  font-size: 0.8rem;
+  color: #ffffff;
+  font-size: 12px;
   margin: 1rem;
+  text-align: center;
+  font-weight: 500;
+  font-family:'Trebuchet MS', monospace;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
 .footer a {
   font-weight: 500;
-  color: #7a7d81;
+  color: #ffffff;
+  font-size: 12px;
+  font-family:'Trebuchet MS', monospace;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
 .listening {

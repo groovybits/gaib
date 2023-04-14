@@ -8,6 +8,7 @@ import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
 import { audioLanguages, subtitleLanguages, Language } from "@/config/textLanguages";
+import nlp from 'compromise';
 
 
 type PendingMessage = {
@@ -86,22 +87,49 @@ export default function Home() {
   useEffect(() => {
     const lastMessageIndex: any = messages.length - 1;
 
+    function extractKeywords(sentence: string, numberOfKeywords = 2) {
+      const doc = nlp(sentence);
+
+      // Extract nouns, verbs, and adjectives
+      const nouns = doc.nouns().out('array');
+      const verbs = doc.verbs().out('array');
+      const adjectives = doc.adjectives().out('array');
+
+      // Combine the extracted words and shuffle the array
+      const combinedWords = [...nouns, ...verbs, ...adjectives];
+      combinedWords.sort(() => 0.5 - Math.random());
+
+      // Select the first N words as keywords
+      const keywords = combinedWords.slice(0, numberOfKeywords);
+
+      return keywords;
+    }
+
     // TODO - use image generation API in the future when it is available
     async function fetchGptGeneratedImageUrl(sentence: string, index: number, useImageAPI = false): Promise<string> {
-      /*if (useImageAPI) {
+      if (useImageAPI) {
         try {
-          const response = await openai.createImage({
-            prompt: sentence,
-            n: 1,
-            size: "1024x1024",
+          let extracted_keywords = extractKeywords(sentence, 3).join(' ');
+          consoleLog('info', 'Extracted keywords: ', extracted_keywords);
+          const keywords = encodeURIComponent(extracted_keywords);
+          const response = await fetch('/api/pexels', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keywords }),
           });
-          const imageUrl = response.data.data[0].url;
-          return imageUrl;
+    
+          const data = await response.json();
+          if (data.photos && data.photos.length > 0) {
+            const imageUrl = data.photos[0].src.medium;
+            return imageUrl;
+          } else {
+            console.error('No image found for the given keywords');
+          }
         } catch (error) {
           console.error('Error fetching image from API:', error);
           // Fall back to the default static images
         }
-      }*/
+      }
     
       const keywords = encodeURIComponent(sentence);
       const gaibOpen = `gaib_o.png?${keywords}`;
@@ -151,7 +179,7 @@ export default function Home() {
       }
 
       for (const sentence of sentences) {
-        const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex, false);
+        const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex, true);
 
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -210,7 +238,7 @@ export default function Home() {
             consoleLog('info', 'speaking translated from text: ', sentence, ' to text: ', translationEntry);
             await speakText(translationEntry, 1, gender, audioLanguage, model);
           }
-          setImageUrl('gaib_c.png'); // Set the image to the closed mouth
+          //setImageUrl('gaib_c.png'); // Set the image to the closed mouth
           // Set the last message displayed
           setLastMessageDisplayed(lastMessageIndex);
         }
@@ -481,6 +509,10 @@ export default function Home() {
 
   return (
     <>
+      <div className={styles.header}>
+        <title>GAIB The Groovy AI Bot</title>
+        <h1>GAIB The Groovy AI Bot</h1>
+      </div>
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#3b82f6">
           <main className={styles.main}>
@@ -750,6 +782,12 @@ export default function Home() {
               </div>
             )}
           </main>
+        </div>
+        <div className={styles.footer}>
+          <div className={styles.footerContainer}>
+            <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://www.pexels.com">Photos provided by Pexels</a>
+          </div>
         </div>
       </Layout>
     </>
