@@ -171,13 +171,32 @@ export default function Home() {
         return;
       }
       try {
-        // Split the message into sentences
-        sentences = messages[lastMessageIndex].message.split(/(?<=\.|\?|!)\s+/);
+        // Split the message into lines
+        const lines = messages[lastMessageIndex].message.split('\n');
+        const splitLines = lines.flatMap(line => line.split(/(?<=\.|\?|!)\s+/));
+      
+        // Collect sentences with a maximum character limit per group
+        const maxCharsPerGroup = 60;
+        sentences = [];
+        let currentGroup = '';
+        splitLines.forEach((sentence, index) => {
+          if (currentGroup.length + sentence.length <= maxCharsPerGroup) {
+            currentGroup += `${currentGroup ? ' ' : ''}${sentence}`;
+          } else {
+            sentences.push(currentGroup.trim());
+            currentGroup = sentence;
+          }
+        });
+      
+        // Add the last group if it's not empty
+        if (currentGroup.trim() !== '') {
+          sentences.push(currentGroup.trim());
+        }
       } catch (e) {
         consoleLog('error', 'Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
       }
-
+      
       for (const sentence of sentences) {
         const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex, true);
 
