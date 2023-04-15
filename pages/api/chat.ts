@@ -33,7 +33,7 @@ function summarizeTextLocal(text: string, numSentences: number = 3): string {
   return summarySentences.join(' ');
 }
 
-function extractKeywords(sentence: string, numberOfKeywords = 12) {
+function extractKeywords(sentence: string, numberOfKeywords = 3) {
   const doc = nlp(sentence);
 
   // Extract nouns, verbs, and adjectives
@@ -61,14 +61,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
 
   // sanitize history
-  const summarizedHistory = history;// ? extractKeywords(summarizeTextLocal(history)) : '';
+  const summarizedHistory = history ? extractKeywords(summarizeTextLocal(history)) : '';
 
   // Truncate the input if it exceeds the maximum length
   if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {
     consoleLog('error', `Question ${sanitizedQuestion} exceeds maximum length of ${MAX_INPUT_LENGTH} characters, truncating...`)
     sanitizedQuestion = sanitizedQuestion.substring(0, MAX_INPUT_LENGTH);
   }
-  consoleLog('info', "\nPersonality: ", personality, "\nHistory: ", history, "\nsummarizedHistory: ", summarizedHistory, "\nQuestion: ", question, "\nSanitized Question: ", sanitizedQuestion, "\nRequest Body: ", req.body);
+
+  consoleLog('info', "\n===\nPersonality: ", personality, "\n===\nHistory: ", 
+      history, "\n===\nsummarizedHistory: ", summarizedHistory, "\n===\nQuestion: ", 
+      question, "\n===\nSanitized Question: ", sanitizedQuestion, "\n===\nRequest Body: ", 
+      req.body, "\n===\n");
 
   const index = pinecone.Index(PINECONE_INDEX_NAME);
 
@@ -111,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Ask a question
       response = await chain.call({
         question: sanitizedQuestion,
-        chat_history: summarizedHistory ? [summarizedHistory] : [],
+        chat_history: history ? [history] : [],
       });
 
       if (!response) {
@@ -120,7 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      consoleLog('info', "History: \n", summarizedHistory ? summarizedHistory : '', "Response: \n", response);
+      consoleLog('info', "\n===\nResponse: \n", response, "\n===\n");
 
       sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;

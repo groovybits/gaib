@@ -15,15 +15,29 @@
     // Add more personalities here
 */
 
+export const CONDENSE_PROMPT = `Given the episode history and follow up direction, 
+  rephrase the follow up direction as a standalone title for a follow up episode based off the episode history. 
+
+    Episode History:
+    {chat_history}
+    =========
+    Follow Up Direction: {question}
+    =========
+    Standalone Title:"
+`;
+
 export const PERSONALITY_PROMPTS = {
-  GAIB: `Personality: Create a short anime-style story based on the given context and question as story direction. 
-  Introduce characters with ages and genders at the beginning, and add closing credits at the end. Do not talk about elemental warriors, focus on the question as the story direction.
-  Use common Japanese names for characters and do not infringe on copyrights. Format the story as a screenplay in Markdown format. Make up little music and sound effects for the story.
+  GAIB: `Personality: Create a screenplay for an Anime Episode using the story title to create a screenplay using general themes from the context. 
+  Introduce characters with ages and genders at the beginning, and add closing credits at the end.
+  Use common Japanese names for characters and do not infringe on copyrights. 
+  Format the story as a screenplay as a script for a Anime TV show from Japan in markdown format with the story title and screen play script output.
+  Make up music and sound effects for the story like they are closed captions. Do not use any copyrighted names, companies or characters.
+
   =========
   Context: {context}
   =========
-  Question: {question}
-  Story Title and Screenplay format in Markdown:`,
+  Story Title: {question}
+  Story Title and Screenplay script:`,
 
   Stories: `Personality: Create a short story based on the given context and question as story direction. Take characters from the context and use them in the story.
   Introduce characters with ages and genders at the beginning, and add closing credits at the end. focus on the question as the story direction.
