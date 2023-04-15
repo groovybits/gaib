@@ -33,6 +33,24 @@ function summarizeTextLocal(text: string, numSentences: number = 3): string {
   return summarySentences.join(' ');
 }
 
+function extractKeywords(sentence: string, numberOfKeywords = 12) {
+  const doc = nlp(sentence);
+
+  // Extract nouns, verbs, and adjectives
+  const nouns = doc.nouns().out('array');
+  const verbs = doc.verbs().out('array');
+  const adjectives = doc.adjectives().out('array');
+
+  // Combine the extracted words and shuffle the array
+  const combinedWords = [...nouns, ...verbs, ...adjectives];
+  combinedWords.sort(() => 0.5 - Math.random());
+
+  // Select the first N words as keywords
+  const keywords = combinedWords.slice(0, numberOfKeywords);
+
+  return keywords;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { question, personality, history } = req.body;
 
@@ -43,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
 
   // sanitize history
-  const summarizedHistory = history ? summarizeTextLocal(history) : '';
+  const summarizedHistory = history ? extractKeywords(summarizeTextLocal(history)) : '';
 
   // Truncate the input if it exceeds the maximum length
   if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {
@@ -102,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      consoleLog('info', "History: \n", history ? history : '', "Response: \n", response);
+      consoleLog('info', "History: \n", summarizedHistory ? summarizedHistory : '', "Response: \n", response);
 
       sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
       success = true;

@@ -130,13 +130,9 @@ export default function Home() {
           // Fall back to the default static images
         }
       }
-    
-      const keywords = encodeURIComponent(sentence);
-      const gaibOpen = `gaib_o.png?${keywords}`;
-      const gaibClosed = `gaib_c.png?${keywords}`;
-    
-      const selectedImage = index % 2 === 0 ? gaibOpen : gaibClosed;
-      return selectedImage;
+
+      // failed to fetch image, don't change the image
+      return '';
     }    
 
     function splitSentence(sentence: any, maxLength = 80) {
@@ -197,12 +193,16 @@ export default function Home() {
         sentences = [messages[lastMessageIndex].message];
       }
       
+      // Display the images and subtitles
+      setImageUrl('gaib_o.png');
       for (const sentence of sentences) {
         const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex, true);
 
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
-          setImageUrl(generatedImageUrl); // Set the image to the open mouth
+          if (generatedImageUrl !== '') {
+            setImageUrl(generatedImageUrl); // Set the image to the open mouth
+          }
           setSubtitle(''); // Clear the subtitle
 
           // Set the subtitle to the translated text if the text is not in English
