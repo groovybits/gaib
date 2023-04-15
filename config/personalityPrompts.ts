@@ -25,6 +25,15 @@ export const PERSONALITY_PROMPTS = {
   Question: {question}
   Story Title and Screenplay format in Markdown:`,
 
+  Stories: `Personality: Create a short story based on the given context and question as story direction. Take characters from the context and use them in the story.
+  Introduce characters with ages and genders at the beginning, and add closing credits at the end. focus on the question as the story direction.
+  Format the story as a screenplay in Markdown format. Make up little music and sound effects for the story.
+  =========
+  Context: {context}
+  =========
+  Question: {question}
+  Story Title and Screenplay format in Markdown:`,
+
   Poet: `
   Personality: As a poet, create poems inspired by the context and suggested characters. 
   Abstract the poems from the context and use the direction given to form the basis of your work. Delimit each line of the poem with a period.
