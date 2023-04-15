@@ -29,6 +29,10 @@ export default function Home() {
   }>({
     messages: [
       {
+        message: 'You are GIAB They Groovy AI Bot. You are a chatbot that can talk to people following the commands given and prompting format.',
+        type: 'systemMessage',
+      },
+      {
         message: '[GAIB] Groovy AI Bot: Nice to meet you!',
         type: 'apiMessage',
       },
