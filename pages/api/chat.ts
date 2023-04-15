@@ -5,6 +5,7 @@ import { makeChain } from '@/utils/makechain';
 import { pinecone } from '@/utils/pinecone-client';
 import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
 import logger from '@/utils/logger';
+import nlp from 'compromise';
 
 const MAX_INPUT_LENGTH = 4096;
 const MAX_RETRIES = 10;
@@ -21,6 +22,17 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function summarizeTextLocal(text: string, numSentences: number = 3): string {
+  const doc = nlp(text);
+  const sentences = doc.sentences().out('array');
+
+  // Sort sentences by their length and pick the longest ones
+  const sortedSentences = sentences.sort((a: string | any[], b: string | any[]) => b.length - a.length);
+  const summarySentences = sortedSentences.slice(0, numSentences);
+
+  return summarySentences.join(' ');
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { question, personality, history } = req.body;
 
@@ -30,12 +42,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // OpenAI recommends replacing newlines with spaces for best results
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
 
+  // sanitize history
+  const summarizedHistory = history ? summarizeTextLocal(history) : '';
+
   // Truncate the input if it exceeds the maximum length
   if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {
     consoleLog('error', `Question ${sanitizedQuestion} exceeds maximum length of ${MAX_INPUT_LENGTH} characters, truncating...`)
     sanitizedQuestion = sanitizedQuestion.substring(0, MAX_INPUT_LENGTH);
   }
-  consoleLog('info', "\nPersonality: ", personality, "\nHistory: ", history, "\nQuestion: ", question, "\nSanitized Question: ", sanitizedQuestion, "\nRequest Body: ", req.body);
+  consoleLog('info', "\nPersonality: ", personality, "\nHistory: ", history, "\nsummarizedHistory: ", summarizedHistory, "\nQuestion: ", question, "\nSanitized Question: ", sanitizedQuestion, "\nRequest Body: ", req.body);
 
   const index = pinecone.Index(PINECONE_INDEX_NAME);
 
@@ -78,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Ask a question
       response = await chain.call({
         question: sanitizedQuestion,
-        chat_history: history || [],
+        chat_history: summarizedHistory ? [summarizedHistory] : [],
       });
 
       if (!response) {
