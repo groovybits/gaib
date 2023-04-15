@@ -61,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
 
   // sanitize history
-  const summarizedHistory = history ? extractKeywords(summarizeTextLocal(history)) : '';
+  const summarizedHistory = history;// ? extractKeywords(summarizeTextLocal(history)) : '';
 
   // Truncate the input if it exceeds the maximum length
   if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {

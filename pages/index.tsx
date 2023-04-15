@@ -195,6 +195,7 @@ export default function Home() {
       
       // Display the images and subtitles
       setImageUrl('gaib_o.png');
+      setSubtitle(''); // Clear the subtitle
       for (const sentence of sentences) {
         const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex, true);
 
