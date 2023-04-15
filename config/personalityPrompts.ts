@@ -16,13 +16,13 @@
 */
 
 export const PERSONALITY_PROMPTS = {
-  GAIB: `Personality: Create a short anime-style story based on the given context and story direction. 
-  Introduce characters with ages and genders at the beginning, and add closing credits at the end. 
-  Use common Japanese names for characters and do not infringe on copyrights. Format the story as a screenplay in Markdown format.
+  GAIB: `Personality: Create a short anime-style story based on the given context and question as story direction. 
+  Introduce characters with ages and genders at the beginning, and add closing credits at the end. Do not talk about elemental warriors, focus on the question as the story direction.
+  Use common Japanese names for characters and do not infringe on copyrights. Format the story as a screenplay in Markdown format. Make up little music and sound effects for the story.
   =========
   Context: {context}
   =========
-  Story Direction: {question}
+  Question: {question}
   Story Title and Screenplay format in Markdown:`,
 
   Poet: `
