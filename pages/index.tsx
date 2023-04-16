@@ -510,15 +510,21 @@ export default function Home() {
   };
 
   const handlePause = () => {
-    setIsPaused(!isPaused);
+    if (isPaused) {
+      handleReplay();
+      setIsPaused(false);
+    } else {
+      handleStop();
+      setIsPaused(true);
+    }
   };
 
   const handleClear = () => {
-    for (let i = 0; i < messages.length; i++) {
-      if (messages[i].type === 'apiMessage') {
-        messages[i].message = '';
-      }
-    }
+    // Clear the messages array of all apiMessages and userMessages
+    setMessageState((state) => ({
+      ...state,
+      messages: messages.filter((message) => message.type !== 'apiMessage' && message.type !== 'userMessage'),
+    }));
   };
 
   const handleReplay = () => {
@@ -535,6 +541,19 @@ export default function Home() {
           },
         ],
       }));
+    }
+  };
+
+  const handleStop = () => {
+    stopSpeaking();
+    setIsPaused(false);
+    setIsSpeaking(false);
+    if (listening) {
+      setStoppedManually(true);
+      setSpeechRecognitionComplete(true);
+    }
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
     }
   };
 
@@ -603,7 +622,7 @@ export default function Home() {
                           }}
                           className={styles.generatebutton}
                         >
-                          {loading ? (
+                          {(loading || isSpeaking) ? (
                             <div className={styles.loadingwheel}>
                               <LoadingDots color="#FFA500" />
                             </div>
@@ -645,8 +664,7 @@ export default function Home() {
                         <button
                           type="button"
                           className={styles.stopvoicebutton}
-                          onClick={stopSpeaking}
-                          disabled={!isSpeaking}
+                          onClick={handleStop}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -689,7 +707,6 @@ export default function Home() {
                         </button>
                         <button
                           type="button"
-                          disabled={!loading || !isSpeaking}
                           className={styles.pausebutton}
                           onClick={handlePause}
                         >
