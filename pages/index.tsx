@@ -62,6 +62,7 @@ export default function Home() {
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
   const [isPaused, setIsPaused] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -242,25 +243,30 @@ export default function Home() {
             model = "";
           }
 
-          consoleLog('info', 'Using speakText with values - gender: ', gender, ' model: ', model, ' language: ', audioLanguage);
+          // Speak the sentence if speech output is enabled
+          if (speechOutputEnabled) {
+            consoleLog('info', 'Using speakText with values - gender: ', gender, ' model: ', model, ' language: ', audioLanguage);
 
-          // Speak the sentence
-          if (audioLanguage === 'en-US') {
-            // Speak the original text
-            consoleLog('info', 'speaking untranslated from text: ', sentence);
-            await speakText(sentence, 1, gender, audioLanguage, model);
-          } else {
-            // Speak the translated text
-            let translationEntry: string = '';
-            if (translatedText !== '' && audioLanguage == subtitleLanguage) {
-              // Use the previously translated text
-              translationEntry = translatedText;
+            // Speak the sentence
+            if (audioLanguage === 'en-US') {
+              // Speak the original text
+              consoleLog('info', 'speaking untranslated from text: ', sentence);
+              await speakText(sentence, 1, gender, audioLanguage, model);
             } else {
-              // Translate the text
-              translationEntry = await fetchTranslation(sentence, audioLanguage);
+              // Speak the translated text
+              let translationEntry: string = '';
+              if (translatedText !== '' && audioLanguage == subtitleLanguage) {
+                // Use the previously translated text
+                translationEntry = translatedText;
+              } else {
+                // Translate the text
+                translationEntry = await fetchTranslation(sentence, audioLanguage);
+              }
+              consoleLog('info', 'speaking translated from text: ', sentence, ' to text: ', translationEntry);
+              await speakText(translationEntry, 1, gender, audioLanguage, model);
             }
-            consoleLog('info', 'speaking translated from text: ', sentence, ' to text: ', translationEntry);
-            await speakText(translationEntry, 1, gender, audioLanguage, model);
+          } else {
+            stopSpeaking();
           }
           //setImageUrl('gaib_c.png'); // Set the image to the closed mouth
           // Set the last message displayed
@@ -272,17 +278,16 @@ export default function Home() {
       setImageUrl('gaib_c.png');
     }
 
-    if (
-      speechOutputEnabled &&
-      lastMessageIndex > lastSpokenMessageIndex &&
+    if (lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
       displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
     } else {
       stopSpeaking();
+      setIsSpeaking(false);
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking]);
 
 
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -339,6 +344,7 @@ export default function Home() {
     }));
 
     setLoading(true);
+    setIsSpeaking(true);
     setQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
 
@@ -517,17 +523,18 @@ export default function Home() {
 
   const handleReplay = () => {
     // Find the last user message
-    const lastUserMessage = messages
-      .slice()
-      .reverse()
-      .find((message) => message.type === 'userMessage');
-
-    if (lastUserMessage) {
-      // Set the input value to the last user message
-      setQuery(lastUserMessage.message);
-
-      // Submit the form
-      handleSubmit({ preventDefault: () => { } }, selectedPersonality);
+    if (lastSpokenMessageIndex > 0) {
+      // add a new message to the messages array with the last spoken message
+      setMessageState((state) => ({
+        ...state,
+        messages: [
+          ...state.messages,
+          {
+            type: 'apiMessage',
+            message: state.messages[lastSpokenMessageIndex].message,
+          },
+        ],
+      }));
     }
   };
 
@@ -560,7 +567,7 @@ export default function Home() {
                 <form onSubmit={handleSubmit}>
                   <div className={styles.cloudform}>
                     <textarea
-                      disabled={loading}
+                      disabled={loading || isSpeaking}
                       onKeyDown={handleEnter}
                       ref={textAreaRef}
                       autoFocus={true}
@@ -572,7 +579,7 @@ export default function Home() {
                         loading
                           ? selectedPersonality === 'GAIB'
                             ? 'GAIB is generating your Anime...'
-                            : 'Meditating upon your question...'
+                            : 'Thinking upon your question...'
                           : selectedPersonality === 'GAIB'
                             ? 'Give me an Anime plotline to generate? Please end all spoken commands with "GAIB".'
                             : 'Give me a question to answer? Please end all spoken commands with "GAIB".'
@@ -587,7 +594,7 @@ export default function Home() {
                       <div className={styles.buttoncontainer}>
                         <button
                           type="submit"
-                          disabled={loading || !selectedPersonality}
+                          disabled={loading || !selectedPersonality || isSpeaking}
                           onClick={(e) => {
                             e.preventDefault();
                             if (selectedPersonality) {
@@ -613,7 +620,7 @@ export default function Home() {
                         </button>
                         <button
                           type="button"
-                          disabled={loading}
+                          disabled={loading || isSpeaking}
                           className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
                           onClick={startSpeechRecognition}
                         >
@@ -639,6 +646,7 @@ export default function Home() {
                           type="button"
                           className={styles.stopvoicebutton}
                           onClick={stopSpeaking}
+                          disabled={!isSpeaking}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -657,6 +665,7 @@ export default function Home() {
                         </button>
                         <button
                           type="button"
+                          disabled={loading || isSpeaking}
                           className={styles.replaybutton}
                           onClick={handleReplay}
                         >
@@ -667,6 +676,7 @@ export default function Home() {
                         </button>
                         <button
                           type="button"
+                          disabled={loading || isSpeaking}
                           className={styles.clearbutton}
                           onClick={handleClear}
                         >
@@ -679,6 +689,7 @@ export default function Home() {
                         </button>
                         <button
                           type="button"
+                          disabled={!loading || !isSpeaking}
                           className={styles.pausebutton}
                           onClick={handlePause}
                         >
@@ -696,6 +707,7 @@ export default function Home() {
                           <span className={styles.label} >Personality:</span>
                           <select
                             className={styles.dropdown}
+                            disabled={isSpeaking || loading}
                             value={selectedPersonality}
                             onChange={(e) => {
                               setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
@@ -716,6 +728,7 @@ export default function Home() {
                           <select
                             id="gender-select"
                             className={styles.dropdown}
+                            disabled={isSpeaking || loading}
                             value={gender}
                             onChange={(e) => setGender(e.target.value)}
                           >
@@ -733,6 +746,7 @@ export default function Home() {
                         <select
                           id="audio-language-select"
                           className={styles.dropdown}
+                          disabled={isSpeaking || loading}
                           value={audioLanguage}
                           onChange={(e) => setAudioLanguage(e.target.value)}
                         >
@@ -749,6 +763,7 @@ export default function Home() {
                         <select
                           id="subtitle-language-select"
                           className={styles.dropdown}
+                          disabled={isSpeaking || loading}
                           value={subtitleLanguage}
                           onChange={(e) => setSubtitleLanguage(e.target.value)}
                         >
@@ -775,7 +790,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div className={styles.buttonContainer}>
-                    <button onClick={togglePopup} className={styles.copyButton}>
+                    <button onClick={togglePopup} className={styles.copyButton} disabled={isSpeaking || loading}>
                       <svg
                         className={styles.documentIcon}
                         width="24"

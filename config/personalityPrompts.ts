@@ -26,10 +26,21 @@ export const CONDENSE_PROMPT = `Given the episode history and follow up directio
     Standalone Title:"
 `;
 
+export const CONDENSE_PROMPT_QUESTION = `Given the Question and Context, 
+  condense the Question down with the context included. 
+
+    Context:
+    {chat_history}
+    =========
+    Question: {question}
+    =========
+    Condensed Question:"
+`;
+
 export const PERSONALITY_PROMPTS = {
   GAIB: `Personality: Create a screenplay for an Anime Episode using the story title to create a screenplay using general themes from the context. 
-  Introduce characters with ages and genders at the beginning, and add closing credits at the end.
-  Use common Japanese names for characters and do not infringe on copyrights. 
+  Introduce characters with ages and genders at the beginning as a screen play would.
+  Use common randomized Japanese names for characters and do not infringe on copyrights. 
   Format the story as a screenplay as a script for a Anime TV show from Japan in markdown format with the story title and screen play script output.
   Make up music and sound effects for the story like they are closed captions. Do not use any copyrighted names, companies or characters.
 
@@ -45,7 +56,7 @@ export const PERSONALITY_PROMPTS = {
   =========
   Context: {context}
   =========
-  Question: {question}
+  Story Title: {question}
   Story Title and Screenplay format in Markdown:`,
 
   Therapist: `

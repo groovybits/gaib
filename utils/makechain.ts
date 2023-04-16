@@ -3,20 +3,20 @@ import { LLMChain, ChatVectorDBQAChain, loadQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { PromptTemplate } from 'langchain/prompts';
 import { CallbackManager } from 'langchain/callbacks';
-import { PERSONALITY_PROMPTS, CONDENSE_PROMPT } from '@/config/personalityPrompts';
+import { PERSONALITY_PROMPTS, CONDENSE_PROMPT, CONDENSE_PROMPT_QUESTION } from '@/config/personalityPrompts';
 
 const debug = false;
-
-const CONDENSE_PROMPT_TEMPLATE =
-  PromptTemplate.fromTemplate(CONDENSE_PROMPT);
-
-let accumulatedTokens = '';
 
 export const makeChain = (
   vectorstore: PineconeStore,
   personality: keyof typeof PERSONALITY_PROMPTS = 'GAIB', // Set a default personality
   onTokenStream?: (token: string) => void,
 ) => {
+
+  // Condense Prompt depending on a question or a story
+  const CONDENSE_PROMPT_TEMPLATE = (personality == 'GAIB' || personality == 'Stories') ?  PromptTemplate.fromTemplate(CONDENSE_PROMPT) : PromptTemplate.fromTemplate(CONDENSE_PROMPT_QUESTION);
+
+  let accumulatedTokens = '';
 
   const QA_PROMPT = PromptTemplate.fromTemplate(PERSONALITY_PROMPTS[personality]);
   if (debug) {
