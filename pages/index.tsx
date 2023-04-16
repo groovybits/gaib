@@ -113,7 +113,7 @@ export default function Home() {
     async function fetchGptGeneratedImageUrl(sentence: string, index: number, useImageAPI = false): Promise<string> {
       if (useImageAPI) {
         try {
-          let extracted_keywords = extractKeywords(sentence, 3).join(' ');
+          let extracted_keywords = extractKeywords(sentence, 8).join(' ');
           consoleLog('info', 'Extracted keywords: ', extracted_keywords);
           const keywords = encodeURIComponent(extracted_keywords);
           const response = await fetch('/api/pexels', {
