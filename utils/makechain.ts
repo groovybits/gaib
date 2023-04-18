@@ -1,5 +1,6 @@
 import { OpenAIChat } from 'langchain/llms';
-import { LLMChain, ChatVectorDBQAChain, loadQAChain } from 'langchain/chains';
+import { OpenAI } from 'langchain/llms/openai';
+import { LLMChain, ChatVectorDBQAChain, ConversationalRetrievalQAChain, loadQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { PromptTemplate } from 'langchain/prompts';
 import { CallbackManager } from 'langchain/callbacks';
@@ -12,61 +13,53 @@ export const makeChain = (
   personality: keyof typeof PERSONALITY_PROMPTS = 'GAIB', // Set a default personality
   onTokenStream?: (token: string) => void,
 ) => {
-
   // Condense Prompt depending on a question or a story
-  const CONDENSE_PROMPT_TEMPLATE = (personality == 'GAIB' || personality == 'Stories') ?  PromptTemplate.fromTemplate(CONDENSE_PROMPT) : PromptTemplate.fromTemplate(CONDENSE_PROMPT_QUESTION);
+  const CONDENSE_PROMPT_STRING = (personality == 'GAIB' || personality == 'Stories') ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
 
-  let accumulatedTokens = '';
+  let title_finished = false;
+  let accumulatedBodyTokens = '';
+  let accumulatedTitleTokens = '';
+  let accumulatedTitleTokenCount = 0;
+  let accumulatedBodyTokenCount = 0;
 
-  const QA_PROMPT = PromptTemplate.fromTemplate(PERSONALITY_PROMPTS[personality]);
-  if (debug) {
-    console.log("\n===\nQA_PROMPT: ", QA_PROMPT);
-    console.log("\n===\nCONDENSE_PROMPT_TEMPLATE: ", CONDENSE_PROMPT_TEMPLATE);
-  }
-
-  const questionGenerator = new LLMChain({
-    llm: new OpenAIChat({ temperature: 0.3, presencePenalty: 0, frequencyPenalty: 0, maxTokens: 200, modelName: 'gpt-3.5-turbo' }),
-    prompt: CONDENSE_PROMPT_TEMPLATE,
-  });
-  if (debug) {
-    console.log("\n===\nQuestionGenerator: ", questionGenerator);
-  }
-
-  const docChain = loadQAChain(
-    new OpenAIChat({
-      temperature: 0.7,
-      maxTokens: 800,
-      presencePenalty: 0.1,
-      frequencyPenalty: 0.2,
-      modelName: 'gpt-3.5-turbo', //change this to older versions (e.g. gpt-3.5-turbo) if you don't have access to gpt-4
-      streaming: Boolean(onTokenStream),
-      callbackManager: onTokenStream
-        ? CallbackManager.fromHandlers({
-          async handleLLMNewToken(token) {
-            accumulatedTokens += token;
+  const model = new OpenAIChat({
+    temperature: 0.7,
+    maxTokens: 800,
+    presencePenalty: 0.1,
+    frequencyPenalty: 0.2,
+    modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
+    streaming: Boolean(onTokenStream),
+    callbackManager: onTokenStream
+      ? CallbackManager.fromHandlers({
+        async handleLLMNewToken(token) {
+          if (title_finished == true) {
+            accumulatedBodyTokenCount += 1;
+            accumulatedBodyTokens += token;
             onTokenStream(token);
-          },
-          async handleLLMEnd() {
-            console.log("accumulatedTokens: [", accumulatedTokens, "] length: ", accumulatedTokens.length, " tokens\n");
-          },
-        })
-        : undefined,
-    }),
-    { prompt: QA_PROMPT },
-  );
-  if (debug) {
-    console.log("\n===\nDocChain: ", docChain);
-  }
-
-  if (!docChain) {
-    throw new Error('Failure with GPT API, please try again later.');
-  }
-
-  return new ChatVectorDBQAChain({
-    vectorstore,
-    combineDocumentsChain: docChain,
-    questionGeneratorChain: questionGenerator,
-    returnSourceDocuments: true,
-    k: 8, //number of source documents to return
+          } else {
+            accumulatedTitleTokens += token;
+            accumulatedTitleTokenCount += 1;
+          }
+        },
+        async handleLLMEnd() {
+          if (title_finished === false) {
+            title_finished = true;
+            console.log("Title: [", accumulatedTitleTokens, "]\n Title Accumulated: ", accumulatedTitleTokenCount, " tokens.\n");
+          } else {
+            console.log("Body: [", accumulatedBodyTokens, "]\n Body Accumulated: ", accumulatedBodyTokenCount, " tokens.\n");
+          }
+        },
+      })
+      : undefined,
   });
+
+  return ConversationalRetrievalQAChain.fromLLM(
+    model,
+    vectorstore.asRetriever(),
+    {
+      qaTemplate: PERSONALITY_PROMPTS[personality],
+      questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
+      returnSourceDocuments: true, //The number of source documents returned is 4 by default    
+    },
+  );
 };

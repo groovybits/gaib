@@ -807,7 +807,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div className={styles.buttonContainer}>
-                    <button onClick={togglePopup} className={styles.copyButton} disabled={isSpeaking || loading}>
+                    <button type="button" onClick={togglePopup} className={styles.copyButton} disabled={isSpeaking || loading}>
                       <svg
                         className={styles.documentIcon}
                         width="24"
