@@ -509,6 +509,7 @@ export default function Home() {
     }
   };
 
+  // pause speaking output
   const handlePause = () => {
     if (isPaused) {
       handleReplay();
@@ -519,14 +520,17 @@ export default function Home() {
     }
   };
 
+  // clear the chat history
   const handleClear = () => {
-    // Clear the messages array of all apiMessages and userMessages
-    setMessageState((state) => ({
-      ...state,
-      messages: messages.filter((message) => message.type !== 'apiMessage' && message.type !== 'userMessage'),
-    }));
-  };
+    setMessageState((state) => {
+      return {
+        ...state,
+        history: [],
+      };
+    });
+  };  
 
+  // replay the last spoken message
   const handleReplay = () => {
     // Find the last user message
     if (lastSpokenMessageIndex > 0) {
@@ -544,6 +548,7 @@ export default function Home() {
     }
   };
 
+  // stop speaking and listening
   const handleStop = () => {
     stopSpeaking();
     setIsPaused(false);
