@@ -34,7 +34,7 @@ To set up Google Cloud authentication for the Text-to-Speech API:
 - Set the `GOOGLE_APPLICATION_CREDENTIALS` `.env` environment variable to the path of your downloaded JSON file.
 - Enable Google Text Translation API for your project.
 - Get the Google Text Translation API Key and add it into `.env` (see `.env.example`).
-- Get a pexels.com API key and put it in `.env` (Pexels is free).
+- Get a pexels.com API key and put it in `.env` (Pexels is free). <https://www.pexels.com/api/>
 - Set up a Firebase DB and Stripe payments: [Setup Guide](https://blog.jarrodwatts.com/set-up-subscription-payments-with-stripe-using-firebase-and-nextjs)
 
 The tech stack used includes LangChain, Pinecone, TypeScript, OpenAI, and Next.js. LangChain is a framework that makes it easier to build scalable AI/LLM apps and chatbots. Pinecone is a vector store for storing embeddings and your PDF in text to later retrieve similar docs.
@@ -58,7 +58,7 @@ pnpm install
 3. Set up your `.env` file
 
 - Copy `.env.example` into `.env`
-  Your `.env` file should look like this:
+  Your `.env` file should look like this: <https://github.com/groovybits/gaib/blob/main/.env.example>
 
 - Visit [OpenAI](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key) to retrieve API
 keys and insert them into your `.env` file.
@@ -66,7 +66,7 @@ keys and insert them into your `.env` file.
 
 4. Set up the `PINECONE_NAME_SPACE` in `.env` with a `namespace` where you'd like to store your embeddings on Pinecone when you run `pnpm run ingest`. This namespace will later be used for queries and retrieval. The different personalities check if the namespace exists for their names too, so they can focus on a set of data.
 
-5. In `utils/makechain.ts`, you'll find the main OpenAI SDK code. Change `modelName` in `new OpenAIChat` to `gpt-3.5-turbo` if you don't have access to `gpt-4`. Please verify outside this repo that you have access to `gpt-4`, otherwise the application will not work with it.
+5. In `utils/makechain.ts`, you'll find the main OpenAI SDK code. Change `modelName` in `new OpenAIChat` to `gpt-3.5-turbo` if you don't have access to `gpt-4`. Please verify outside this repo that you have access to `gpt-4`, otherwise the application will not work with it. There are personalities setup in <https://github.com/groovybits/gaib/blob/main/config/personalityPrompts.ts>
 
 ## Convert your PDF files to embeddings
 

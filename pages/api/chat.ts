@@ -54,6 +54,12 @@ function extractKeywords(sentence: string, numberOfKeywords = 3) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { question, selectedPersonality, history } = req.body;
 
+  //only accept post requests
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
   if (!question) {
     return res.status(400).json({ message: 'No question in the request' });
   }
