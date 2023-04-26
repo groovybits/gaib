@@ -86,12 +86,12 @@ function Auth({}: Props): ReactElement {
         {!userIsPremium ? (
             <div className={styles.header}>
               <button onClick={() => createCheckoutSession(user.uid)} className={styles.voicebutton}>
-                Upgrade to premium!
+                Become a Monthly Patron
               </button>
             </div>
           ) : (
             <div className={styles.header}>
-              <p>You are a Groovy customer! [PREMIUM]</p>
+              <p>You are a Groovy Human!!! [PATRON]</p>
             </div>
           )}        
           <button onClick={signOut} className={styles.voicebutton}>Sign out</button>
