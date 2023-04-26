@@ -87,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const index = pinecone.Index(PINECONE_INDEX_NAME);
 
   // Check if the personality namespace exists, otherwise use the environment variable
-  const namespace = (await namespaceExists(index, selectedPersonality.toLowerCase())) ? selectedPersonality.toLowerCase() : PINECONE_NAME_SPACE;
+  const namespace = (await namespaceExists(index, selectedPersonality.toLowerCase().trim())) ? selectedPersonality.toLowerCase().trim() : PINECONE_NAME_SPACE;
 
   let vectorStore;
   try {
