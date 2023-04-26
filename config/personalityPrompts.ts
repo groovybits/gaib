@@ -15,8 +15,8 @@
     // Add more personalities here
 */
 
-export const CONDENSE_PROMPT = `Given the episode history and follow up direction, 
-  rephrase the follow up direction as a standalone title for a follow up episode based off the episode history with a new line at the end. 
+export const CONDENSE_PROMPT = `Given the episode history and follow up direction for the new title, 
+  condense the episode history and follow up direction into a standalone title for the next episode. 
 
     Episode History:
     {chat_history}
@@ -26,7 +26,7 @@ export const CONDENSE_PROMPT = `Given the episode history and follow up directio
     Standalone Title:
 `;
 
-export const CONDENSE_PROMPT_QUESTION = `Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question with a new line at the end.
+export const CONDENSE_PROMPT_QUESTION = `Given the previous context and current question, condense them both into a single question weighting the question more than the previous context.
 
     Context:
     {chat_history}

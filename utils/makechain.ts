@@ -12,7 +12,7 @@ export const makeChain = (
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
-  const CONDENSE_PROMPT_STRING = (personality == 'GAIB' || personality == 'Stories') ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
+  const CONDENSE_PROMPT_STRING = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
 
   let title_finished = false;
   let accumulatedBodyTokens = '';
@@ -20,8 +20,8 @@ export const makeChain = (
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
 
-  let temperature = (personality == 'GAIB' || personality == 'Stories') ? 0.7 : 0.2;
-  let maxTokens = (personality == 'GAIB' || personality == 'Stories') ? 800 : 500;
+  let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.7 : 0.2;
+  let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 800 : 500;
 
   const model = new OpenAIChat({
     temperature: temperature,

@@ -51,16 +51,6 @@ function extractKeywords(sentence: string, numberOfKeywords = 3) {
   return keywords;
 }
 
-async function namespaceExists(pineconeIndex : any, namespace : any) {
-  try {
-    const info = await pineconeIndex.info();
-    return info.namespaces.includes(namespace);
-  } catch (error) {
-    consoleLog('error', 'Error checking namespace [', namespace, ']: ', error);
-    return false;
-  }
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { question, selectedPersonality, history } = req.body;
 
@@ -86,17 +76,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const index = pinecone.Index(PINECONE_INDEX_NAME);
 
-  // Check if the personality namespace exists, otherwise use the environment variable
-  const namespace = (await namespaceExists(index, selectedPersonality.toLowerCase().trim())) ? selectedPersonality.toLowerCase().trim() : PINECONE_NAME_SPACE;
-
   let vectorStore;
   try {
-    /* create vectorstore */
-    vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({}), {
-      pineconeIndex: index,
-      textKey: 'text',
-      namespace: namespace,
-    });
+    try {
+      // Try to load the vector store for the selected personality
+      vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({}), {
+        pineconeIndex: index,
+        textKey: 'text',
+        namespace: selectedPersonality.toLowerCase().trim(),
+      });
+    } catch (error) {
+      // Use the default vector store if the selected personality is not available
+      vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({}), {
+        pineconeIndex: index,
+        textKey: 'text',
+        namespace: PINECONE_NAME_SPACE,
+      });
+    }
   } catch (error) {
     consoleLog('error', 'Error creating vector store:', error);
     return res.status(500).json({ message: 'Internal server error VS001.' });
