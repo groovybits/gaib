@@ -5,6 +5,14 @@
   padding: 0.5rem;
 }
 
+.mainlogin {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  /* Add any other existing styles for the .main class */
+}
+
 .header {
   width: auto;
   text-align: center;
@@ -205,7 +213,7 @@
 }
 
 .generatebutton:hover {
-  background: #e5f810;
+  background: #7f8a09;
   border-radius: 0.2rem;
 }
 
@@ -216,7 +224,7 @@
 }
 
 .voicebutton:hover {
-  background: #e5f810;
+  background: #7f8a09;
   border-radius: 0.2rem;
 }
 
@@ -601,6 +609,27 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   cursor: pointer;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+  background-color: #f5f5f5;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fff;
+  padding: 2rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile optimization */

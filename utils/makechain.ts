@@ -1,8 +1,6 @@
 import { OpenAIChat } from 'langchain/llms';
-import { OpenAI } from 'langchain/llms/openai';
-import { LLMChain, ChatVectorDBQAChain, ConversationalRetrievalQAChain, loadQAChain } from 'langchain/chains';
+import { ConversationalRetrievalQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
-import { PromptTemplate } from 'langchain/prompts';
 import { CallbackManager } from 'langchain/callbacks';
 import { PERSONALITY_PROMPTS, CONDENSE_PROMPT, CONDENSE_PROMPT_QUESTION } from '@/config/personalityPrompts';
 
@@ -22,11 +20,14 @@ export const makeChain = (
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
 
+  let temperature = (personality == 'GAIB' || personality == 'Stories') ? 0.7 : 0.2;
+  let maxTokens = (personality == 'GAIB' || personality == 'Stories') ? 800 : 500;
+
   const model = new OpenAIChat({
-    temperature: 0.7,
-    maxTokens: 800,
+    temperature: temperature,
+    maxTokens: maxTokens,
     presencePenalty: 0.1,
-    frequencyPenalty: 0.2,
+    frequencyPenalty: 0.1,
     modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
     streaming: Boolean(onTokenStream),
     callbackManager: onTokenStream

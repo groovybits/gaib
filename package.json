@@ -1,6 +1,6 @@
 {
   "name": "gaib",
-  "version": "0.1.0",
+  "version": ".2.0",
   "private": true,
   "engines": {
     "node": ">=18"
@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3000",
     "type-check": "tsc --noEmit",
     "lint": "eslint --ignore-path .gitignore \"**/*.+(ts|js|tsx)\"",
     "format": "prettier --ignore-path .gitignore \"**/*.+(ts|js|tsx)\" --write",
@@ -22,10 +22,13 @@
     "@microsoft/fetch-event-source": "^2.0.1",
     "@pinecone-database/pinecone": "^0.0.12",
     "@radix-ui/react-accordion": "^1.1.1",
+    "@stripe/stripe-js": "^1.52.1",
     "child_process": "^1.0.2",
     "clsx": "^1.2.1",
     "compromise": "^14.8.2",
     "dotenv": "^16.0.3",
+    "firebase": "^8.10.1",
+    "firebase-admin": "^11.7.0",
     "fs": "0.0.1-security",
     "gtts.js": "^1.0.1",
     "howler": "^2.2.3",
@@ -33,13 +36,16 @@
     "lucide-react": "^0.125.0",
     "net": "^1.0.2",
     "next": "13.2.3",
+    "next-firebase-auth": "^0.15.0",
     "node-fetch": "^3.3.1",
     "openai": "^3.2.1",
     "pdf-parse": "1.1.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-firebase-hooks": "^3.0.4",
     "react-markdown": "^8.0.5",
     "sharp": "^0.32.0",
+    "stripe": "^12.2.0",
     "tailwind-merge": "^1.10.0",
     "tls": "^0.0.1",
     "winston": "^3.8.2"

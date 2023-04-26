@@ -51,8 +51,18 @@ function extractKeywords(sentence: string, numberOfKeywords = 3) {
   return keywords;
 }
 
+async function namespaceExists(pineconeIndex : any, namespace : any) {
+  try {
+    const info = await pineconeIndex.info();
+    return info.namespaces.includes(namespace);
+  } catch (error) {
+    consoleLog('error', 'Error checking namespace [', namespace, ']: ', error);
+    return false;
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { question, personality, history } = req.body;
+  const { question, selectedPersonality, history } = req.body;
 
   if (!question) {
     return res.status(400).json({ message: 'No question in the request' });
@@ -69,12 +79,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sanitizedQuestion = sanitizedQuestion.substring(0, MAX_INPUT_LENGTH);
   }
 
-  consoleLog('info', "\n===\nPersonality: ", personality, "\n===\nHistory: ", 
+  consoleLog('info', "\n===\nPersonality: ", selectedPersonality, "\n===\nHistory: ", 
       history, "\n===\nsummarizedHistory: ", summarizedHistory, "\n===\nQuestion: ", 
       question, "\n===\nSanitized Question: ", sanitizedQuestion, "\n===\nRequest Body: ", 
       req.body, "\n===\n");
 
   const index = pinecone.Index(PINECONE_INDEX_NAME);
+
+  // Check if the personality namespace exists, otherwise use the environment variable
+  const namespace = (await namespaceExists(index, selectedPersonality)) ? selectedPersonality : PINECONE_NAME_SPACE;
 
   let vectorStore;
   try {
@@ -82,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({}), {
       pineconeIndex: index,
       textKey: 'text',
-      namespace: PINECONE_NAME_SPACE,
+      namespace: namespace,
     });
   } catch (error) {
     consoleLog('error', 'Error creating vector store:', error);
@@ -102,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   sendData(JSON.stringify({ data: '' }));
 
   // Create chain
-  const chain = makeChain(vectorStore, personality, (token: string) => {
+  const chain = makeChain(vectorStore, selectedPersonality, (token: string) => {
     sendData(JSON.stringify({ data: token }));
   });
 
