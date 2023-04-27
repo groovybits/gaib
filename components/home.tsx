@@ -110,51 +110,33 @@ function Home() {
       return keywords;
     }
 
-    async function fetchVideoUrl(sentence: string, useVideoAPI = false): Promise<string> {
-      if (useVideoAPI) {
-        try {
-          let extracted_keywords = extractKeywords(sentence, 8).join(' ');
-          consoleLog('info', 'Extracted keywords: ', extracted_keywords);
-          const keywords = encodeURIComponent(extracted_keywords);
-          const response = await fetch('/api/pexels', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ keywords }),
-          });
-    
-          const data = await response.json();
-          if (data.videos && data.videos.length > 0) {
-            const videoUrl = data.videos[0].video_files[0].link;
-            return videoUrl;
-          } else {
-            console.error('No video found for the given keywords');
-          }
-        } catch (error) {
-          console.error('Error fetching video from API:', error);
-          // Fall back to the default static images
-        }
+    async function getGaib() {
+      const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
+      const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
+      const randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
+
+      let url = 'gaib.png';
+      if (directoryUrl != null && maxNumber > 1 && randomNumber > 0) {
+        url = `${directoryUrl}/${randomNumber}.png`;
       }
-      // failed to fetch video, don't change the video
-      return '';
-    }    
+      return url;
+    }
 
     // TODO - use image generation API in the future when it is available
     async function gptGeneratedImageUrl(sentence: string, useImageAPI = false): Promise<string> {
-      const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
-      const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
-
+      // Check if it has been 5 seconds since we last generated an image
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-      if (deltaTimeInSeconds < 10) {
+      if (deltaTimeInSeconds < 5) {
         console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
         return '';
       } 
     
-      if (useImageAPI == false && directoryUrl !== null && maxNumber !== null && maxNumber > 0) {
-        const randomNumber = Math.floor(Math.random() * maxNumber) + 1;
-        const imageUrl = `${directoryUrl}/${randomNumber}.png`;
-        return imageUrl;
-      } else if (useImageAPI) {
+      // Use local images if requested else use Pexels API to fetch images
+      if (!useImageAPI) {
+        // use local images
+        return getGaib();
+      } else {
         try {
           let extracted_keywords = extractKeywords(sentence, 8).join(' ');
           consoleLog('info', 'Extracted keywords: ', extracted_keywords);
@@ -167,30 +149,16 @@ function Home() {
     
           const data = await response.json();
           if (data.photos && data.photos.length > 0) {
-            const imageUrl = data.photos[0].src.medium;
-            return imageUrl;
+            return data.photos[0].src.medium;
           } else {
             console.error('No image found for the given keywords');
           }
         } catch (error) {
           console.error('Error fetching image from API:', error);
-          // Fall back to the default static images
-          const randomNumber = Math.floor(Math.random() * maxNumber) + 1;
-          const imageUrl = `${directoryUrl}/${randomNumber}.png`;
-          if (imageUrl !== null && imageUrl !== undefined && imageUrl !== '') {
-            return imageUrl;
-          }
-          return 'gaib.png';
         }
       }
-
-      // failed to fetch image, return the default image
-      const randomNumber = Math.floor(Math.random() * maxNumber) + 1;
-      const imageUrl = `${directoryUrl}/${randomNumber}.png`;
-      if (imageUrl !== null && imageUrl !== undefined && imageUrl !== '') {
-        return imageUrl;
-      }
-      return 'gaib.png';
+      // failed to fetch image, leave the image as is
+      return '';
     }    
 
     function splitSentence(sentence: any, maxLength = 80) {
@@ -258,12 +226,10 @@ function Home() {
       }
       setSubtitle(''); // Clear the subtitle
       for (const sentence of sentences) {
-        gaibImage = await gptGeneratedImageUrl(sentence, true);
-        // TODO - display video Pexels API in the future, chatGPT has the plan laid out...
-        //const videoUrl = await fetchVideoUrl(sentence, true);
-
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
+          // get the image for the sentence
+          gaibImage = await gptGeneratedImageUrl(sentence, true);
           if (gaibImage !== '') {
             setImageUrl(gaibImage); // Set the image to the open mouth
           }
