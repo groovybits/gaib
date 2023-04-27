@@ -18,12 +18,6 @@ def delete_vectors(year, month):
     pinecone_url = os.environ["PINECONE_URL"]
     pinecone_api_key = os.environ["PINECONE_API_KEY"]
 
-    # -H "Api-Key: 594a5a09-1b60-4198-abf7-1a3e1c9d3f48" -H "Content-Type: application/json"
-
-    # "/Users/christi/src/gaib/docs/ffmpeg-devel/2006-November.txt.pdf"
-
-    # -d '{"filter":{"source":{"$in":["/Users/christi/src/gaib/docs/ffmpeg-devel/2008-July.txt.pdf"]}}}'
-
     url = f"https://{pinecone_index_name}-{pinecone_url}.svc.{pinecone_region}.pinecone.io/vectors/delete?namespace={pinecone_name_space}"
     print("URL: %s\n" % url)
     headers = {
