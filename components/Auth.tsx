@@ -33,8 +33,6 @@ function Auth({}: Props): ReactElement {
   const [user, userLoading] = useAuthState(firebase.auth());
   const userIsPremium = usePremiumStatus(user);
   
-  consoleLog('debug', "Auth User is:", user);
-
   async function signInWithGoogle() {
     try {
       const userCredentials = await firebase
@@ -42,8 +40,6 @@ function Auth({}: Props): ReactElement {
         .signInWithPopup(new firebase.auth.GoogleAuthProvider());
   
       if (userCredentials && userCredentials.user) {
-        //console.log({ ...userCredentials.user });
-
         consoleLog('debug', 
           'user: ', 
           userCredentials.user, 

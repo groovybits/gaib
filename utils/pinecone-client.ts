@@ -9,13 +9,17 @@ async function initPinecone() {
     const pinecone = new PineconeClient();
 
     await pinecone.init({
-      environment: process.env.PINECONE_ENVIRONMENT ?? '', //this is in the dashboard
-      apiKey: process.env.PINECONE_API_KEY ?? '',
+      environment: process.env.PINECONE_ENVIRONMENT!,
+      apiKey: process.env.PINECONE_API_KEY!,
     });
 
     return pinecone;
   } catch (error) {
-    console.log('error', error);
+    if (error instanceof Error && error.message) {
+      console.log('Pinecone init error message: [', error.message, ']');
+    } else {
+      console.log('Pinecone init error: [', error, ']');
+    }
     throw new Error('Failed to initialize Pinecone Client');
   }
 }

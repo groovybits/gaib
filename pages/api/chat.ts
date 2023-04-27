@@ -31,7 +31,7 @@ async function getValidNamespace(namespaces: any) {
     const namespaceStats = indexStatsResponse.namespaces;
 
     if (!namespaceStats) {
-      console.log('No namespace stats found');
+      console.log('getValidNamespace: No namespace stats found from Pinecone from [', namespaces, ']');
       return null;
     }
 
@@ -70,55 +70,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   //only accept post requests
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
-    res.end();
     return;
   }
 
   if (!question) {
     consoleLog('error', 'No question in the request');
     res.status(400).json({ error: 'No question in the request' });
-    res.end();
     return;
   }
 
   // OpenAI recommends replacing newlines with spaces for best results
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
-
-  consoleLog('info', "\n===\nPersonality: ", selectedPersonality, "\n===\nHistory: ",
-    question, "\n===\nSanitized Question: ", sanitizedQuestion, "\n===\nRequest Body: ",
-    req.body, "\n===\n");
-
-  const namespaces = [selectedPersonality.toLowerCase().trim(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
-  consoleLog('info', 'Namespaces:', namespaces)
-
+  // Find a valid namespace
+  const namespaces = [selectedPersonality.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
   const namespaceResult = await getValidNamespace(namespaces);
 
   if (!namespaceResult) {
-    consoleLog('error', 'No valid namespace found.');
+    consoleLog('error', 'Pinecone chat: No valid namespace found.');
     res.setHeader('Retry-After', '5'); // The value is in seconds
     res.status(503).end();
     return
   }
-  consoleLog('info', 'VectorDB Namespace found:', namespaceResult.validNamespace);
+
+  consoleLog('info', "\n===\nPersonality:", selectedPersonality, "\nQuestion:",
+    sanitizedQuestion, "Namespaces:", namespaces, "\nNamespace:",
+    namespaceResult.validNamespace, "\nHistory:", history, "\n===\n")
 
   const sendData = (data: string) => {
     res.write(`data: ${data}\n\n`);
   };
 
   try {
-     // Set headers before starting the chain
-     res.writeHead(200, {
+    // Set headers before starting the chain
+    res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
     });
     sendData(JSON.stringify({ data: '' }));
-  
+
     // Create chain
     const chain = makeChain(namespaceResult.vectorStore, selectedPersonality, (token: string) => {
       sendData(JSON.stringify({ data: token }));
     });
-  
+
     // Ask a question
     let response = await chain.call({
       question: sanitizedQuestion,
@@ -127,7 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (response) {
       sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
-      consoleLog('info', "\n===\nResponse: \n", response, "\n===\n");
+      consoleLog('info', "\n===\nResponse: \n", response.text, "\n===\nSource Documents:", response.sourceDocuments, "\n===\n");
     } else {
       consoleLog('error', 'Error, giving up, No response from GPT for question:', sanitizedQuestion, ' personality:', selectedPersonality);
       res.setHeader('Retry-After', '5'); // The value is in seconds

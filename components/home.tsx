@@ -128,7 +128,7 @@ function Home() {
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
       if (deltaTimeInSeconds < 5) {
-        console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
+        //console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
         return '';
       } 
     
@@ -139,7 +139,7 @@ function Home() {
       } else {
         try {
           let extracted_keywords = extractKeywords(sentence, 8).join(' ');
-          consoleLog('info', 'Extracted keywords: ', extracted_keywords);
+          consoleLog('info', 'Extracted keywords: [', extracted_keywords, ']');
           const keywords = encodeURIComponent(extracted_keywords);
           const response = await fetch('/api/pexels', {
             method: 'POST',
@@ -151,7 +151,7 @@ function Home() {
           if (data.photos && data.photos.length > 0) {
             return data.photos[0].src.medium;
           } else {
-            console.error('No image found for the given keywords');
+            console.error('No image found for the given keywords: [', keywords, ']');
           }
         } catch (error) {
           console.error('Error fetching image from API:', error);
@@ -269,12 +269,10 @@ function Home() {
 
           // Speak the sentence if speech output is enabled
           if (speechOutputEnabled) {
-            consoleLog('info', 'Using speakText with values - gender: ', gender, ' model: ', model, ' language: ', audioLanguage);
-
             // Speak the sentence
             if (audioLanguage === 'en-US') {
               // Speak the original text
-              consoleLog('info', 'speaking untranslated from text: ', sentence);
+              consoleLog('info', 'Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
               await speakText(sentence, 1, gender, audioLanguage, model);
             } else {
               // Speak the translated text
@@ -286,14 +284,14 @@ function Home() {
                 // Translate the text
                 translationEntry = await fetchTranslation(sentence, audioLanguage);
               }
-              consoleLog('info', 'speaking translated from text: ', sentence, ' to text: ', translationEntry);
+              consoleLog('info', 'Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
               await speakText(translationEntry, 1, gender, audioLanguage, model);
             }
           } else {
             stopSpeaking();
             gaibImage = await gptGeneratedImageUrl('', false);
             if (gaibImage !== '') {
-              setImageUrl(gaibImage); // Set the image to the closed mouth
+              setImageUrl(gaibImage);
             }
           }
           // Set the last message displayed
@@ -350,8 +348,8 @@ function Home() {
       return;
     }
 
+    // Return early if the user has not spoken
     if (!query) {
-      consoleLog('debug', 'Entry Prompt Query submission was empty!');
       return;
     }
 

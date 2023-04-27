@@ -8,7 +8,7 @@ const debug = false;
 
 export const makeChain = (
   vectorstore: PineconeStore,
-  personality: keyof typeof PERSONALITY_PROMPTS = 'GAIB', // Set a default personality
+  personality: keyof typeof PERSONALITY_PROMPTS,
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
@@ -45,9 +45,9 @@ export const makeChain = (
         async handleLLMEnd() {
           if (title_finished === false) {
             title_finished = true;
-            console.log("Title: [", accumulatedTitleTokens, "]\n Title Accumulated: ", accumulatedTitleTokenCount, " tokens.\n");
+            console.log(personality, "Stories Title: [", accumulatedTitleTokens.trim(), "]\nTitle Accumulated: ", accumulatedTitleTokenCount, " tokens.");
           } else {
-            console.log("Body: [", accumulatedBodyTokens, "]\n Body Accumulated: ", accumulatedBodyTokenCount, " tokens.\n");
+            console.log(personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
           }
         },
       })
@@ -56,11 +56,11 @@ export const makeChain = (
 
   return ConversationalRetrievalQAChain.fromLLM(
     model,
-    vectorstore.asRetriever(),
+    vectorstore.asRetriever(8), // get 8 source documents, override default of 4
     {
       qaTemplate: PERSONALITY_PROMPTS[personality],
       questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
-      returnSourceDocuments: true, //The number of source documents returned is 4 by default    
+      returnSourceDocuments: true,   
     },
   );
 };
