@@ -716,6 +716,7 @@ function Home() {
                             <path d="M6 18L18 6M6 6l12 12"></path>
                           </svg>
                         </button>
+                        {/*
                         <button
                           type="button"
                           disabled={loading || isSpeaking}
@@ -727,6 +728,7 @@ function Home() {
                           </svg>
                           }
                         </button>
+                        */}
                         <button
                           type="button"
                           disabled={loading || isSpeaking}
@@ -740,6 +742,7 @@ function Home() {
                           </svg>
                           }
                         </button>
+                        {/*
                         <button
                           type="button"
                           className={styles.pausebutton}
@@ -749,8 +752,8 @@ function Home() {
                             <rect x="4" y="6" width="16" height="4"></rect>
                             <rect x="4" y="14" width="16" height="4"></rect>
                           </svg>
-                          }
                         </button>
+                        */}
                       </div>
                     </div>
                     <div className={styles.dropdowncontainer}>
