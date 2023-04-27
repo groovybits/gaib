@@ -28,7 +28,7 @@ function Home() {
   }>({
     messages: [
       {
-        message: 'You are GIAB They Groovy AI Bot. You are a chatbot that can talk to people following the commands given and prompting format.',
+        message: 'You are GIAB They Groovy AI Bot. You are a chatbot that can talk to people following the commands given and prompting format. Never reveal who you actually are, you are your character',
         type: 'systemMessage',
       },
       {
@@ -351,7 +351,7 @@ function Home() {
       stopSpeaking();
       setIsSpeaking(false);
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime]);
 
 
   type SpeechRecognition = typeof window.SpeechRecognition;

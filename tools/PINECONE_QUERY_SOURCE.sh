@@ -1,16 +1,17 @@
+#!/bin/bash
+#
 #  -d '{
 #    "filter": {"source": {"$in": ["PATH/FILENAME.pdf"]}}
 #  }'
 
 # {"$in": ["comedy", "documentary", "drama"]}
 #
-_ACCOUNT_NAME_=""
-_API_KEY_HERE_=""
-NAMESPACE=""
+
+
 curl -X POST \
-    https://_ACCOUNT_NAME_.svc.us-west1-gcp.pinecone.io/query \
+    "https://${PINECONE_INDEX_NAME}-${PINECONE_URL}.svc.${PINECONE_ENVIRONMENT}.pinecone.io/query" \
     -H 'Content-Type: application/json' \
-    -H 'Api-Key: _API_KEY_HERE_' \
+    -H "Api-Key: ${PINECONE_API_KEY}" \
     -d '{
   "vector": [
     0,
@@ -1553,5 +1554,13 @@ curl -X POST \
   "topK": 10000,
   "includeMetadata": true,
   "includeValues": false,
-  "namespace": "${NAMESPACE}"
+  "namespace": "groovypdf"
 }'
+
+
+#'{
+# "filter": {"text": {"$in": ["\n"]}}
+#}'
+
+
+

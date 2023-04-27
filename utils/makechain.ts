@@ -1,4 +1,4 @@
-import { OpenAIChat } from 'langchain/llms';
+import { OpenAI } from 'langchain/llms/openai';
 import { ConversationalRetrievalQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { CallbackManager } from 'langchain/callbacks';
@@ -20,10 +20,10 @@ export const makeChain = (
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
 
-  let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.7 : 0.2;
+  let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.7 : 0.4;
   let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 800 : 500;
 
-  const model = new OpenAIChat({
+  const model = new OpenAI({
     temperature: temperature,
     maxTokens: maxTokens,
     presencePenalty: 0.1,
