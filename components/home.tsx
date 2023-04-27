@@ -55,13 +55,14 @@ function Home() {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [subtitle, setSubtitle] = useState<string>('');
-  const [imageUrl, setImageUrl] = useState<string>('gaib_c.png');
+  const [imageUrl, setImageUrl] = useState<string>('gaib.png');
   const [gender, setGender] = useState('FEMALE');
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
   const [isPaused, setIsPaused] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [startTime, setStartTime] = useState<Date>(new Date());
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -138,8 +139,22 @@ function Home() {
     }    
 
     // TODO - use image generation API in the future when it is available
-    async function fetchGptGeneratedImageUrl(sentence: string, index: number, useImageAPI = false): Promise<string> {
-      if (useImageAPI) {
+    async function gptGeneratedImageUrl(sentence: string, useImageAPI = false): Promise<string> {
+      const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
+      const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
+
+      const endTime = new Date();
+      const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+      if (deltaTimeInSeconds < 10) {
+        console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
+        return '';
+      } 
+    
+      if (useImageAPI == false && directoryUrl !== null && maxNumber !== null && maxNumber > 0) {
+        const randomNumber = Math.floor(Math.random() * maxNumber) + 1;
+        const imageUrl = `${directoryUrl}/${randomNumber}.png`;
+        return imageUrl;
+      } else if (useImageAPI) {
         try {
           let extracted_keywords = extractKeywords(sentence, 8).join(' ');
           consoleLog('info', 'Extracted keywords: ', extracted_keywords);
@@ -160,11 +175,22 @@ function Home() {
         } catch (error) {
           console.error('Error fetching image from API:', error);
           // Fall back to the default static images
+          const randomNumber = Math.floor(Math.random() * maxNumber) + 1;
+          const imageUrl = `${directoryUrl}/${randomNumber}.png`;
+          if (imageUrl !== null && imageUrl !== undefined && imageUrl !== '') {
+            return imageUrl;
+          }
+          return 'gaib.png';
         }
       }
 
-      // failed to fetch image, don't change the image
-      return '';
+      // failed to fetch image, return the default image
+      const randomNumber = Math.floor(Math.random() * maxNumber) + 1;
+      const imageUrl = `${directoryUrl}/${randomNumber}.png`;
+      if (imageUrl !== null && imageUrl !== undefined && imageUrl !== '') {
+        return imageUrl;
+      }
+      return 'gaib.png';
     }    
 
     function splitSentence(sentence: any, maxLength = 80) {
@@ -226,17 +252,20 @@ function Home() {
       }
       
       // Display the images and subtitles
-      setImageUrl('gaib_o.png');
+      let gaibImage = await gptGeneratedImageUrl('', false);
+      if (gaibImage !== '') {
+        setImageUrl(gaibImage);
+      }
       setSubtitle(''); // Clear the subtitle
       for (const sentence of sentences) {
-        const generatedImageUrl = await fetchGptGeneratedImageUrl(sentence, lastMessageIndex, true);
+        gaibImage = await gptGeneratedImageUrl(sentence, true);
         // TODO - display video Pexels API in the future, chatGPT has the plan laid out...
         //const videoUrl = await fetchVideoUrl(sentence, true);
 
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
-          if (generatedImageUrl !== '') {
-            setImageUrl(generatedImageUrl); // Set the image to the open mouth
+          if (gaibImage !== '') {
+            setImageUrl(gaibImage); // Set the image to the open mouth
           }
           setSubtitle(''); // Clear the subtitle
 
@@ -296,15 +325,21 @@ function Home() {
             }
           } else {
             stopSpeaking();
+            gaibImage = await gptGeneratedImageUrl('', false);
+            if (gaibImage !== '') {
+              setImageUrl(gaibImage); // Set the image to the closed mouth
+            }
           }
-          //setImageUrl('gaib_c.png'); // Set the image to the closed mouth
           // Set the last message displayed
           setLastMessageDisplayed(lastMessageIndex);
         }
       }
       // Reset the subtitle after all sentences have been spoken
       setSubtitle('');
-      setImageUrl('gaib_c.png');
+      gaibImage = await gptGeneratedImageUrl('', false);
+      if (gaibImage !== '') {
+        setImageUrl(gaibImage);
+      }
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&

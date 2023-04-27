@@ -40,3 +40,6 @@ next-env.d.ts
 /Notion_DB
 
 docs/*.pdf
+
+#Gaib images
+/public/gaib/
