@@ -7,10 +7,6 @@ import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
 import logger from '@/utils/logger';
 import nlp from 'compromise';
 
-const MAX_INPUT_LENGTH = 4096;
-const MAX_RETRIES = 10;
-const INITIAL_RETRY_DELAY = 1000; // Set the initial retry delay in milliseconds
-
 // Use this function in your frontend components when you want to send a log message
 async function consoleLog(level: string, ...args: any[]) {
   const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
@@ -57,6 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   //only accept post requests
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    res.write('[DONE]');
+    res.end();
     return;
   }
 
@@ -69,16 +67,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // sanitize history
   const summarizedHistory = history ? extractKeywords(summarizeTextLocal(history)) : '';
 
-  // Truncate the input if it exceeds the maximum length
-  if (sanitizedQuestion.length > MAX_INPUT_LENGTH) {
-    consoleLog('error', `Question ${sanitizedQuestion} exceeds maximum length of ${MAX_INPUT_LENGTH} characters, truncating...`)
-    sanitizedQuestion = sanitizedQuestion.substring(0, MAX_INPUT_LENGTH);
-  }
-
-  consoleLog('info', "\n===\nPersonality: ", selectedPersonality, "\n===\nHistory: ", 
-      history, "\n===\nsummarizedHistory: ", summarizedHistory, "\n===\nQuestion: ", 
-      question, "\n===\nSanitized Question: ", sanitizedQuestion, "\n===\nRequest Body: ", 
-      req.body, "\n===\n");
+  consoleLog('info', "\n===\nPersonality: ", selectedPersonality, "\n===\nHistory: ",
+    history, "\n===\nsummarizedHistory: ", summarizedHistory, "\n===\nQuestion: ",
+    question, "\n===\nSanitized Question: ", sanitizedQuestion, "\n===\nRequest Body: ",
+    req.body, "\n===\n");
 
   const index = pinecone.Index(PINECONE_INDEX_NAME);
 
@@ -101,6 +93,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error) {
     consoleLog('error', 'Error creating vector store:', error);
+    res.write('[DONE]');
+    res.end();
     return res.status(500).json({ message: 'Internal server error VS001.' });
   }
 
@@ -122,45 +116,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   let response;
-  let retries = 0;
-  let success = false;
+  try {
+    // Ask a question
+    response = await chain.call({
+      question: sanitizedQuestion,
+      chat_history: history ? [history] : [],
+    });
 
-  while (!success && retries < MAX_RETRIES) {
-    try {
-      // Ask a question
-      response = await chain.call({
-        question: sanitizedQuestion,
-        chat_history: history ? [history] : [],
-      });
-
-      if (!response) {
-        console.error('No response from GPT');
-        retries++;
-        continue;
-      }
-
+    if (response) {
       consoleLog('info', "\n===\nResponse: \n", response, "\n===\n");
-
-      //sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
-      success = true;
-    } catch (error) {
-      if (error instanceof Error && error.message) {
-        consoleLog('error', 'API error: ', error.message ? error.message : error);
-      } else {
-        consoleLog('error', 'Unknown error:', error);
-      }
-      retries++;
-
-      if (retries < MAX_RETRIES) {
-        const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retries - 1);
-        console.log('info', `Failed to connect to the GPT API after ${retries}, Retrying in ${retryDelay} ms...`);
-        await sleep(retryDelay);
-      } else {
-        console.log('error', 'Could not contact GPT after multiple retries, giving up. Please try again later.');
-        sendData(JSON.stringify({ error: 'Could not contact GPT after multiple retries, giving up. Please try again later.' }));
-        break;
-      }
     }
+
+  } catch (error) {
+    if (error instanceof Error && error.message) {
+      consoleLog('error', 'API error: ', error.message ? error.message : error);
+    } else {
+      consoleLog('error', 'Unknown error:', error);
+    }
+
+    consoleLog('error', 'Could not contact GPT, giving up. Please try again later.');
+    sendData('[DONE]');
+    res.end();
+    return res.status(420).json({ message: 'OpenAI Error GPT Unavailable or has an issue with queries, try again later.' });
   }
 
   sendData('[DONE]');
