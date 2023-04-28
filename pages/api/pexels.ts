@@ -11,7 +11,7 @@ const pexelsHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     const keywords = req.body.keywords;
-    const apiUrl = `https://api.pexels.com/v1/search?query=${keywords}&per_page=1&page=1&orientation=landscape&size=small`;
+    const apiUrl = `https://api.pexels.com/v1/search?query=${keywords}&per_page=1&page=1&orientation=landscape&size=large`;
 
     try {
       const response = await fetch(apiUrl, {

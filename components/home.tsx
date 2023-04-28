@@ -63,6 +63,8 @@ function Home() {
   const [isPaused, setIsPaused] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [startTime, setStartTime] = useState<Date>(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [autoFullScreen, setAutoFullScreen] = useState(false);
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -358,6 +360,11 @@ function Home() {
     // make sure we are not paused
     setIsPaused(false);
 
+    // Full screen if autoFullScreen is enabled
+    if (autoFullScreen && !isFullScreen) {
+      toggleFullScreen();
+    }
+
     setMessageState((state) => ({
       ...state,
       messages: [
@@ -383,6 +390,7 @@ function Home() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Retry-After': '5',
         },
         body: JSON.stringify({
           question,
@@ -433,6 +441,9 @@ function Home() {
   const handleEnter = useCallback(
     (e: any) => {
       if (e.key === 'Enter' && !e.shiftKey && query) {
+        if (autoFullScreen && !isFullScreen) {
+          toggleFullScreen();
+        }
         handleSubmit(e);
       } else if (e.key == 'Enter') {
         e.preventDefault();
@@ -464,6 +475,12 @@ function Home() {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  useEffect(() => {
+    if (!isSpeaking && !loading && autoFullScreen && !isFullScreen) {
+      toggleFullScreen();
+    }
+  }, [isSpeaking, autoFullScreen, loading, isFullScreen]);
 
   // Update the startSpeechRecognition function
   const startSpeechRecognition = () => {
@@ -590,6 +607,28 @@ function Home() {
     }
   };
 
+  const toggleFullScreen = () => {
+    const imageContainer = document.querySelector(`.${styles.imageContainer}`);
+    const image = document.querySelector(`.${styles.generatedImage} img`);
+    const subtitle = document.querySelector(`.${styles.subtitle}`);
+    
+    if (!document.fullscreenElement) {
+      if (imageContainer?.requestFullscreen) {
+        imageContainer.requestFullscreen();
+        image?.classList.add(styles.fullScreenImage);
+        subtitle?.classList.add(styles.fullScreenSubtitle);
+      }
+      setIsFullScreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        image?.classList.remove(styles.fullScreenImage);
+        subtitle?.classList.remove(styles.fullScreenSubtitle);
+      }
+      setIsFullScreen(false);
+    }
+  };
+  
   return (
     <>
       <div className={styles.header}>
@@ -600,18 +639,34 @@ function Home() {
         <div className="mx-auto flex flex-col gap-4 bg-#3b82f6">
           <main className={styles.main}>
             <div className={styles.cloud}>
-              <div className={styles.imageContainer}>
+              <div
+                className={styles.imageContainer}
+                style={{
+                  position: isFullScreen ? "fixed" : "relative",
+                  top: isFullScreen ? 0 : "auto",
+                  left: isFullScreen ? 0 : "auto",
+                  width: isFullScreen ? "auto" : "auto",
+                  height: isFullScreen ? "100vh" : "480px",
+                  zIndex: isFullScreen ? 1000 : "auto",
+                  backgroundColor: isFullScreen ? "black" : "transparent",
+                }}
+              >
+                <button
+                  type="button"
+                  className={styles.fullscreenButton}
+                  onClick={toggleFullScreen}
+                >
+                  {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                </button>
                 <div className={styles.generatedImage}>
                   <img
                     src={imageUrl}
                     alt="GAIB"
-                    style={{
-                      width: '720px',
-                      height: '480px',
-                      objectFit: 'scale-down',
-                    }}
-                  />                </div>
-                <div className={styles.subtitle}>{subtitle}</div>
+                  />
+                </div>
+                <div className={
+                  isFullScreen ? `${styles.subtitle} ${styles.fullScreenSubtitle}` : styles.subtitle
+                }>{subtitle}</div>
               </div>
             </div>
             <div className={styles.center}>
@@ -645,6 +700,7 @@ function Home() {
                     <div className={styles.buttoncontainer}>
                       <div className={styles.buttoncontainer}>
                         <button
+                          title="Submit prompt to GAIB"
                           type="submit"
                           disabled={loading || !selectedPersonality || isSpeaking}
                           onClick={(e) => {
@@ -671,6 +727,7 @@ function Home() {
                           )}
                         </button>
                         <button
+                          title="Start Listening for Voice Commands"
                           type="button"
                           disabled={loading || isSpeaking}
                           className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
@@ -695,6 +752,7 @@ function Home() {
                         </button>
 
                         <button
+                          title="Stop Voice"
                           type="button"
                           className={styles.stopvoicebutton}
                           onClick={handleStop}
@@ -728,6 +786,7 @@ function Home() {
                         </button>
                         */}
                         <button
+                          title="Clear Chat History"
                           type="button"
                           disabled={loading || isSpeaking}
                           className={styles.clearbutton}
@@ -742,6 +801,7 @@ function Home() {
                         </button>
                         {/*
                         <button
+                          title="Pause"
                           type="button"
                           className={styles.pausebutton}
                           onClick={handlePause}
@@ -833,17 +893,27 @@ function Home() {
                       <div className={styles.buttoncontainer}>
                         <label>
                           <input
+                            title="Speaking Enabled"
                             type="checkbox"
                             checked={speechOutputEnabled}
                             onChange={handleSpeechOutputToggle}
                           />
-                          &nbsp;&nbsp; <b>Speaking Enabled</b>
+                          &nbsp;&nbsp; <b>Speaking Enabled</b> &nbsp;&nbsp;&nbsp;&nbsp;
+                        </label>
+                        <label htmlFor="auto-full-screen">
+                          <input
+                            title="Auto full screen on play"
+                            type="checkbox"
+                            checked={autoFullScreen}
+                            onChange={(e) => setAutoFullScreen(e.target.checked)}
+                          />
+                           &nbsp;&nbsp; <b>Auto full screen on play</b>
                         </label>
                       </div>
                     </div>
                   </div>
                   <div className={styles.buttonContainer}>
-                    <button type="button" onClick={togglePopup} className={styles.copyButton} disabled={isSpeaking || loading}>
+                    <button title="View Transcript" type="button" onClick={togglePopup} className={styles.copyButton} disabled={isSpeaking || loading}>
                       <svg
                         className={styles.documentIcon}
                         width="24"

@@ -18,6 +18,10 @@ async function consoleLog(level: string, ...args: any[]) {
   logger.log(level, message);
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getValidNamespace(namespaces: any) {
   const describeIndexStatsQuery = {
     describeIndexStatsRequest: {
@@ -65,6 +69,10 @@ async function getValidNamespace(namespaces: any) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Set the CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   const { question, selectedPersonality, history } = req.body;
 
   //only accept post requests
@@ -114,19 +122,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sendData(JSON.stringify({ data: token }));
     });
 
-    // Ask a question
-    let response = await chain.call({
-      question: sanitizedQuestion,
-      chat_history: history ? [history] : [],
-    });
+    const maxRetries = 100;
+    const baseDelay = 333; // .333 second
+    let retries = 0;
+    let response;
+
+    while (retries < maxRetries) {
+      try {
+        response = await chain.call({
+          question: sanitizedQuestion,
+          chat_history: history ? [history] : [],
+        });
 
     if (response) {
-      sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
+      break; // Exit the loop if a response is received
+    }
+  } catch (error) {
+    consoleLog("error", `Attempt ${retries + 1}: GPT API error`, error);
+    retries++;
+    await delay(baseDelay * retries); // Wait for a delay before retrying
+  }
+}
+
+
+    if (response) {
       consoleLog('info', "\n===\nResponse: \n", response.text, "\n===\nSource Documents:", response.sourceDocuments, "\n===\n");
     } else {
       consoleLog('error', 'Error, giving up, No response from GPT for question:', sanitizedQuestion, ' personality:', selectedPersonality);
-      res.setHeader('Retry-After', '5'); // The value is in seconds
-      res.status(503).end();
       return;
     }
   } catch (error) {
@@ -135,8 +157,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       consoleLog('error', 'GPT Unknown error:', error);
     }
-    res.setHeader('Retry-After', '5'); // The value is in seconds
-    res.status(503).end();
     return;
   }
 

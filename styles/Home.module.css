@@ -248,27 +248,6 @@
   margin-top: 1rem;
 }
 
-.usermessage {
-  padding: 0.5rem;
-  color: #bada55; /* Changed font color to yellow-green */
-  background: #1e1e1e; /* Changed background color to a darker color */
-  font-size: 28px;
-}
-
-.usermessagewaiting {
-  padding: 1rem;
-  color: #bada55; /* Changed font color to yellow-green */
-  background: #1e1e1e; /* Changed background color to a darker color */
-  background: linear-gradient(to left, #07080938, #1a1c2024, #07080936);
-  background-size: 200% 200%;
-  background-position: -100% 0;
-  animation: loading-gradient 2s ease-in-out infinite;
-  animation-direction: alternate;
-  animation-name: loading-gradient;
-  font-family: 'Trebuchet MS', monospace; /* Added font family */
-  font-size: 28px;
-}
-
 @keyframes loading-gradient {
   0% {
     background-position: -100% 0;
@@ -278,15 +257,6 @@
   }
 }
 
-.apimessage {
-  background: #1e1e1e;
-  padding: 0.5rem;
-  color: #e5f810;
-  animation: fadein 0.5s;
-  white-space: pre-wrap !important;
-  font-family: 'Trebuchet MS', monospace; /* Added font family */
-}
-
 @keyframes fadein {
   from {
     opacity: 0;
@@ -294,64 +264,6 @@
   to {
     opacity: 1;
   }
-}
-
-.apimessage,
-.usermessage,
-.usermessagewaiting {
-  display: flex;
-  background: #1e1e1e;
-}
-
-.markdownanswer {
-  line-height: 1.2;
-  white-space: pre-wrap !important;
-  color: #e5f810;
-  background: transparent;
-  animation: fadein 0.5s;
-  font-family: 'Trebuchet MS', monospace; /* Added font family */
-  font-size: 20px;
-  font-weight: 300;
-}
-
-.markdownanswer a:hover {
-  opacity: 0.8;
-}
-
-.markdownanswer a {
-  color: #ffffff;
-  font-weight: 500;
-  font-size: 18px;
-}
-
-.markdownanswer code {
-  font-weight: 500;
-  white-space: pre-wrap !important;
-  color: #bada55; /* Changed font color to yellow-green */
-  background: #1e1e1e; /* Changed background color to a darker color */
-  font-family: 'Trebuchet MS', monospace; /* Added font family */
-  animation: fadein 0.5s;
-  font-size: 18px;
-}
-
-.markdownanswer ol,
-.markdownanswer ul {
-  margin: 1rem;
-}
-
-.boticon,
-.usericon {
-  margin-right: 1rem;
-  border-radius: 1rem;
-  height: 100%;
-  color: #ffffff;
-  background: #ffffff;
-}
-
-.markdownanswer h1,
-.markdownanswer h2,
-.markdownanswer h3 {
-  font-size: 20px;
 }
 
 .center {
@@ -369,7 +281,48 @@
   justify-content: center;
   align-items: center;
   border-radius: 1rem;
-  padding: 33px; /* Adjust the padding to reduce the black area around the image */
+  padding: 4px; /* Adjust the padding to reduce the black area around the image */
+}
+
+.fullScreenImage {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: 100%;
+  object-fit: scale-up;
+}
+
+.generatedImage img {
+  width: auto;
+  height: 100%;
+  object-fit: scale-up;
+}
+
+.generatedImage {
+  width: auto;
+  height: 100%;
+  object-fit: scale-up;
+  border-radius: 1rem;
+  padding: 4px; /* Adjust the padding to reduce the black area around the image */
+}
+
+.fullscreenButton {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 10;
+  padding: 2px 4px;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: rgb(238, 255, 0);
+  border: 1px solid rgb(255, 255, 255);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  position: right;
+}
+
+.fullscreenButton:hover {
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .imageContainer {
@@ -377,7 +330,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px; /* Adjust the padding to reduce the black area around the image */
+  padding: 4px; /* Adjust the padding to reduce the black area around the image */
 }
 
 .pointsnormal {
@@ -473,27 +426,6 @@
   margin-top: 30px;
 }
 
-.animesubtitles {
-  align-items: flex-end;
-  white-space: pre-wrap !important;
-  background: transparent;
-  color: white;
-  padding: 0px;
-  bottom: 12%;
-  left: 2%;
-  font-size: 24px;
-  text-align: left;
-  border-width: 0px;
-  font-weight: bolder;
-  font-family: 'Trebuchet MS';
-  /* Added font family */
-  line-height: 1.2;
-  margin: 0px;
-  justify-content: bottom;
-  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
-    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
-}
-
 .copyButton {
   background-color: #3b82f6; /* Change this to your desired button background color */
   border: none;
@@ -511,6 +443,12 @@
 
 .documentIcon {
   margin-right: 8px;
+}
+
+.fullScreenSubtitle {
+  font-size: 48px; /* Increased font size */
+  bottom: 5%; /* Adjust the bottom property */
+  left: 1%; /* Adjust the left property */
 }
 
 .subtitle {
@@ -659,13 +597,6 @@
   .navlogo {
     font-size: 1.25rem;
     width: 20rem;
-  }
-
-  .markdownanswer code {
-    white-space: pre-wrap !important;
-    color: #e5f810;
-    background: #1e1e1e;
-    font-family: 'Trebuchet MS', monospace; /* Added font family */
   }
 
   .footer {

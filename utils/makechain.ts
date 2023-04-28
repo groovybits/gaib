@@ -4,7 +4,6 @@ import { PineconeStore } from 'langchain/vectorstores';
 import { CallbackManager } from 'langchain/callbacks';
 import { PERSONALITY_PROMPTS, CONDENSE_PROMPT, CONDENSE_PROMPT_QUESTION } from '@/config/personalityPrompts';
 
-const debug = false;
 
 export const makeChain = (
   vectorstore: PineconeStore,
@@ -22,6 +21,8 @@ export const makeChain = (
 
   let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.7 : 0.4;
   let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 800 : 500;
+  const logInterval = 33; // Adjust this value to log less or more frequently
+  let tokenCount = 0;  
 
   const model = new OpenAI({
     temperature: temperature,
@@ -33,13 +34,27 @@ export const makeChain = (
     callbackManager: onTokenStream
       ? CallbackManager.fromHandlers({
         async handleLLMNewToken(token) {
+          tokenCount += 1;
+
           if (title_finished == true) {
             accumulatedBodyTokenCount += 1;
             accumulatedBodyTokens += token;
             onTokenStream(token);
+
+            if (accumulatedBodyTokenCount % logInterval === 0) {
+              console.log(
+                `${personality} Body Accumulated: ${accumulatedBodyTokenCount} tokens and ${accumulatedBodyTokens.length} characters.`
+              );
+            }
           } else {
             accumulatedTitleTokens += token;
             accumulatedTitleTokenCount += 1;
+
+            if (accumulatedTitleTokenCount % logInterval === 0) {
+              console.log(
+                `${personality} Title Accumulated: ${accumulatedTitleTokenCount} tokens.`
+              );
+            }
           }
         },
         async handleLLMEnd() {

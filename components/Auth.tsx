@@ -115,7 +115,7 @@ function Auth({}: Props): ReactElement {
       <div className={styles.cloud}>
         <div className={styles.imageContainer}>
           <div className={styles.generatedImage}>
-            <img src="gaib_o.png" alt="GAIB" style={{
+            <img src="gaib.png" alt="GAIB" style={{
                       width: '720px',
                       height: '480px',
                       objectFit: 'scale-down',
