@@ -20,7 +20,7 @@ export const makeChain = (
   let accumulatedBodyTokenCount = 0;
 
   let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.9 : 0.5;
-  let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet' || personality == 'VideoEngineer' || personality == 'Engineer' || personality == 'Coder') ? 800 : 200;
+  let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet' || personality == 'VideoEngineer' || personality == 'Engineer' || personality == 'Coder') ? 800 : 500;
   const logInterval = 33; // Adjust this value to log less or more frequently
   let tokenCount = 0;  
 
