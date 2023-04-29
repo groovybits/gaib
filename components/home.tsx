@@ -9,6 +9,8 @@ import { useSpeakText } from '@/utils/speakText';
 import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
 import { audioLanguages, subtitleLanguages, Language } from "@/config/textLanguages";
 import nlp from 'compromise';
+import { ImageData } from '@/types/imageData'; // Update the path if required
+import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
 
 type PendingMessage = {
   type: string;
@@ -65,6 +67,9 @@ function Home() {
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [autoFullScreen, setAutoFullScreen] = useState(false);
+  const [photographer, setPhotographer] = useState<string>('');
+  const [photographerUrl, setPhotographerUrl] = useState<string>('');
+  const [pexelsUrl, setPexelsUrl] = useState<string>('');
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -112,6 +117,22 @@ function Home() {
       return keywords;
     }
 
+    async function setPexelImageUrls(gaibImage : ImageData | string) {
+      if (typeof gaibImage === 'string') {
+        if (gaibImage !== '') {
+          setImageUrl(gaibImage); // Set the image to the open mouth
+        }
+        setPhotographer('GAIB');
+        setPhotographerUrl('https://groovy.org');
+        setPexelsUrl('https://ai.groovy.org');
+      } else {
+        setImageUrl(gaibImage.url); // Set the image to the open mouth
+        setPhotographer(gaibImage.photographer);
+        setPhotographerUrl(gaibImage.photographer_url);
+        setPexelsUrl(gaibImage.pexels_url);
+      }
+    }
+
     async function getGaib() {
       const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
       const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
@@ -125,7 +146,7 @@ function Home() {
     }
 
     // TODO - use image generation API in the future when it is available
-    async function gptGeneratedImageUrl(sentence: string, useImageAPI = false): Promise<string> {
+    async function gptGeneratedImageUrl(sentence: string, useImageAPI = false): Promise<ImageData | string> {
       // Check if it has been 5 seconds since we last generated an image
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
@@ -152,7 +173,12 @@ function Home() {
     
           const data = await response.json();
           if (data.photos && data.photos.length > 0) {
-            return data.photos[0].src.medium;
+            return {
+              url: data.photos[0].src.large2x,
+              photographer: data.photos[0].photographer,
+              photographer_url: data.photos[0].photographer_url,
+              pexels_url: data.photos[0].url,
+            };
           } else {
             console.error('No image found for the given keywords: [', keywords, ']');
           }
@@ -224,18 +250,14 @@ function Home() {
       
       // Display the images and subtitles
       let gaibImage = await gptGeneratedImageUrl('', false);
-      if (gaibImage !== '') {
-        setImageUrl(gaibImage);
-      }
+      setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
           // get the image for the sentence
           gaibImage = await gptGeneratedImageUrl(sentence, true);
-          if (gaibImage !== '') {
-            setImageUrl(gaibImage); // Set the image to the open mouth
-          }
+          setPexelImageUrls(gaibImage);
           setSubtitle(''); // Clear the subtitle
 
           // Set the subtitle to the translated text if the text is not in English
@@ -303,9 +325,7 @@ function Home() {
       // Reset the subtitle after all sentences have been spoken
       setSubtitle('');
       gaibImage = await gptGeneratedImageUrl('', false);
-      if (gaibImage !== '') {
-        setImageUrl(gaibImage);
-      }
+      setPexelImageUrls(gaibImage);
       stopSpeaking();
       setIsSpeaking(false);
 
@@ -666,7 +686,9 @@ function Home() {
                 </div>
                 <div className={
                   isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
-                }>{subtitle}</div>
+                }>{subtitle}
+                </div>
+                <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
               </div>
             </div>
             <div className={styles.center}>
