@@ -306,6 +306,8 @@ function Home() {
       if (gaibImage !== '') {
         setImageUrl(gaibImage);
       }
+      stopSpeaking();
+      setIsSpeaking(false);
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -313,15 +315,13 @@ function Home() {
     ) {
       displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
-    } else {
-      stopSpeaking();
-      setIsSpeaking(false);
-    }
+    } 
   }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime]);
 
-
+  // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
 
+  // Enable speech recognition toggle
   const handleSpeechOutputToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSpeechOutputEnabled(event.target.checked);
   };
@@ -330,8 +330,12 @@ function Home() {
   async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
     e.preventDefault();
 
-    setError(null);
+    // Don't submit if the query is empty
+    if (isSpeaking || !speechRecognitionComplete || !query) {
+      return;
+    }
 
+    // Stop listening
     if (listening) {
       setStoppedManually(true);
       if (recognitionInstance) {
@@ -340,31 +344,14 @@ function Home() {
       return;
     }
 
+    // Clear the timeout
     if (timeoutID) {
       clearTimeout(timeoutID);
       setTimeoutID(null);
     }
 
-    // Return early if speechRecognitionComplete is false
-    if (!speechRecognitionComplete) {
-      return;
-    }
-
-    // Return early if the user has not spoken
-    if (!query) {
-      return;
-    }
-
+    // Set the message state
     const question = query.trim();
-
-    // make sure we are not paused
-    setIsPaused(false);
-
-    // Full screen if autoFullScreen is enabled
-    if (autoFullScreen && !isFullScreen) {
-      toggleFullScreen();
-    }
-
     setMessageState((state) => ({
       ...state,
       messages: [
@@ -378,13 +365,16 @@ function Home() {
       pending: undefined,
     }));
 
+    // Reset the state
+    setError(null);
+    setIsPaused(false);
     setLoading(true);
     setIsSpeaking(true);
     setQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
 
+    // Send the question to the server
     const ctrl = new AbortController();
-
     try {
       fetchEventSource('/api/chat', {
         method: 'POST',
@@ -438,6 +428,7 @@ function Home() {
     }
   }
 
+  // Handle the submit event on Enter
   const handleEnter = useCallback(
     (e: any) => {
       if (e.key === 'Enter' && !e.shiftKey && query) {
@@ -452,6 +443,7 @@ function Home() {
     [query],
   );
 
+  // Handle the submit event on click
   const chatMessages = useMemo(() => {
     return [
       ...messages,
@@ -467,15 +459,17 @@ function Home() {
     ];
   }, [messages, pending, pendingSourceDocs]);
 
+  // Get the latest message
   const latestMessage: Message | PendingMessage | undefined = chatMessages[chatMessages.length - 1];
 
-  //scroll to bottom of chat
+  // scroll to bottom of chat
   useEffect(() => {
     if (messageListRef.current) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   }, [chatMessages]);
 
+  // Update the autoFullScreen state
   useEffect(() => {
     if (!isSpeaking && !loading && autoFullScreen && !isFullScreen) {
       toggleFullScreen();
@@ -607,6 +601,7 @@ function Home() {
     }
   };
 
+  // toggle the autoFullScreen state
   const toggleFullScreen = () => {
     const imageContainer = document.querySelector(`.${styles.imageContainer}`);
     const image = document.querySelector(`.${styles.generatedImage} img`);
@@ -629,6 +624,7 @@ function Home() {
     }
   };
   
+  // handle the form submission
   return (
     <>
       <div className={styles.header}>
