@@ -108,57 +108,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.write(`data: ${data}\n\n`);
   };
 
-  try {
-    // Set headers before starting the chain
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-    });
-    sendData(JSON.stringify({ data: '' }));
+  // Set headers before starting the chain
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+  });
+  sendData(JSON.stringify({ data: '' }));
 
-    // Create chain
-    const chain = makeChain(namespaceResult.vectorStore, selectedPersonality, (token: string) => {
-      sendData(JSON.stringify({ data: token }));
-    });
-
-    const maxRetries = 100;
-    const baseDelay = 333; // .333 second
-    let retries = 0;
-    let response;
-
-    while (retries < maxRetries) {
-      try {
-        response = await chain.call({
-          question: sanitizedQuestion,
-          chat_history: history ? [history] : [],
-        });
-
-    if (response) {
-      break; // Exit the loop if a response is received
+  // Create chain
+  let token_count = 0;
+  const chain = makeChain(namespaceResult.vectorStore, selectedPersonality, (token: string) => {
+    token_count++;
+    if (token_count % 33 === 0) {
+      console.log('Chat Token count:', token_count);
     }
-  } catch (error) {
-    consoleLog("error", `Attempt ${retries + 1}: GPT API error`, error);
-    retries++;
-    await delay(baseDelay * retries); // Wait for a delay before retrying
-  }
-}
+    sendData(JSON.stringify({ data: token }));
+  });
 
-
-    if (response) {
-      consoleLog('info', "\n===\nResponse: \n", response.text, "\n===\nSource Documents:", response.sourceDocuments, "\n===\n");
-    } else {
-      consoleLog('error', 'Error, giving up, No response from GPT for question:', sanitizedQuestion, ' personality:', selectedPersonality);
-      return;
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message) {
-      consoleLog('error', 'GPT API error: ', error.message ? error.message : error);
-    } else {
-      consoleLog('error', 'GPT Unknown error:', error);
-    }
+  let response = await chain.call({
+    question: sanitizedQuestion,
+    chat_history: history ? [history] : [],
+  });
+  if (!response) {
+    consoleLog("error", 'GPT API error, no response');
+    sendData('[ERROR]');
+    res.end();
     return;
   }
+  consoleLog('info', "\n===\nResponse: \n", response.text, "\n===\nSource Documents:", response.sourceDocuments, "\n===\n");
 
   sendData('[DONE]');
   res.end();

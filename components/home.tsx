@@ -308,15 +308,22 @@ function Home() {
       }
       stopSpeaking();
       setIsSpeaking(false);
+
+      if (!autoFullScreen && isFullScreen) {
+        setIsFullScreen(false);
+      }
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
+      if (autoFullScreen && !isFullScreen) {
+        setIsFullScreen(true);
+      }
       displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
     } 
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -389,7 +396,7 @@ function Home() {
         }),
         signal: ctrl.signal,
         onmessage: (event: { data: string; }) => {
-          if (event.data === '[DONE]') {
+          if (event.data === '[DONE]' || event.data === '[ERROR]') {
             setMessageState((state) => ({
               history: [...state.history, [question, state.pending ?? '']],
               messages: [
@@ -440,7 +447,7 @@ function Home() {
         e.preventDefault();
       }
     },
-    [query],
+    [query, autoFullScreen, isFullScreen],
   );
 
   // Handle the submit event on click
@@ -605,22 +612,19 @@ function Home() {
   const toggleFullScreen = () => {
     const imageContainer = document.querySelector(`.${styles.imageContainer}`);
     const image = document.querySelector(`.${styles.generatedImage} img`);
-    const subtitle = document.querySelector(`.${styles.subtitle}`);
     
     if (!document.fullscreenElement) {
       if (imageContainer?.requestFullscreen) {
         imageContainer.requestFullscreen();
         image?.classList.add(styles.fullScreenImage);
-        subtitle?.classList.add(styles.fullScreenSubtitle);
+        setIsFullScreen(true);
       }
-      setIsFullScreen(true);
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
         image?.classList.remove(styles.fullScreenImage);
-        subtitle?.classList.remove(styles.fullScreenSubtitle);
+        setIsFullScreen(false);
       }
-      setIsFullScreen(false);
     }
   };
   
@@ -661,7 +665,7 @@ function Home() {
                   />
                 </div>
                 <div className={
-                  isFullScreen ? `${styles.subtitle} ${styles.fullScreenSubtitle}` : styles.subtitle
+                  isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                 }>{subtitle}</div>
               </div>
             </div>
@@ -896,7 +900,7 @@ function Home() {
                           />
                           &nbsp;&nbsp; <b>Speaking Enabled</b> &nbsp;&nbsp;&nbsp;&nbsp;
                         </label>
-                        <label htmlFor="auto-full-screen">
+                        {/*<label htmlFor="auto-full-screen">
                           <input
                             title="Auto full screen on play"
                             type="checkbox"
@@ -904,7 +908,7 @@ function Home() {
                             onChange={(e) => setAutoFullScreen(e.target.checked)}
                           />
                            &nbsp;&nbsp; <b>Auto full screen on play</b>
-                        </label>
+                          </label>*/}
                       </div>
                     </div>
                   </div>

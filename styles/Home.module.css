@@ -38,7 +38,7 @@
   font-size: 1.1rem;
   padding: 0.5rem 1rem 0.5rem 1rem;
   width: 75vw;
-  max-width: 800px; /* Add this line to limit the textarea width */
+  max-width: 800px; /* limit width to 800px */
   border-radius: 0.5rem;
   border: 2px solid #d9d9e3;
   color: #000000; /* Changed font color to yellow-green */
@@ -287,6 +287,8 @@
 .fullScreenImage {
   max-width: 100%;
   max-height: 100%;
+  min-width: 100%;
+  min-height: 100%;
   width: auto;
   height: 100%;
   object-fit: scale-up;
@@ -301,6 +303,7 @@
 .generatedImage {
   width: auto;
   height: 100%;
+  min-height: 100%;
   object-fit: scale-up;
   border-radius: 1rem;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
@@ -446,9 +449,24 @@
 }
 
 .fullScreenSubtitle {
-  font-size: 48px; /* Increased font size */
-  bottom: 5%; /* Adjust the bottom property */
-  left: 1%; /* Adjust the left property */
+  position: absolute;
+  white-space: pre-wrap !important;
+  background: transparent;
+  color: white;
+  padding: 0px;
+  bottom: 12%;
+  left: 2%;
+  font-size: 48px;
+  text-align: center;
+  border-width: 0px;
+  font-weight: bolder;
+  font-family: 'Trebuchet MS';
+  /* Added font family */
+  line-height: 1.2;
+  margin: 0px;
+  justify-content: bottom;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
 .subtitle {
@@ -460,7 +478,7 @@
   bottom: 12%;
   left: 2%;
   font-size: 24px;
-  text-align: left;
+  text-align: center;
   border-width: 0px;
   font-weight: bolder;
   font-family: 'Trebuchet MS';
