@@ -16,3 +16,6 @@
 * Listening and Speaking like a device you would purchase from a big company
 * Next episode, auto generation mode
 * Feed input listening for generation of congtent from a feed, create sentiment and stories off any text or media feeds
+* More prompt per personality customization on waiting messages and general better "waiting" spinner object
+* Generate Images with AI
+* Generate Video with AI
