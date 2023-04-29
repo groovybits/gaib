@@ -130,9 +130,10 @@ function Home() {
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
       if (deltaTimeInSeconds < 5) {
-        //console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
+        consoleLog('info', `Time elapsed: ${deltaTimeInSeconds} seconds`);
         return '';
       } 
+      setStartTime(endTime);
     
       // Use local images if requested else use Pexels API to fetch images
       if (!useImageAPI) {
@@ -290,11 +291,10 @@ function Home() {
               await speakText(translationEntry, 1, gender, audioLanguage, model);
             }
           } else {
-            stopSpeaking();
-            gaibImage = await gptGeneratedImageUrl('', false);
-            if (gaibImage !== '') {
-              setImageUrl(gaibImage);
-            }
+            // Wait for the sentence to be spoken, measure sentence length to know how long to wait for
+            const sentenceLength = sentence.length;
+            const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
           }
           // Set the last message displayed
           setLastMessageDisplayed(lastMessageIndex);
