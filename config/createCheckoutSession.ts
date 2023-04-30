@@ -4,7 +4,7 @@ import initializeStripe from "./initializeStripe";
 export async function createCheckoutSession(uid: string) {
   const firestore = firebase.firestore();
 
-  // Create a new checkout session in the subollection inside this users document
+  // Create a new checkout session in the subcollection inside this users document
   const checkoutSessionRef = await firestore
     .collection("users")
     .doc(uid)
@@ -13,13 +13,11 @@ export async function createCheckoutSession(uid: string) {
       price: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       success_url: window.location.origin,
       cancel_url: window.location.origin,
+      metadata: { userId: uid }, // Add the user's ID to the metadata
     });
-
-  //console.log("checkoutSessionRef:", checkoutSessionRef);
 
   // Wait for the CheckoutSession to get attached by the extension
   checkoutSessionRef.onSnapshot(async (snap) => {
-    //console.log("snap.data():", snap.data());
     const data = snap.data();
   
     if (data && data.sessionId) {

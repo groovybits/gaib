@@ -26,22 +26,20 @@ This project uses Firebase for authentication and Cloud Functions. To set up Fir
 
    During initialization, choose Firestore, Functions, and Hosting, and select the project you created in step 3.
 
-5. Set up environment variables for your Firebase project by adding your configuration in `.env.local` file in the root of your project. It should include the following keys:
+5. Set up environment variables for your Firebase project remotely so they are secure. See .env in the main gaib directory for other values.
    ```
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-   NEXT_PUBLIC_FIREBASE_DATABASE_URL=your_database_url
-   FIREBASE_PRIVATE_KEY=your_firebase_private_key
-   FIREBASE_CLIENT_EMAIL=your_firebase_client_email
-   NEXT_PUBLIC_STRIPE_PRICE_ID=your_stripe_price_id
+   firebase functions:config:set stripe.premium_token_balance="5000000"
+   firebase functions:config:set stripe.trial_token_balance="50000"
+   firebase functions:config:set stripe.secret="YOUR_STRIPE_SECRET_KEY"
+   firebase functions:config:set stripe.webhook_secret="YOUR_STRIPE_WEBHOOK_SECRET"
+   firebase functions:config:set stripe.cords="https://your.host.com.none"
+
+   firebase deploy --only functions
    ```
 
 6. Deploy the Cloud Functions:
    ```
+   npx eslint --fix functions/src/index.ts
    firebase deploy --only functions
    ```
 

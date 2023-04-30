@@ -60,7 +60,8 @@ export const makeChain = async (
   if (userTokenBalance < maxTokens && !isAdmin) {
     const userDetails = await getUserDetails(userId!);
     console.log(
-      `${userId} (${userDetails.displayName}, ${userDetails.email}) Premium:${isPremium} does not have enough tokens to run this model [only ${userTokenBalance} of ${maxTokens} needed].`
+      `${userId} (${userDetails.displayName}, 
+        ${userDetails.email}) Premium:${isPremium} does not have enough tokens to run this model [only ${userTokenBalance} of ${maxTokens} needed].`
     );
     // Send signal that user does not have enough tokens to run this model
     return null;

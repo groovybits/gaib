@@ -6,6 +6,7 @@ import { createCheckoutSession } from "@/config/createCheckoutSession";
 import { useAuthState } from "react-firebase-hooks/auth";
 import usePremiumStatus from "@/config/usePremiumStatus";
 import ServiceInfo from './ServiceInfo';
+import 'firebase/functions';
 
 // Use this function in your frontend components when you want to send a log message
 async function consoleLog(level: string, ...args: any[]) {
@@ -33,6 +34,17 @@ interface Props {}
 function Auth({}: Props): ReactElement {
   const [user, userLoading] = useAuthState(firebase.auth());
   const userIsPremium = usePremiumStatus(user);
+
+  async function cancelSubscription() {
+    const cancelPremiumSubscription = firebase.functions().httpsCallable('cancelPremiumSubscription');
+    
+    try {
+      const result = await cancelPremiumSubscription();
+      console.log('Subscription cancelled successfully:', result.data);
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+    }
+  }  
   
   async function signInWithGoogle() {
     try {
@@ -76,12 +88,16 @@ function Auth({}: Props): ReactElement {
         {!userIsPremium ? (
             <div className={styles.header}>
               <button onClick={() => createCheckoutSession(user.uid)} className={styles.voicebutton}>
-                Purchase Premium Tokens
+                Purchase Premium Subscription
               </button>
-            </div>
+              <p>($30/month for 5000000 tokens)</p>
+            </div>              
           ) : (
             <div className={styles.header}>
               <p>You are a Groovy Human!!! [PREMIUM]</p>
+              <button onClick={cancelSubscription} className={styles.stopvoicebutton}>
+                Cancel Premium Subscription
+              </button>
             </div>
           )}        
           <button onClick={signOut} className={styles.voicebutton}>Sign out</button>
