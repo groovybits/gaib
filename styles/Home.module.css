@@ -309,20 +309,16 @@
   border-radius: 1rem;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
 }
-
 .fullscreenButton {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 10px;
+  right: 10px;
+  padding: 3px 8px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  font-size: 14px;
   z-index: 10;
-  padding: 2px 4px;
-  background-color: rgba(0, 0, 0, 0.4);
-  color: rgb(238, 255, 0);
-  border: 1px solid rgb(255, 255, 255);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  position: right;
 }
 
 .fullscreenButton:hover {
@@ -593,21 +589,40 @@
   position: absolute;
   top: 10px;
   left: 10px;
-  padding: 8px 12px;
-  background-color: rgba(0, 0, 0, 0.5);
+  padding: 3px 8px;
+  background-color: rgba(0, 0, 0, 0.7);
   color: rgba(255, 255, 255, 0.8);
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   z-index: 10;
 }
 
 .pexels-credit a {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 1);
   text-decoration: none;
 }
 
 .pexels-credit a:hover {
   text-decoration: underline;
+}
+
+.serviceInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  gap: 2rem;
+}
+
+.serviceInfoContent {
+  text-align: center;
+}
+
+.serviceInfoTable {
+  width: 100%;
+  max-width: 900px;
+  text-align: left;
+  border:rgb(0, 0, 0);
+  border-radius: 8px;
 }
 
 /* Mobile optimization */

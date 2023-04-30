@@ -1,10 +1,11 @@
-import React, { ReactElement, useState } from "react";
+import React, { ReactElement } from "react";
 import firebase from "@/config/firebaseClientInit";
 import Home from '@/components/home';
 import styles from '@/styles/Home.module.css';
 import { createCheckoutSession } from "@/config/createCheckoutSession";
 import { useAuthState } from "react-firebase-hooks/auth";
 import usePremiumStatus from "@/config/usePremiumStatus";
+import ServiceInfo from './ServiceInfo';
 
 // Use this function in your frontend components when you want to send a log message
 async function consoleLog(level: string, ...args: any[]) {
@@ -38,42 +39,35 @@ function Auth({}: Props): ReactElement {
       const userCredentials = await firebase
         .auth()
         .signInWithPopup(new firebase.auth.GoogleAuthProvider());
-  
+
       if (userCredentials && userCredentials.user) {
-        consoleLog('debug', 
-          'user: ', 
-          userCredentials.user, 
-          ' provider: ', 
-          userCredentials.user.providerData[0]?.providerId, 
-          ' photoUrl: ', 
-          userCredentials.user.photoURL, 
-          ' displayName: ', 
-          userCredentials.user.displayName || 'unknown', 
-          ' email: ',
-          userCredentials.user.email)
-  
-        firebase.firestore().collection("users").doc(userCredentials.user.uid).set({
-          uid: userCredentials.user.uid,
-          email: userCredentials.user.email,
-          name: userCredentials.user.displayName,
-          provider: userCredentials.user.providerData[0]?.providerId,
-          photoUrl: userCredentials.user.photoURL,
-        });
+        consoleLog("info",
+          "user:", userCredentials.user,
+          " provider:", userCredentials.user.providerData[0]?.providerId,
+          " photoUrl:", userCredentials.user.photoURL,
+          " displayName:", userCredentials.user.displayName || "unknown",
+          " email:", userCredentials.user.email);
       }
     } catch (error) {
       console.log(error);
     }
-  }
+  }  
 
   const signOut = async () => {
     await firebase.auth().signOut();
   };
   
-  if (!userLoading && user) {
+  if (!userLoading && user) { 
+    consoleLog("info",
+      "user:", user,
+      " provider:", user.providerData[0]?.providerId,
+      " photoUrl:", user.photoURL,
+      " displayName:", user.displayName || "unknown",
+      " email:", user.email);
     return (
       <div className={styles.container}>
         <div className={styles.main}>
-          <Home />
+          <Home user={user} /> {/* Pass user object to Home component */}
         </div>
         <div className={styles.header}>
           <p>Welcome, {user.displayName}!</p>
@@ -82,12 +76,12 @@ function Auth({}: Props): ReactElement {
         {!userIsPremium ? (
             <div className={styles.header}>
               <button onClick={() => createCheckoutSession(user.uid)} className={styles.voicebutton}>
-                Become a Monthly Patron
+                Purchase Premium Tokens
               </button>
             </div>
           ) : (
             <div className={styles.header}>
-              <p>You are a Groovy Human!!! [PATRON]</p>
+              <p>You are a Groovy Human!!! [PREMIUM]</p>
             </div>
           )}        
           <button onClick={signOut} className={styles.voicebutton}>Sign out</button>
@@ -116,7 +110,7 @@ function Auth({}: Props): ReactElement {
         <div className={styles.imageContainer}>
           <div className={styles.generatedImage}>
             <img src="gaib.png" alt="GAIB" style={{
-                      width: '720px',
+                      width: 'auto',
                       height: '480px',
                       objectFit: 'scale-down',
                     }} />
@@ -125,6 +119,9 @@ function Auth({}: Props): ReactElement {
       </div>
       <div className={styles.buttonContainer}>
         <button onClick={() => signInWithGoogle()} className={styles.voicebutton}>Sign in with Google</button>
+      </div>
+      <div className={styles.footer}>
+        <ServiceInfo /> {/* Add the ServiceInfo component */}
       </div>
     </div>
   );

@@ -1,5 +1,9 @@
 import winston from 'winston';
 import path from 'path';
+import fs from 'fs-extra';
+
+const logsDir = path.join(process.cwd(), 'logs');
+fs.ensureDirSync(logsDir);
 
 const getLogFileName = () => {
   const now = new Date();
@@ -29,15 +33,15 @@ const logger = winston.createLogger({
         })
       ),
     }),
-    new winston.transports.File({ filename: path.join(__dirname, '..', getLogFileName()) }),
+    new winston.transports.File({ filename: path.join(logsDir, getLogFileName()) }),
   ] as TransportWithFile[],
 });
 
-console.log('GAIB is logging to file', path.join(__dirname, '..', getLogFileName()));
+console.log('GAIB is logging to file', logsDir, getLogFileName());
 
 // Update the log file every minute
 setInterval(() => {
-  const newLogFile = path.join(__dirname, '..', getLogFileName());
+  const newLogFile = path.join(logsDir, getLogFileName());
   const fileTransportIndex = logger.transports.findIndex((transport) => transport instanceof winston.transports.File);
 
   if (fileTransportIndex !== -1) {

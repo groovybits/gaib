@@ -1,0 +1,7 @@
+{
+  "envs": {
+    "INITIAL_TOKEN_BALANCE": "50000",
+    "PREMIUM_TOKEN_BALANCE": "5000000"
+  }
+}
+

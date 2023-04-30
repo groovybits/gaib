@@ -11,6 +11,7 @@ import { audioLanguages, subtitleLanguages, Language } from "@/config/textLangua
 import nlp from 'compromise';
 import { ImageData } from '@/types/imageData'; // Update the path if required
 import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
+import firebase from '@/config/firebaseClientInit';
 
 type PendingMessage = {
   type: string;
@@ -18,7 +19,12 @@ type PendingMessage = {
   sourceDocs?: Document[];
 };
 
-function Home() {
+// Add a type for the user prop
+interface HomeProps {
+  user: firebase.User;
+}
+
+function Home({ user }: HomeProps) {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -411,6 +417,7 @@ function Home() {
         },
         body: JSON.stringify({
           question,
+          userId: user.uid,
           selectedPersonality,
           history,
         }),
@@ -425,6 +432,21 @@ function Home() {
                   type: 'apiMessage',
                   message: state.pending ?? '',
                   sourceDocs: state.pendingSourceDocs,
+                },
+              ],
+              pending: undefined,
+              pendingSourceDocs: undefined,
+            }));
+            setLoading(false);
+            ctrl.abort();
+          } else if (event.data === '[OUT_OF_TOKENS]') {
+            setMessageState((state) => ({
+              ...state,
+              messages: [
+                ...state.messages,
+                {
+                  type: 'apiMessage',
+                  message: 'Sorry, I have run out of tokens. Please purchase more.',
                 },
               ],
               pending: undefined,

@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  const { question, selectedPersonality, history } = req.body;
+  const { question, userId, selectedPersonality, history } = req.body;
 
   //only accept post requests
   if (req.method !== 'POST') {
@@ -118,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Create chain
   let token_count = 0;
-  const chain = makeChain(namespaceResult.vectorStore, selectedPersonality, (token: string) => {
+  const chain = await makeChain(namespaceResult.vectorStore, selectedPersonality, userId, (token: string) => {
     token_count++;
     if (token_count % 33 === 0) {
       console.log('Chat Token count:', token_count);
@@ -126,13 +126,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sendData(JSON.stringify({ data: token }));
   });
 
-  let response = await chain.call({
+  let response = await chain?.call({
     question: sanitizedQuestion,
     chat_history: history ? [history] : [],
   });
   if (!response) {
-    consoleLog("error", 'GPT API error, no response');
-    sendData('[ERROR]');
+    consoleLog("error", 'GPT API error, not enough tokens left to generate a response.');
+    sendData('[OUT_OF_TOKENS]');
     res.end();
     return;
   }
