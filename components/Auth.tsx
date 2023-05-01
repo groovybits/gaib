@@ -1,4 +1,4 @@
-import React, { ReactElement } from "react";
+import React, { ReactElement, useEffect, useState } from "react";
 import firebase from "@/config/firebaseClientInit";
 import Home from '@/components/home';
 import styles from '@/styles/Home.module.css';
@@ -7,6 +7,11 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import usePremiumStatus from "@/config/usePremiumStatus";
 import ServiceInfo from './ServiceInfo';
 import 'firebase/functions';
+import { useDocumentData } from "react-firebase-hooks/firestore";
+
+const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
+const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
+const stripePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
 
 // Use this function in your frontend components when you want to send a log message
 async function consoleLog(level: string, ...args: any[]) {
@@ -34,6 +39,39 @@ interface Props {}
 function Auth({}: Props): ReactElement {
   const [user, userLoading] = useAuthState(firebase.auth());
   const userIsPremium = usePremiumStatus(user);
+  const [tokenBalance, setTokenBalance] = useState<number | null>(null);
+  const [priceDetails, setPriceDetails] = useState<any>(null);
+
+  // Add this line after the previous two lines
+  const userDocRef = user ? firebase.firestore().doc(`users/${user.uid}`) : null;
+  // Add this line after creating the userDocRef
+  const [userData, userDataLoading] = useDocumentData(userDocRef);
+
+
+  useEffect(() => {
+    if (user) {
+      // Fetch the user's token balance from Firestore
+      const userRef = firebase.firestore().collection("users").doc(user.uid);
+      userRef.get().then((doc) => {
+        if (doc.exists) {
+          setTokenBalance(doc.data()?.tokenBalance);
+        }
+      });
+
+      // Fetch the price details from Stripe
+      fetch("/api/getPriceDetails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ priceId: stripePriceId }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setPriceDetails(data);
+        });
+    }
+  }, [user]);
 
   async function cancelSubscription() {
     const cancelPremiumSubscription = firebase.functions().httpsCallable('cancelPremiumSubscription');
@@ -83,23 +121,25 @@ function Auth({}: Props): ReactElement {
         </div>
         <div className={styles.header}>
           <p>Welcome, {user.displayName}!</p>
+          <p>Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</p>
         </div>
         <div className={styles.header}>
-        {!userIsPremium ? (
+          {!userIsPremium ? (
             <div className={styles.header}>
               <button onClick={() => createCheckoutSession(user.uid)} className={styles.voicebutton}>
                 Purchase Premium Subscription
               </button>
-              <p>($30/month for 5000000 tokens)</p>
-            </div>              
+              <p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p>
+            </div>
           ) : (
             <div className={styles.header}>
               <p>You are a Groovy Human!!! [PREMIUM]</p>
+              <p>Token Balance: {tokenBalance}</p>
               <button onClick={cancelSubscription} className={styles.stopvoicebutton}>
                 Cancel Premium Subscription
               </button>
             </div>
-          )}        
+          )}
           <button onClick={signOut} className={styles.voicebutton}>Sign out</button>
         </div>
       </div>

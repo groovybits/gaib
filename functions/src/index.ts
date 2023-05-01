@@ -135,9 +135,6 @@ exports.cancelPremiumSubscription =
 
     const subscriptions =
       await stripe.subscriptions.list({customer: userData.stripeId});
-    console.log("customer ID:", customer.id);
-    console.log("customer subscriptions:",
-      JSON.stringify(subscriptions));
 
     if (!customer || !subscriptions ||
       subscriptions.data.length === 0) {
@@ -155,8 +152,6 @@ exports.cancelPremiumSubscription =
         "User does not have an active subscription."
       );
     }
-
-    console.log("Updating subscription:", subscription.id); // Add this line
 
     try {
     // Update the cancel_at_period_end property
