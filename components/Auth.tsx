@@ -114,12 +114,6 @@ function Auth({}: Props): ReactElement {
   };
   
   if (!userLoading && user) { 
-    consoleLog("info",
-      "user:", user,
-      " provider:", user.providerData[0]?.providerId,
-      " photoUrl:", user.photoURL,
-      " displayName:", user.displayName || "unknown",
-      " email:", user.email);
     return (
       <div className={styles.container}>
         <div className={styles.main}>
