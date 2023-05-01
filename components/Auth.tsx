@@ -126,10 +126,10 @@ function Auth({}: Props): ReactElement {
         <div className={styles.header}>
           {!userIsPremium ? (
             <div className={styles.header}>
-              <button onClick={() => createCheckoutSession(user.uid)} className={styles.voicebutton}>
+              <p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p>
+              <button onClick={() => createCheckoutSession(user.uid)} className={styles.generatebutton}>
                 Purchase Premium Subscription
               </button>
-              <p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p>
             </div>
           ) : (
             <div className={styles.header}>
@@ -140,7 +140,7 @@ function Auth({}: Props): ReactElement {
               </button>
             </div>
           )}
-          <button onClick={signOut} className={styles.voicebutton}>Sign out</button>
+          <button onClick={signOut} className={styles.stopvoicebutton}>Sign out</button>
         </div>
         <div className={styles.footer}>
           <div className={styles.footerContainer}>

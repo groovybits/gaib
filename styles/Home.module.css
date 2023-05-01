@@ -427,9 +427,9 @@
 }
 
 .copyButton {
-  background-color: #3b82f6; /* Change this to your desired button background color */
+  background-color: rgb(226, 163, 16); /* Change this to your desired button background color */
   border: none;
-  color: white; /* Change this to your desired button text color */
+  color: rgb(0, 0, 0); /* Change this to your desired button text color */
   padding: 8px 16px;
   text-align: center;
   text-decoration: none;
