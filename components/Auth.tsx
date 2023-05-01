@@ -98,7 +98,7 @@ function Auth({}: Props): ReactElement {
 
       if (userCredentials && userCredentials.user) {
         consoleLog("info",
-          "user:", userCredentials.user,
+          "userId:", userCredentials.user.uid,
           " provider:", userCredentials.user.providerData[0]?.providerId,
           " photoUrl:", userCredentials.user.photoURL,
           " displayName:", userCredentials.user.displayName || "unknown",
