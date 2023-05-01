@@ -996,12 +996,6 @@ function Home({ user }: HomeProps) {
             )}
           </main>
         </div>
-        <div className={styles.footer}>
-          <div className={styles.footerContainer}>
-            <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href="https://www.pexels.com">Photos provided by Pexels</a>
-          </div>
-        </div>
       </Layout>
     </>
   );

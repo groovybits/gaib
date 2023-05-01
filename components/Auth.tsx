@@ -142,6 +142,12 @@ function Auth({}: Props): ReactElement {
           )}
           <button onClick={signOut} className={styles.voicebutton}>Sign out</button>
         </div>
+        <div className={styles.footer}>
+          <div className={styles.footerContainer}>
+            <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://www.pexels.com">Photos provided by Pexels</a>
+          </div>
+        </div>
       </div>
     );
   }
