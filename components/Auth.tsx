@@ -74,13 +74,19 @@ function Auth({}: Props): ReactElement {
   }, [user]);
 
   async function cancelSubscription() {
-    const cancelPremiumSubscription = firebase.functions().httpsCallable('cancelPremiumSubscription');
+    // Add a confirmation dialog
+    const confirmation = confirm("Are you sure you want to cancel your premium subscription?");
     
-    try {
-      const result = await cancelPremiumSubscription();
-      console.log('Subscription cancelled successfully:', result.data);
-    } catch (error) {
-      console.error('Error cancelling subscription:', error);
+    // Proceed with the cancelation only if the user confirms
+    if (confirmation) {
+      const cancelPremiumSubscription = firebase.functions().httpsCallable('cancelPremiumSubscription');
+      
+      try {
+        const result = await cancelPremiumSubscription();
+        console.log('Subscription cancelled successfully:', result.data);
+      } catch (error) {
+        console.error('Error cancelling subscription:', error);
+      }
     }
   }  
   
@@ -134,7 +140,6 @@ function Auth({}: Props): ReactElement {
           ) : (
             <div className={styles.header}>
               <p>You are a Groovy Human!!! [PREMIUM]</p>
-              <p>Token Balance: {tokenBalance}</p>
               <button onClick={cancelSubscription} className={styles.stopvoicebutton}>
                 Cancel Premium Subscription
               </button>
