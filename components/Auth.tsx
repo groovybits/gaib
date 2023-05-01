@@ -120,8 +120,7 @@ function Auth({}: Props): ReactElement {
           <Home user={user} /> {/* Pass user object to Home component */}
         </div>
         <div className={styles.header}>
-          <p>Welcome, {user.displayName}!</p>
-          <p>Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</p>
+          <p>Welcome, {user.displayName}! Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</p>
         </div>
         <div className={styles.header}>
           {!userIsPremium ? (
