@@ -8,6 +8,7 @@ import usePremiumStatus from "@/config/usePremiumStatus";
 import ServiceInfo from './ServiceInfo';
 import 'firebase/functions';
 import { useDocumentData } from "react-firebase-hooks/firestore";
+import Modal from "react-modal";
 
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
@@ -34,13 +35,14 @@ async function consoleLog(level: string, ...args: any[]) {
   }
 }
 
-interface Props {}
+interface Props { }
 
-function Auth({}: Props): ReactElement {
+function Auth({ }: Props): ReactElement {
   const [user, userLoading] = useAuthState(firebase.auth());
   const userIsPremium = usePremiumStatus(user);
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [priceDetails, setPriceDetails] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
 
   // Add this line after the previous two lines
   const userDocRef = user ? firebase.firestore().doc(`users/${user.uid}`) : null;
@@ -73,23 +75,25 @@ function Auth({}: Props): ReactElement {
     }
   }, [user]);
 
+  // Replace the confirm() function call with setShowModal(true)
   async function cancelSubscription() {
-    // Add a confirmation dialog
-    const confirmation = confirm("Are you sure you want to cancel your premium subscription?");
-    
-    // Proceed with the cancelation only if the user confirms
-    if (confirmation) {
-      const cancelPremiumSubscription = firebase.functions().httpsCallable('cancelPremiumSubscription');
-      
-      try {
-        const result = await cancelPremiumSubscription();
-        console.log('Subscription cancelled successfully:', result.data);
-      } catch (error) {
-        console.error('Error cancelling subscription:', error);
-      }
+    setShowModal(true);
+  }
+
+  // Add a new function to handle the confirmation
+  async function handleConfirmation() {
+    const cancelPremiumSubscription = firebase.functions().httpsCallable('cancelPremiumSubscription');
+
+    try {
+      const result = await cancelPremiumSubscription();
+      console.log('Subscription cancelled successfully:', result.data);
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
     }
-  }  
-  
+
+    setShowModal(false);
+  }
+
   async function signInWithGoogle() {
     try {
       const userCredentials = await firebase
@@ -107,13 +111,13 @@ function Auth({}: Props): ReactElement {
     } catch (error) {
       console.log(error);
     }
-  }  
+  }
 
   const signOut = async () => {
     await firebase.auth().signOut();
   };
-  
-  if (!userLoading && user) { 
+
+  if (!userLoading && user) {
     return (
       <div className={styles.container}>
         <div className={styles.main}>
@@ -126,24 +130,44 @@ function Auth({}: Props): ReactElement {
           {!userIsPremium ? (
             <div className={styles.header}>
               <p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p>
-              <button onClick={() => createCheckoutSession(user.uid)} className={styles.generatebutton}>
+              <a href="#" onClick={() => createCheckoutSession(user.uid)} className={styles.header}>
                 Purchase Premium Subscription
-              </button>
+              </a>
             </div>
           ) : (
             <div className={styles.header}>
               <p>You are a Groovy Human!!! [PREMIUM]</p>
-              <button onClick={cancelSubscription} className={styles.stopvoicebutton}>
-                Cancel Premium Subscription
-              </button>
             </div>
           )}
-          <button onClick={signOut} className={styles.stopvoicebutton}>Sign out</button>
+        </div>
+        <div className={styles.header}>
+          {userIsPremium ? (
+            <div className={styles.footer}>
+              <a href="#" onClick={cancelSubscription} className={styles.cancelsubbutton}>Cancel Subscription</a>
+              <Modal
+                isOpen={showModal}
+                onRequestClose={() => setShowModal(false)}
+                contentLabel="Cancel Subscription Confirmation"
+                ariaHideApp={false}
+                className={styles.popupContent}
+              >
+                <div className={styles.footer}>
+                  <p className={styles.header}>Are you sure you want to cancel your premium subscription?</p>
+                </div>
+                <button onClick={handleConfirmation} className={styles.stopvoicebutton}>Yes, cancel my subscription</button>
+                <button onClick={() => setShowModal(false)} className={styles.generatebutton}>No, keep my subscription</button>
+              </Modal>
+            </div>
+          ) : (
+            <div></div>
+          )}
         </div>
         <div className={styles.footer}>
           <div className={styles.footerContainer}>
             <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href="https://www.pexels.com">Photos provided by Pexels</a>
+            <a href="https://www.pexels.com">Photos provided by Pexels</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="#" onClick={signOut}>Sign out</a>
           </div>
         </div>
       </div>
@@ -161,27 +185,32 @@ function Auth({}: Props): ReactElement {
   }
 
   return (
-    <div className={styles.mainlogin}>
-      <title>GAIB</title>
-      <div className={styles.header}>
-        <h1>GAIB The Groovy AI Bot!!!</h1>
-      </div>
-      <div className={styles.cloud}>
-        <div className={styles.imageContainer}>
-          <div className={styles.generatedImage}>
-            <img src="gaib.png" alt="GAIB" style={{
-                      width: 'auto',
-                      height: '480px',
-                      objectFit: 'scale-down',
-                    }} />
+    <div className={styles.cloud}>
+      <div className={styles.mainlogin}>
+        <title>GAIB</title>
+        <div className={styles.header}>
+          <div className={styles.header}>
+            <h1>Groovy AI Bot (GAIB)</h1>
+            <h2>Project by Chris Kennedy</h2>
           </div>
         </div>
-      </div>
-      <div className={styles.buttonContainer}>
-        <button onClick={() => signInWithGoogle()} className={styles.voicebutton}>Sign in with Google</button>
-      </div>
-      <div className={styles.footer}>
-        <ServiceInfo /> {/* Add the ServiceInfo component */}
+        <div className={styles.cloud}>
+          <div className={styles.imageContainer}>
+            <div className={styles.generatedImage}>
+              <div className={styles.subtitleBack}>
+                <a href="#" onClick={() => signInWithGoogle()}>Sign in to GAIB using Google Authentication</a>
+              </div>
+              <img src="gaib.png" alt="GAIB" style={{
+                width: 'auto',
+                height: '100%',
+                objectFit: 'scale-down',
+              }} />
+            </div>
+          </div>
+        </div>
+        <div className={styles.footer}>
+          <ServiceInfo /> {/* Add the ServiceInfo component */}
+        </div>
       </div>
     </div>
   );

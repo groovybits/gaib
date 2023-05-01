@@ -3,6 +3,79 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
+  background-color: rgb(222, 169, 24);
+  border-radius: 10px;
+  border: 2px double #000;
+}
+
+.cancelcontainer {
+  /*position: relative; */
+  background-color: black;
+  /*display: flex;*/
+  justify-content: center;
+  align-items: center;
+  border-radius: 1rem;
+  padding: 12px; /* Adjust the padding to reduce the black area around the image */
+}
+
+.cloud {
+  position: relative; /* Add this line */
+  background-color: rgb(0, 0, 0, 1);
+  width: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 1rem;
+  padding: 4px; /* Adjust the padding to reduce the black area around the image */
+}
+
+.fullScreenImage {
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: 100%;
+  object-fit: scale-up;
+}
+
+.generatedImage img {
+  width: auto;
+  height: 100%;
+  object-fit: scale-up;
+  border-radius: 8px;
+}
+
+.generatedImage {
+  width: auto;
+  height: 100%;
+  min-height: 100%;
+  object-fit: scale-up;
+  border-radius: 8px;
+  padding: 4px; /* Adjust the padding to reduce the black area around the image */
+}
+.fullscreenButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 8px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 10;
+}
+
+.fullscreenButton:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.imageContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px; /* Adjust the padding to reduce the black area around the image */
 }
 
 .mainlogin {
@@ -61,14 +134,14 @@
   color: #6b7280;
 }
 
-.personalityButtons {
+.labelButtons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
 }
 
-.personalityButton {
+.labelButton {
   background-color: rgb(64, 24, 222);
   color: white;
   font-weight: bold;
@@ -81,7 +154,7 @@
   margin: 0 4px; /* Add this line to add space between buttons */
 }
 
-.personalityButton:hover {
+.labelButton:hover {
   background-color: #000;
   border: 2px solid #000;
   color: #fff;
@@ -98,6 +171,17 @@
   border: double;
 }
 
+.transcriptcontainer {
+  display: inline-block;
+  position: center;
+  margin-right: 8px;
+  background-color: transparent;
+  border: 1;
+  border-radius: 8px;
+  border-color: #000000;
+  border-style: double;
+}
+
 .buttoncontainer {
   display: inline-block;
   margin-right: 8px;
@@ -106,6 +190,81 @@
   border-radius: 8px;
   border-color: #000000;
   border-style: double;
+}
+
+.popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color:rgb(12, 234, 4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  border: #000000;
+  border-style: double;
+  border-width: 8px;
+  border-radius: 8px;
+  max-width: 800px;
+  margin: 30px;
+}
+
+.popupContent {
+  color: rgb(12, 234, 4);
+  background-color:rgba(0, 0, 0, 1);
+  padding: 8px 8px;
+  border-radius: 4px;
+  max-height: 100%;
+  overflow-y: auto;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
+  border-style: double;
+  border-width: 8px;
+  border-radius: 8px;
+  border-color: rgba(0, 0, 0, 1);
+  max-width: 800px;
+  margin: 4px;
+}
+
+.preWrap {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background-color: rgba(0, 0, 0, 1);
+  color: rgb(226, 234, 4);
+  padding: 8px;
+  border-radius: 4px;
+  max-width: 800px;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
+  border-style: double;
+  border-width: 8px;
+  border-radius: 8px;
+  border-color: #1c8bfb;
+  margin-top: 30px;
+}
+
+.copyButton {
+  background-color: #000000; /* Change this to your desired button background color */
+  border: none;
+  color: rgb(255, 255, 255); /* Change this to your desired button text color */
+  padding: 8px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  font-size: 14px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  margin: 4px 2px;
+  transition-duration: 0.4s;
+  align-self: bottom;
+}
+
+.documentIcon {
+  margin-right: 4px;
 }
 
 .voicebutton {
@@ -138,19 +297,58 @@
   transition-duration: 0.4s;
 }
 
+.centeredSvg {
+  vertical-align: middle;
+}
+
+.cancelsubbutton {
+  background-color: #ffffff;
+  border-color: rgb(0, 0, 0);
+  border-style: double;
+  border: 2px;
+  border-radius: 5px;
+  color: rgb(0, 0, 0);
+  font-size: 12px;
+  padding: 2px 4px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  margin: 2px 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition-duration: 0.4s;
+}
+
+.signoutbutton {
+  color: #ffffff;
+  font-size: 12px;
+  margin: 1rem;
+  text-align: center;
+  font-weight: 500;
+  font-family:'Trebuchet MS', monospace;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
 .stopvoicebutton {
   background-color: #ff4500;
   border: none;
   border-radius: 5px;
-  color: white;
+  color: rgb(232, 249, 0);
   font-size: 14px;
   padding: 10px 12px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
   margin: 4px 2px;
+  font-weight: bold;
   cursor: pointer;
   transition-duration: 0.4s;
+}
+
+.stopvoicebutton:hover {
+  background: #7f8a09;
+  border-radius: 0.2rem;
 }
 
 .pausebutton {
@@ -168,11 +366,16 @@
   transition-duration: 0.4s;
 }
 
+.pausebutton:hover {
+  background: #7f8a09;
+  border-radius: 0.2rem;
+}
+
 .clearbutton {
-  background-color: #55010b;
+  background-color: #f1ae11;
   border: none;
   border-radius: 5px;
-  color: white;
+  color: rgb(0, 0, 0);
   font-size: 14px;
   padding: 10px 12px;
   text-align: center;
@@ -181,6 +384,11 @@
   margin: 4px 2px;
   cursor: pointer;
   transition-duration: 0.4s;
+}
+
+.clearbutton:hover {
+  background: #7f8a09;
+  border-radius: 0.2rem;
 }
 
 .replaybutton {
@@ -196,6 +404,11 @@
   margin: 4px 2px;
   cursor: pointer;
   transition-duration: 0.4s;
+}
+
+.replaybutton:hover {
+  background: #7f8a09;
+  border-radius: 0.2rem;
 }
 
 .loadingwheel {
@@ -275,64 +488,6 @@
   flex-direction: column;
 }
 
-.cloud {
-  position: relative; /* Add this line */
-  background-color: black;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 1rem;
-  padding: 12px; /* Adjust the padding to reduce the black area around the image */
-}
-
-.fullScreenImage {
-  max-width: 100%;
-  max-height: 100%;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: 100%;
-  object-fit: scale-up;
-}
-
-.generatedImage img {
-  width: auto;
-  height: 100%;
-  object-fit: scale-up;
-}
-
-.generatedImage {
-  width: auto;
-  height: 100%;
-  min-height: 100%;
-  object-fit: scale-up;
-  border-radius: 1rem;
-  padding: 4px; /* Adjust the padding to reduce the black area around the image */
-}
-.fullscreenButton {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 3px 8px;
-  background-color: rgba(0, 0, 0, 0.3);
-  color: rgba(255, 255, 255, 0.8);
-  border-radius: 8px;
-  font-size: 14px;
-  z-index: 10;
-}
-
-.fullscreenButton:hover {
-  background-color: rgba(0, 0, 0, 0.8);
-}
-
-.imageContainer {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4px; /* Adjust the padding to reduce the black area around the image */
-}
-
 .pointsnormal {
   width: 90%;
   height: 90%;
@@ -371,78 +526,6 @@
 
 .footer a:hover {
   opacity: 0.8;
-}
-
-.popup {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  color:rgb(12, 234, 4);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-  border: #000000;
-  border-style: double;
-  border-width: 8px;
-  border-radius: 8px;
-  max-width: 800px;
-  margin: 30px;
-}
-
-.popup-content {
-  color: rgb(12, 234, 4);
-  background-color:rgba(0, 0, 0, 1);
-  padding: 8px;
-  border-radius: 4px;
-  max-height: 80%;
-  overflow-y: auto;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
-  border-style: double;
-  border-width: 8px;
-  border-radius: 8px;
-  border-color: rgba(0, 0, 0, 1);
-  max-width: 800px;
-  margin: 10px;
-}
-
-.preWrap {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  background-color: rgba(0, 0, 0, 1);
-  color: rgb(12, 234, 4);
-  padding: 8px;
-  border-radius: 4px;
-  max-width: 800px;
-  max-height: 80%;
-  overflow-y: auto;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 1);
-  border-style: double;
-  border-width: 8px;
-  border-radius: 8px;
-  border-color: rgb(226, 163, 16);
-  margin-top: 30px;
-}
-
-.copyButton {
-  background-color: rgb(226, 163, 16); /* Change this to your desired button background color */
-  border: none;
-  color: rgb(0, 0, 0); /* Change this to your desired button text color */
-  padding: 8px 16px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-flex;
-  font-size: 1rem;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
-}
-
-.documentIcon {
-  margin-right: 8px;
 }
 
 .fullScreenSubtitle {
@@ -487,6 +570,27 @@
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
+.subtitleBack {
+  position: absolute;
+  white-space: pre-wrap !important;
+  background: rgb(0, 0, 0, 0.2);
+  color: #f1ae11;
+  padding: 0px;
+  bottom: 12%;
+  left: 2%;
+  font-size: 48px;
+  text-align: center;
+  border-width: 0px;
+  font-weight: bolder;
+  font-family: 'Trebuchet MS';
+  /* Added font family */
+  line-height: 1.2;
+  margin: 0px;
+  justify-content: bottom;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
 .dropdowncontainer {
   display: flex;
   flex-wrap: wrap;
@@ -499,7 +603,7 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  background-color: #f4f960;
+  background-color: #ffffff;
   outline: none;
   padding: 1px 2px;
   font-size: 8px;
@@ -526,7 +630,7 @@
 }
 
 .label {
-  font-weight: bold;
+  font-weight: 500;
   display: inline-block;
   margin-right: 8px;
   margin-left: 8px;
@@ -623,6 +727,7 @@
   text-align: left;
   border:rgb(0, 0, 0);
   border-radius: 8px;
+  font-size: 14px;
 }
 
 /* Mobile optimization */

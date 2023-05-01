@@ -123,7 +123,7 @@ function Home({ user }: HomeProps) {
       return keywords;
     }
 
-    async function setPexelImageUrls(gaibImage : ImageData | string) {
+    async function setPexelImageUrls(gaibImage: ImageData | string) {
       if (typeof gaibImage === 'string') {
         if (gaibImage !== '') {
           setImageUrl(gaibImage); // Set the image to the open mouth
@@ -159,9 +159,9 @@ function Home({ user }: HomeProps) {
       if (deltaTimeInSeconds < 5) {
         consoleLog('info', `Time elapsed: ${deltaTimeInSeconds} seconds`);
         return '';
-      } 
+      }
       setStartTime(endTime);
-    
+
       // Use local images if requested else use Pexels API to fetch images
       if (!useImageAPI) {
         // use local images
@@ -176,7 +176,7 @@ function Home({ user }: HomeProps) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ keywords }),
           });
-    
+
           const data = await response.json();
           if (data.photos && data.photos.length > 0) {
             return {
@@ -194,7 +194,7 @@ function Home({ user }: HomeProps) {
       }
       // failed to fetch image, leave the image as is
       return '';
-    }    
+    }
 
     function splitSentence(sentence: any, maxLength = 80) {
       const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
@@ -231,7 +231,7 @@ function Home({ user }: HomeProps) {
         // Split the message into lines
         const lines = messages[lastMessageIndex].message.split('\n');
         const splitLines = lines.flatMap(line => line.split(/(?<=\.|\?|!)\s+/));
-      
+
         // Collect sentences with a maximum character limit per group
         const maxCharsPerGroup = 60;
         sentences = [];
@@ -244,7 +244,7 @@ function Home({ user }: HomeProps) {
             currentGroup = sentence;
           }
         });
-      
+
         // Add the last group if it's not empty
         if (currentGroup.trim() !== '') {
           sentences.push(currentGroup.trim());
@@ -253,7 +253,7 @@ function Home({ user }: HomeProps) {
         consoleLog('error', 'Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
       }
-      
+
       // Display the images and subtitles
       let gaibImage = await gptGeneratedImageUrl('', false);
       setPexelImageUrls(gaibImage);
@@ -348,7 +348,7 @@ function Home({ user }: HomeProps) {
       }
       displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
-    } 
+    }
   }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime]);
 
   // Speech recognition
@@ -616,7 +616,7 @@ function Home({ user }: HomeProps) {
         history: [],
       };
     });
-  };  
+  };
 
   // replay the last spoken message
   const handleReplay = () => {
@@ -654,7 +654,7 @@ function Home({ user }: HomeProps) {
   const toggleFullScreen = () => {
     const imageContainer = document.querySelector(`.${styles.imageContainer}`);
     const image = document.querySelector(`.${styles.generatedImage} img`);
-    
+
     if (!document.fullscreenElement) {
       if (imageContainer?.requestFullscreen) {
         imageContainer.requestFullscreen();
@@ -669,7 +669,7 @@ function Home({ user }: HomeProps) {
       }
     }
   };
-  
+
   // handle the form submission
   return (
     <>
@@ -856,6 +856,55 @@ function Home({ user }: HomeProps) {
                           </svg>
                         </button>
                         */}
+                        <label className={styles.label}>
+                          <input
+                            title="Speaking Enabled"
+                            type="checkbox"
+                            checked={speechOutputEnabled}
+                            onChange={handleSpeechOutputToggle}
+                          />
+                          Speak
+                        </label>
+                        {/*<label htmlFor="auto-full-screen">
+                          <input
+                            title="Auto full screen on play"
+                            type="checkbox"
+                            checked={autoFullScreen}
+                            onChange={(e) => setAutoFullScreen(e.target.checked)}
+                          />
+                           &nbsp;&nbsp; <b>Auto full screen on play</b>
+                          </label>*/}
+                        <button title="View Transcript"
+                          type="button"
+                          onClick={togglePopup}
+                          className={`${styles.copyButton} ${styles.shrinkedButton}`}
+                          disabled={isSpeaking || loading}>
+                          <svg
+                            className={`${styles.documentIcon} ${styles.centeredSvg}`}
+                            width="24"
+                            height="22"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        </button>
+                        {showPopup && (
+                          <div className="popup" onClick={togglePopup}>
+                            <div
+                              className="popupContent"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                            >
+                              <pre className={styles.preWrap}>{latestMessage.message}</pre>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className={styles.dropdowncontainer}>
@@ -881,7 +930,7 @@ function Home({ user }: HomeProps) {
                           </select>
                         </div>
                         <div className={styles.labelContainer}>
-                          <span className={styles.label}>Gender:</span>
+                          <span className={styles.label}></span>
                           <select
                             id="gender-select"
                             className={styles.dropdown}
@@ -933,58 +982,6 @@ function Home({ user }: HomeProps) {
                         </select>
                       </div>
                     </div>
-                    <div className={styles.buttoncontainer}>
-                      <div className={styles.buttoncontainer}>
-                        <label>
-                          <input
-                            title="Speaking Enabled"
-                            type="checkbox"
-                            checked={speechOutputEnabled}
-                            onChange={handleSpeechOutputToggle}
-                          />
-                          &nbsp;&nbsp; <b>Speaking Enabled</b> &nbsp;&nbsp;&nbsp;&nbsp;
-                        </label>
-                        {/*<label htmlFor="auto-full-screen">
-                          <input
-                            title="Auto full screen on play"
-                            type="checkbox"
-                            checked={autoFullScreen}
-                            onChange={(e) => setAutoFullScreen(e.target.checked)}
-                          />
-                           &nbsp;&nbsp; <b>Auto full screen on play</b>
-                          </label>*/}
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.buttonContainer}>
-                    <button title="View Transcript" type="button" onClick={togglePopup} className={styles.copyButton} disabled={isSpeaking || loading}>
-                      <svg
-                        className={styles.documentIcon}
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                      Transcript View
-                    </button>
-                    {showPopup && (
-                      <div className="popup" onClick={togglePopup}>
-                        <div
-                          className="popup-content"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        >
-                          <pre className={styles.preWrap}>{latestMessage.message}</pre>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </form>
               </div>
