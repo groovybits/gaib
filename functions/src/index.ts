@@ -122,25 +122,32 @@ exports.cancelPremiumSubscription =
     const userDoc = await db.collection("users").doc(uid).get();
     const userData = userDoc.data();
 
-    if (!userData || !userData.stripeCustomerId) {
+    if (!userData || !userData.stripeId) {
       throw new functions.https.HttpsError(
         "failed-precondition",
-        "User does not have an active subscription."
+        "User does not have an active subscription, not a user."
       );
     }
 
     const customer =
     await
-    stripe.customers.retrieve(userData.stripeCustomerId) as Stripe.Customer;
+    stripe.customers.retrieve(userData.stripeId) as Stripe.Customer;
 
-    if (!customer || !customer.subscriptions) {
+    const subscriptions =
+      await stripe.subscriptions.list({customer: userData.stripeId});
+    console.log("customer ID:", customer.id);
+    console.log("customer subscriptions:",
+      JSON.stringify(subscriptions));
+
+    if (!customer || !subscriptions ||
+      subscriptions.data.length === 0) {
       throw new functions.https.HttpsError(
         "failed-precondition",
-        "User does not have an active subscription."
+        "User does not have an active subscription, not a customer 002."
       );
     }
 
-    const subscription = customer.subscriptions.data[0];
+    const subscription = subscriptions.data[0];
 
     if (!subscription) {
       throw new functions.https.HttpsError(
@@ -149,8 +156,45 @@ exports.cancelPremiumSubscription =
       );
     }
 
+    console.log("Updating subscription:", subscription.id); // Add this line
+
+    try {
+    // Update the cancel_at_period_end property
+      const updatedSubscription =
     await stripe.subscriptions.update(subscription.id,
       {cancel_at_period_end: true});
+
+      console.log("Updated subscription:",
+        JSON.stringify(updatedSubscription)); // Add this line
+    } catch (err) {
+      console.error("Failed to update subscription:", err);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Failed to update the subscription."
+      );
+    }
+
+    const updatedSubscription =
+      await stripe.subscriptions.retrieve(subscription.id);
+
+    await admin
+      .firestore()
+      .collection("users")
+      .doc(uid)
+      .collection("subscriptions")
+      .doc(subscription.id)
+      .set({
+        cancel_at: updatedSubscription.cancel_at,
+        cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+        canceled_at: updatedSubscription.canceled_at,
+      }, {merge: true});
+
+    const user = await admin.auth().getUser(uid);
+    if (user.customClaims && user.customClaims.stripeRole) {
+      const updatedClaims = {...user.customClaims};
+      delete updatedClaims.stripeRole;
+      await admin.auth().setCustomUserClaims(uid, updatedClaims);
+    }
 
     await db.collection("users").doc(uid).update({isPremium: false});
 
