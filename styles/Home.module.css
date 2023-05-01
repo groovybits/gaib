@@ -2,11 +2,23 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem;
-  background-color: rgb(222, 169, 24);
+  padding: 1.5rem;
+  background-color: rgb(222, 169, 24, 1);
   border-radius: 10px;
   border: 2px double #000;
 }
+
+.mainTransparent {
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0rem;
+  background-color: rgb(0, 0, 0, 0);
+  border-radius: 10px;
+  border: none;
+  width: auto;
+}
+
 
 .cancelcontainer {
   /*position: relative; */
