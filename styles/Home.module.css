@@ -3,7 +3,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  background-color: #F47521;
+  background-color: #FFCC33;
   border-radius: 10px;
   border: 2px double #000;
 }
@@ -18,7 +18,6 @@
   border: none;
   width: auto;
 }
-
 
 .cancelcontainer {
   /*position: relative; */
