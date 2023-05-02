@@ -1,6 +1,6 @@
 import React from 'react';
-import Layout from '../components/Layout';
-import styles from '../styles/Home.module.css';
+import Layout from '@/components/Layout';
+import styles from '@/styles/Home.module.css';
 
 const Custom404 = () => {
   return (
@@ -10,7 +10,7 @@ const Custom404 = () => {
         <h1>GAIB The Groovy AI Bot</h1>
       </div>
       <Layout>
-        <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
+        <div className="mx-auto flex flex-col gap-4 bg-#FEC601">
           <main className={styles.main}>
             <div className={styles.center}>
               <div className={styles.errorMessage}>

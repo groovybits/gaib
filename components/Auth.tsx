@@ -1,6 +1,6 @@
 import React, { ReactElement, useEffect, useState } from "react";
 import firebase from "@/config/firebaseClientInit";
-import Home from '@/components/home';
+import Home from '@/components/Home';
 import styles from '@/styles/Home.module.css';
 import { createCheckoutSession } from "@/config/createCheckoutSession";
 import { useAuthState } from "react-firebase-hooks/auth";
