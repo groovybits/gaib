@@ -874,37 +874,6 @@ function Home({ user }: HomeProps) {
                           />
                            &nbsp;&nbsp; <b>Auto full screen on play</b>
                           </label>*/}
-                        <button title="View Transcript"
-                          type="button"
-                          onClick={togglePopup}
-                          className={`${styles.copyButton} ${styles.shrinkedButton}`}
-                        >
-                          <svg
-                            className={`${styles.documentIcon} ${styles.centeredSvg}`}
-                            width="24"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
-                              fill="currentColor"
-                            />
-                          </svg>
-                        </button>
-                        {showPopup && (
-                          <div className="popup" onClick={togglePopup}>
-                            <div
-                              className="popupContent"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                            >
-                              <pre className={styles.preWrap}>{latestMessage.message}</pre>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                     <div className={styles.dropdowncontainer}>
@@ -944,40 +913,74 @@ function Home({ user }: HomeProps) {
                             <option value="NEUTRAL">Neutral</option>
                           </select>
                         </div>
-                      <div className={styles.labelContainer}>
-                        <select
-                          id="audio-language-select"
-                          className={styles.dropdown}
-                          disabled={isSpeaking || loading}
-                          value={audioLanguage}
-                          onChange={(e) => setAudioLanguage(e.target.value)}
-                        >
-                          <option value="" disabled>
-                            Choose Audio Language
-                          </option>
-                          {audioLanguages.map((lang: Language) => (
-                            <option key={lang.code} value={lang.code}>{lang.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className={styles.labelContainer}>
-                        <select
-                          id="subtitle-language-select"
-                          className={styles.dropdown}
-                          disabled={isSpeaking || loading}
-                          value={subtitleLanguage}
-                          onChange={(e) => setSubtitleLanguage(e.target.value)}
-                        >
-                          <option value="" disabled>
-                            Choose Subtitle Language
-                          </option>
-                          {subtitleLanguages.map((lang: Language) => (
-                            <option key={lang.code} value={lang.code}>{lang.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                        <div className={styles.labelContainer}>
+                          <select
+                            id="audio-language-select"
+                            className={styles.dropdown}
+                            disabled={isSpeaking || loading}
+                            value={audioLanguage}
+                            onChange={(e) => setAudioLanguage(e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose Audio Language
+                            </option>
+                            {audioLanguages.map((lang: Language) => (
+                              <option key={lang.code} value={lang.code}>{lang.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className={styles.labelContainer}>
+                          <select
+                            id="subtitle-language-select"
+                            className={styles.dropdown}
+                            disabled={isSpeaking || loading}
+                            value={subtitleLanguage}
+                            onChange={(e) => setSubtitleLanguage(e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose Subtitle Language
+                            </option>
+                            {subtitleLanguages.map((lang: Language) => (
+                              <option key={lang.code} value={lang.code}>{lang.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
                       </div>
                     </div>
+                    <div className={styles.labelContainer}>
+                        <button title="View Transcript"
+                          type="button"
+                          onClick={togglePopup}
+                          className={`${styles.copyButton} ${styles.shrinkedButton}`}
+                        >
+                          <svg
+                            className={`${styles.documentIcon} ${styles.centeredSvg}`}
+                            width="24"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        </button>
+                        {showPopup && (
+                          <div className="popup" onClick={togglePopup}>
+                            <div
+                              className="popupContent"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                            >
+                              <pre className={styles.preWrap}>{latestMessage.message}</pre>
+                            </div>
+                          </div>
+                        )}
+                        </div>
                   </div>
                 </form>
               </div>

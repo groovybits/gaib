@@ -121,8 +121,8 @@
   position: relative;
   resize: none;
   font-size: 1.1rem;
-  padding: 0.5rem 1rem 0.5rem 1rem;
-  width: 75vw;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+  width: 60vw;
   max-width: 800px; /* limit width to 800px */
   border-radius: 0.5rem;
   border: 2px double #000000;
@@ -202,11 +202,12 @@
   border-style: double;
   border-width: 8px;
   border-radius: 8px;
-  max-width: 800px;
+  max-width: 600px;
   margin: 30px;
 }
 
 .popupContent {
+  position: center;
   color: #FEC601;
   background-color:rgba(0, 0, 0, 1);
   padding: 8px 8px;
@@ -218,7 +219,7 @@
   border-width: 8px;
   border-radius: 8px;
   border-color: rgba(0, 0, 0, 1);
-  max-width: 800px;
+  max-width: 600px;
   margin: 4px;
 }
 
@@ -244,7 +245,7 @@
   background-color: #ffffff; /* Change this to your desired button background color */
   border: none;
   color: #000000; /* Change this to your desired button text color */
-  padding: 8px 12px;
+  padding: 4px 12px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
