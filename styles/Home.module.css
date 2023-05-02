@@ -3,7 +3,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  background-color: #FFCC33;
+  background-color: #FFC601;
   border-radius: 10px;
   border: 2px double #000;
 }
@@ -65,12 +65,13 @@
   border-radius: 8px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
 }
+
 .fullscreenButton {
   position: absolute;
   top: 10px;
   right: 10px;
   padding: 3px 8px;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.2);
   color: rgba(255, 255, 255, 0.8);
   border-radius: 8px;
   font-size: 14px;
@@ -78,7 +79,7 @@
 }
 
 .fullscreenButton:hover {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.9);
 }
 
 .imageContainer {
@@ -124,7 +125,7 @@
   width: 75vw;
   max-width: 800px; /* limit width to 800px */
   border-radius: 0.5rem;
-  border: 2px solid #d9d9e3;
+  border: 2px double #000000;
   color: #000000; /* Changed font color to yellow-green */
   background: #ffffff; /* Changed background color to a darker color */
   outline: none;
@@ -153,7 +154,7 @@
 }
 
 .labelButton {
-  background-color: rgb(64, 24, 222);
+  background-color: #0C4B8E;
   color: white;
   font-weight: bold;
   border: 2px double #000;
@@ -163,23 +164,6 @@
   cursor: pointer;
   transition: 0.3s;
   margin: 0 4px; /* Add this line to add space between buttons */
-}
-
-.labelButton:hover {
-  background-color: #000;
-  border: 2px solid #000;
-  color: #fff;
-}
-
-.speakbutton {
-  position: right;
-  color: #ffffff;
-  background: #000000;
-  padding: 1rem;
-  border-color: #ffa500;
-  font-weight: bold;
-  border-radius: 8px;
-  border: double;
 }
 
 .transcriptcontainer {
@@ -209,7 +193,7 @@
   left: 0;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  color:rgb(12, 234, 4);
+  color: #FEC601;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -223,7 +207,7 @@
 }
 
 .popupContent {
-  color: rgb(12, 234, 4);
+  color: #FEC601;
   background-color:rgba(0, 0, 0, 1);
   padding: 8px 8px;
   border-radius: 4px;
@@ -242,7 +226,7 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   background-color: rgba(0, 0, 0, 1);
-  color: rgb(226, 234, 4);
+  color: #FEC601;
   padding: 8px;
   border-radius: 4px;
   max-width: 800px;
@@ -252,18 +236,18 @@
   border-style: double;
   border-width: 8px;
   border-radius: 8px;
-  border-color: #1c8bfb;
+  border-color: #0C4B8E;
   margin-top: 30px;
 }
 
 .copyButton {
-  background-color: #000000; /* Change this to your desired button background color */
+  background-color: #ffffff; /* Change this to your desired button background color */
   border: none;
-  color: rgb(255, 255, 255); /* Change this to your desired button text color */
+  color: #000000; /* Change this to your desired button text color */
   padding: 8px 12px;
   text-align: center;
   text-decoration: none;
-  display: inline-flex;
+  display: inline-block;
   font-size: 14px;
   cursor: pointer;
   align-items: center;
@@ -271,15 +255,20 @@
   border-radius: 5px;
   margin: 4px 2px;
   transition-duration: 0.4s;
-  align-self: bottom;
+}
+
+.copyButton:hover {
+  background: rgb(255, 255, 255, 0.5);
+  border-radius: 0.2rem;
 }
 
 .documentIcon {
   margin-right: 4px;
+  color: rgb(0,0,0,0.8)
 }
 
 .voicebutton {
-  background-color: #1e90ff;
+  background-color: #0C4B8E;
   border: none;
   border-radius: 5px;
   color: white;
@@ -293,8 +282,19 @@
   transition-duration: 0.4s;
 }
 
+.voicebutton:hover {
+  background: rgb(12, 75, 142, 0.5);
+  border-radius: 0.2rem;
+}
+
+.voicebutton:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+  background: none;
+}
+
 .generatebutton {
-  background-color: #3ea125;
+  background-color: #008000;
   border: none;
   border-radius: 5px;
   color: white;
@@ -306,6 +306,17 @@
   margin: 4px 2px;
   cursor: pointer;
   transition-duration: 0.4s;
+}
+
+.generatebutton:hover {
+  background: rgb(0, 128, 0, 0.5);
+  border-radius: 0.2rem;
+}
+
+.generatebutton:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+  background: none;
 }
 
 .centeredSvg {
@@ -342,10 +353,10 @@
 }
 
 .stopvoicebutton {
-  background-color: #ff4500;
+  background-color: #C70025;
   border: none;
   border-radius: 5px;
-  color: rgb(232, 249, 0);
+  color: #ffffff;
   font-size: 14px;
   padding: 10px 12px;
   text-align: center;
@@ -358,15 +369,15 @@
 }
 
 .stopvoicebutton:hover {
-  background: #7f8a09;
+  background: rgb(199, 0, 37, 0.5);
   border-radius: 0.2rem;
 }
 
 .pausebutton {
-  background-color: #e2f10e;
+  background-color: #FEC601;
   border: none;
   border-radius: 5px;
-  color: rgb(255, 0, 0);
+  color: #000000;
   font-size: 14px;
   padding: 10px 12px;
   text-align: center;
@@ -378,15 +389,15 @@
 }
 
 .pausebutton:hover {
-  background: #7f8a09;
+  background: rgb(254, 198, 1, 0.5);
   border-radius: 0.2rem;
 }
 
 .clearbutton {
-  background-color: #f1ae11;
+  background-color: #000000;
   border: none;
   border-radius: 5px;
-  color: rgb(0, 0, 0);
+  color: #ffffff;
   font-size: 14px;
   padding: 10px 12px;
   text-align: center;
@@ -398,12 +409,18 @@
 }
 
 .clearbutton:hover {
-  background: #7f8a09;
+  background: rgb(0,0,0,.5);
   border-radius: 0.2rem;
 }
 
+.clearbutton:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+  background: none;
+}
+
 .replaybutton {
-  background-color: #f1ae11;
+  background-color: #0C4B8E;
   border: none;
   border-radius: 5px;
   color: white;
@@ -418,7 +435,7 @@
 }
 
 .replaybutton:hover {
-  background: #7f8a09;
+  background: rgb(254, 198, 1, 0.5);
   border-radius: 0.2rem;
 }
 
@@ -426,7 +443,7 @@
   position: absolute;
   top: 0.2rem;
   right: 0.25rem;
-  color: #ff0000; /* Changed font color to yellow-green */
+  color: #C70025;
 }
 
 .svgicon {
@@ -434,28 +451,6 @@
   width: 2em;
   height: 1.2em;
   fill: currentColor;
-}
-
-.generatebutton:hover {
-  background: #7f8a09;
-  border-radius: 0.2rem;
-}
-
-.generatebutton:disabled {
-  opacity: 0.9;
-  cursor: not-allowed;
-  background: none;
-}
-
-.voicebutton:hover {
-  background: #7f8a09;
-  border-radius: 0.2rem;
-}
-
-.voicebutton:disabled {
-  opacity: 0.9;
-  cursor: not-allowed;
-  background: none;
 }
 
 .messagelist {
@@ -531,11 +526,17 @@
 }
 
 .listening {
-  background-color: #4caf50; /* Change to your desired color */
+  background-color: #008000; /* Change to your desired color */
   color: white; /* Change to your desired text color */
 }
 
 .footer a:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.header a:hover {
+  text-decoration: underline;
   opacity: 0.8;
 }
 
@@ -585,7 +586,7 @@
   position: absolute;
   white-space: pre-wrap !important;
   background: rgb(0, 0, 0, 0.2);
-  color: #f1ae11;
+  color: #FEC601;
   padding: 0px;
   bottom: 12%;
   left: 2%;
@@ -705,7 +706,7 @@
   top: 10px;
   left: 10px;
   padding: 3px 8px;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.5);
   color: rgba(255, 255, 255, 0.8);
   border-radius: 8px;
   font-size: 14px;
@@ -719,6 +720,7 @@
 
 .pexels-credit a:hover {
   text-decoration: underline;
+  background-color: #000000;
 }
 
 .serviceInfo {

@@ -678,7 +678,7 @@ function Home({ user }: HomeProps) {
         <h1>GAIB The Groovy AI Bot</h1>
       </div>
       <Layout>
-        <div className="mx-auto flex flex-col gap-4 bg-#3b82f6">
+        <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
           <main className={styles.main}>
             <div className={styles.cloud}>
               <div
@@ -856,15 +856,15 @@ function Home({ user }: HomeProps) {
                           </svg>
                         </button>
                         */}
-                        <label className={styles.label}>
+                        {/*<label className={styles.label}>
                           <input
                             title="Speaking Enabled"
                             type="checkbox"
                             checked={speechOutputEnabled}
                             onChange={handleSpeechOutputToggle}
                           />
-                          Speak
-                        </label>
+                          &nbsp;&nbsp;Speak
+                      </label>*/}
                         {/*<label htmlFor="auto-full-screen">
                           <input
                             title="Auto full screen on play"
@@ -878,11 +878,11 @@ function Home({ user }: HomeProps) {
                           type="button"
                           onClick={togglePopup}
                           className={`${styles.copyButton} ${styles.shrinkedButton}`}
-                          disabled={isSpeaking || loading}>
+                        >
                           <svg
                             className={`${styles.documentIcon} ${styles.centeredSvg}`}
                             width="24"
-                            height="22"
+                            height="20"
                             viewBox="0 0 24 24"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
@@ -910,7 +910,6 @@ function Home({ user }: HomeProps) {
                     <div className={styles.dropdowncontainer}>
                       <div className={styles.dropdowncontainer}>
                         <div className={styles.labelContainer}>
-                          <span className={styles.label} >Personality:</span>
                           <select
                             className={styles.dropdown}
                             disabled={isSpeaking || loading}
@@ -930,7 +929,6 @@ function Home({ user }: HomeProps) {
                           </select>
                         </div>
                         <div className={styles.labelContainer}>
-                          <span className={styles.label}></span>
                           <select
                             id="gender-select"
                             className={styles.dropdown}
@@ -946,9 +944,7 @@ function Home({ user }: HomeProps) {
                             <option value="NEUTRAL">Neutral</option>
                           </select>
                         </div>
-                      </div>
                       <div className={styles.labelContainer}>
-                        <span className={styles.label}>Audio:</span>
                         <select
                           id="audio-language-select"
                           className={styles.dropdown}
@@ -980,6 +976,7 @@ function Home({ user }: HomeProps) {
                             <option key={lang.code} value={lang.code}>{lang.name}</option>
                           ))}
                         </select>
+                      </div>
                       </div>
                     </div>
                   </div>
