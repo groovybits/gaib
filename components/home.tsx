@@ -961,7 +961,6 @@ function Home({ user }: HomeProps) {
                         </select>
                       </div>
                       <div className={styles.labelContainer}>
-                        <span className={styles.label}>Subtitles:</span>
                         <select
                           id="subtitle-language-select"
                           className={styles.dropdown}
