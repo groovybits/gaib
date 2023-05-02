@@ -23,7 +23,7 @@ export const makeChain = async (
   let documentsReturned = 8;
 
   let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.9 : 0.5;
-  let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet' || personality == 'VideoEngineer' || personality == 'Engineer' || personality == 'Coder') ? 800 : 500;
+  let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet' || personality == 'VideoEngineer' || personality == 'Engineer' || personality == 'Coder') ? 1000 : 500;
   let logInterval = 33; // Adjust this value to log less or more frequently
   let tokenCount = 0;  
   let isPremium = await isUserPremium();
@@ -32,7 +32,7 @@ export const makeChain = async (
   // Adjust maxTokens and documentsReturned based on premium status
   if (!isPremium && !isAdmin) {
     maxTokens = maxTokens * 0.25;
-    documentsReturned = 4;
+    documentsReturned = 1;
   }
 
   async function getUserDetails(userId: string) {
