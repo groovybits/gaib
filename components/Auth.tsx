@@ -189,24 +189,10 @@ function Auth({ }: Props): ReactElement {
         <div className={styles.header}>
           <div className={styles.header}>
             <h1>Groovy AI Bot (GAIB)</h1>
-            <h2>Project by Chris Kennedy</h2>
+            <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>
           </div>
         </div>
-        <div className={styles.cloud}>
-          <div className={styles.imageContainer}>
-            <div className={styles.generatedImage}>
-              <div className={styles.subtitleBack}>
-                <a href="#" onClick={() => signInWithGoogle()}>Sign in to GAIB using Google Authentication</a>
-              </div>
-              <img src="gaib.png" alt="GAIB" style={{
-                width: 'auto',
-                height: '100%',
-                objectFit: 'scale-down',
-              }} />
-            </div>
-          </div>
-        </div>
-        <div className={styles.footer}>
+         <div className={styles.footer}>
           <ServiceInfo /> {/* Add the ServiceInfo component */}
         </div>
       </div>
