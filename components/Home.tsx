@@ -81,27 +81,6 @@ function Home({ user }: HomeProps) {
     setShowPopup(!showPopup);
   };
 
-  // Use this function in your frontend components when you want to send a log message
-  async function consoleLog(level: string, ...args: any[]) {
-    try {
-      const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
-
-      const response = await fetch('/api/log', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ level: level, message }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send log message');
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
   useEffect(() => {
     const lastMessageIndex: any = messages.length - 1;
 
@@ -157,7 +136,7 @@ function Home({ user }: HomeProps) {
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
       if (deltaTimeInSeconds < 5) {
-        consoleLog('info', `Time elapsed: ${deltaTimeInSeconds} seconds`);
+        console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
         return '';
       }
       setStartTime(endTime);
@@ -169,7 +148,7 @@ function Home({ user }: HomeProps) {
       } else {
         try {
           let extracted_keywords = extractKeywords(sentence, 8).join(' ');
-          consoleLog('info', 'Extracted keywords: [', extracted_keywords, ']');
+          console.log('Extracted keywords: [', extracted_keywords, ']');
           const keywords = encodeURIComponent(extracted_keywords);
           const response = await fetch('/api/pexels', {
             method: 'POST',
@@ -201,7 +180,7 @@ function Home({ user }: HomeProps) {
       try {
         return sentence.match(regex) || [];
       } catch (e) {
-        consoleLog('error', 'Error splitting sentence: ', sentence, ': ', e);
+        console.log('Error splitting sentence: ', sentence, ': ', e);
         return [sentence];
       }
     }
@@ -250,7 +229,7 @@ function Home({ user }: HomeProps) {
           sentences.push(currentGroup.trim());
         }
       } catch (e) {
-        consoleLog('error', 'Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
+        console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
       }
 
@@ -303,7 +282,7 @@ function Home({ user }: HomeProps) {
             // Speak the sentence
             if (audioLanguage === 'en-US') {
               // Speak the original text
-              consoleLog('info', 'Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
+              console.log('Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
               await speakText(sentence, 1, gender, audioLanguage, model);
             } else {
               // Speak the translated text
@@ -315,7 +294,7 @@ function Home({ user }: HomeProps) {
                 // Translate the text
                 translationEntry = await fetchTranslation(sentence, audioLanguage);
               }
-              consoleLog('info', 'Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
+              console.log('Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
               await speakText(translationEntry, 1, gender, audioLanguage, model);
             }
           } else {
@@ -473,7 +452,7 @@ function Home({ user }: HomeProps) {
     } catch (error) {
       setLoading(false);
       setError('An error occurred while fetching the data. Please try again.');
-      consoleLog('error', error);
+      console.log(error);
     }
   }
 
