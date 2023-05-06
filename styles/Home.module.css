@@ -744,6 +744,39 @@
   font-size: 14px;
 }
 
+.emailInput {
+  /* Add styles for email input */
+  width: 100%;
+  padding: 8px 12px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+}
+
+.passwordInput {
+  /* Add styles for password input */
+  width: 100%;
+  padding: 8px 12px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+}
+
+.signInButton {
+  /* Add styles for sign-in button */
+  width: 100%;
+  padding: 8px 12px;
+  margin: 8px 0;
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.message {
+  margin-top: 1rem;
+  color: red;
+  font-size: 28px;
+}
+
 /* Mobile optimization */
 @media (max-width: 300px) {
   .main {

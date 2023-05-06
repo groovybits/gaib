@@ -8,14 +8,13 @@ import {
   PINECONE_NAME_SPACE,
   OTHER_PINECONE_NAMESPACES,
 } from '@/config/pinecone';
-import logger from '@/utils/logger';
 
 async function consoleLog(level: string, ...args: any[]) {
   const message = args
     .map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : arg))
     .join(' ');
 
-  logger.log(level, message);
+  console.log(message);
 }
 
 function delay(ms: number) {

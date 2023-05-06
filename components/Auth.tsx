@@ -9,31 +9,11 @@ import ServiceInfo from './ServiceInfo';
 import 'firebase/functions';
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import Modal from "react-modal";
+import { registerUser, loginUser } from "@/config/localAuthProvider";
 
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
 const stripePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
-
-// Use this function in your frontend components when you want to send a log message
-async function consoleLog(level: string, ...args: any[]) {
-  try {
-    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
-
-    const response = await fetch('/api/log', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ level: level, message }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to send log message');
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
 
 interface Props { }
 
@@ -43,6 +23,9 @@ function Auth({ }: Props): ReactElement {
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [priceDetails, setPriceDetails] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState('');
 
   // Add this line after the previous two lines
   const userDocRef = user ? firebase.firestore().doc(`users/${user.uid}`) : null;
@@ -61,7 +44,7 @@ function Auth({ }: Props): ReactElement {
       });
 
       // Fetch the price details from Stripe
-      fetch("/api/getPriceDetails", {
+      fetch("/getPriceDetails", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -94,6 +77,51 @@ function Auth({ }: Props): ReactElement {
     setShowModal(false);
   }
 
+  const registerUser = async (email: string, password: string) => {
+    try {
+      const userCredential = await firebase
+        .auth()
+        .createUserWithEmailAndPassword(email, password);
+      return userCredential.user;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const loginUser = async (email: string, password: string) => {
+    try {
+      const userCredential = await firebase
+        .auth()
+        .signInWithEmailAndPassword(email, password);
+      return userCredential.user;
+    } catch (error) {
+      throw error;
+    }
+  };  
+
+  const handleSignIn = async () => {
+    try {
+      const user = await loginUser(email, password);
+      console.log("User logged in:", user);
+      setMessage('Logged in successfully!');
+    } catch (error : any) {
+      console.error("Error signing in:", error);
+      setMessage('Error signing in: ' + error.message);
+    }
+  };
+  
+  const handleRegister = async () => {
+    try {
+      const user = await registerUser(email, password);
+      console.log("User registered:", user);
+      setMessage('User registered successfully!');
+    } catch (error : any) {
+      console.error("Error registering user:", error);
+      setMessage('Error registering user: ' + error.message);
+    }
+  };
+  
+
   async function signInWithGoogle() {
     try {
       const userCredentials = await firebase
@@ -101,8 +129,7 @@ function Auth({ }: Props): ReactElement {
         .signInWithPopup(new firebase.auth.GoogleAuthProvider());
 
       if (userCredentials && userCredentials.user) {
-        consoleLog("info",
-          "userId:", userCredentials.user.uid,
+        console.log("userId:", userCredentials.user.uid,
           " provider:", userCredentials.user.providerData[0]?.providerId,
           " photoUrl:", userCredentials.user.photoURL,
           " displayName:", userCredentials.user.displayName || "unknown",
@@ -192,12 +219,32 @@ function Auth({ }: Props): ReactElement {
             <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>
           </div>
         </div>
-         <div className={styles.footer}>
+        <div className={styles.dropdowncontainer}>
+          <input
+            type="text"
+            className={styles.emailInput} 
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            className={styles.passwordInput} 
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button className={styles.signInButton} onClick={handleSignIn}>Sign In</button>
+          <button className={styles.signInButton} onClick={handleRegister}>Register</button>
+        </div>
+        <div className={styles.footer}>
+          {message && <div className={styles.message}>{message}</div>}
           <ServiceInfo /> {/* Add the ServiceInfo component */}
         </div>
       </div>
     </div>
   );
+  
 }
 
 export default Auth;

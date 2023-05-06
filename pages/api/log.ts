@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import logger from '@/utils/logger';
 
 const logHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === 'POST') {
     const { message, level } = req.body;
-    logger.log(level || 'info', message);
+    console.log(message)
     res.status(200).json({ message: 'OK' });
   } else {
     res.setHeader('Allow', ['POST']);
