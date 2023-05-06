@@ -9,7 +9,7 @@ import ServiceInfo from './ServiceInfo';
 import 'firebase/functions';
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import Modal from "react-modal";
-import { registerUser, loginUser } from "@/config/localAuthProvider";
+//import { registerUser, loginUser } from "@/config/localAuthProvider";
 
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
