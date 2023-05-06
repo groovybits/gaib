@@ -30,7 +30,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return;
   }
 
-  const client = new TextToSpeechClient();
+  // Read the JSON content from the environment variable
+const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+if (!credentialsJson) {
+  throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set');
+}
+const credentialsData = JSON.parse(credentialsJson);
+
+// Create credentials from the JSON content
+const credentials = {
+  client_email: credentialsData.client_email,
+  private_key: credentialsData.private_key,
+};
+
+// Initialize the Text-to-Speech client with the credentials
+const client = new TextToSpeechClient({ credentials });
 
   const request = {
     input: { text },
