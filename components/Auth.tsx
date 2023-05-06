@@ -26,6 +26,7 @@ function Auth({ }: Props): ReactElement {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState('');
+  const [showPremium, setShowPremium] = useState(false);
 
   // Add this line after the previous two lines
   const userDocRef = user ? firebase.firestore().doc(`users/${user.uid}`) : null;
@@ -155,9 +156,13 @@ function Auth({ }: Props): ReactElement {
           {!userIsPremium ? (
             <div className={styles.header}>
               <p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p>
+              {showPremium ? (
               <a href="#" onClick={() => createCheckoutSession(user.uid)} className={styles.header}>
                 Purchase Premium Subscription
               </a>
+              ) : (
+                <p>Currently in Beta.</p>
+              )}
             </div>
           ) : (
             <div className={styles.header}>
