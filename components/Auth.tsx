@@ -44,7 +44,7 @@ function Auth({ }: Props): ReactElement {
       });
 
       // Fetch the price details from Stripe
-      fetch("/getPriceDetails", {
+      fetch("/api/getPriceDetails", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
