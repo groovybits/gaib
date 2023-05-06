@@ -1,20 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
-import {https} from "firebase-functions";
-import {parse} from "url";
-import next from "next";
-
-const dev = process.env.NODE_ENV !== "production";
-const app = next({dev});
-const handle = app.getRequestHandler();
-
-export const nextServer = https.onRequest((req, res) => {
-  return app.prepare().then(() => {
-    const parsedUrl = parse(req.url, true);
-    handle(req, res, parsedUrl);
-  });
-});
 
 admin.initializeApp();
 const db = admin.firestore();
