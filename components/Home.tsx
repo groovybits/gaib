@@ -12,6 +12,7 @@ import nlp from 'compromise';
 import { ImageData } from '@/types/imageData'; // Update the path if required
 import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
 import firebase from '@/config/firebaseClientInit';
+import TokensDropdown from '@/components/TokensDropdown';
 
 type PendingMessage = {
   type: string;
@@ -63,7 +64,8 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [subtitle, setSubtitle] = useState<string>('');
-  const [imageUrl, setImageUrl] = useState<string>('gaib.png');
+  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || 'https://groovy.org/gaib/1.png';
+  const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
@@ -76,6 +78,7 @@ function Home({ user }: HomeProps) {
   const [photographer, setPhotographer] = useState<string>('');
   const [photographerUrl, setPhotographerUrl] = useState<string>('');
   const [pexelsUrl, setPexelsUrl] = useState<string>('');
+  const [tokensCount, setTokensCount] = useState<number>(0);
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -105,13 +108,13 @@ function Home({ user }: HomeProps) {
     async function setPexelImageUrls(gaibImage: ImageData | string) {
       if (typeof gaibImage === 'string') {
         if (gaibImage !== '') {
-          setImageUrl(gaibImage); // Set the image to the open mouth
+          setImageUrl(gaibImage); 
         }
         setPhotographer('GAIB');
         setPhotographerUrl('https://groovy.org');
-        setPexelsUrl('https://ai.groovy.org');
+        setPexelsUrl('https://gaib.groovy.org');
       } else {
-        setImageUrl(gaibImage.url); // Set the image to the open mouth
+        setImageUrl(gaibImage.url); 
         setPhotographer(gaibImage.photographer);
         setPhotographerUrl(gaibImage.photographer_url);
         setPexelsUrl(gaibImage.pexels_url);
@@ -123,7 +126,7 @@ function Home({ user }: HomeProps) {
       const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
       const randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
 
-      let url = 'gaib.png';
+      let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || 'https://ai.groovy.org/gaib/1.png';
       if (directoryUrl != null && maxNumber > 1 && randomNumber > 0) {
         url = `${directoryUrl}/${randomNumber}.png`;
       }
@@ -140,6 +143,10 @@ function Home({ user }: HomeProps) {
         return '';
       }
       setStartTime(endTime);
+
+      if (sentence === '') {
+        sentence = 'Anime AI Robot, quantum computing, and the meaning of life.';
+      }
 
       // Use local images if requested else use Pexels API to fetch images
       if (!useImageAPI) {
@@ -398,6 +405,7 @@ function Home({ user }: HomeProps) {
           question,
           userId: user.uid,
           selectedPersonality,
+          tokensCount,
           history,
         }),
         signal: ctrl.signal,
@@ -574,6 +582,11 @@ function Home({ user }: HomeProps) {
     } else {
       alert('Speech Recognition API is not supported in this browser.');
     }
+  };
+
+  // handle the change in the number of tokens
+  const handleTokensChange = (value: number) => {
+    setTokensCount(value);
   };
 
   // pause speaking output
@@ -924,8 +937,10 @@ function Home({ user }: HomeProps) {
                             ))}
                           </select>
                         </div>
-                        
                       </div>
+                    </div>
+                    <div>
+                      <TokensDropdown onChange={handleTokensChange} />
                     </div>
                     <div className={styles.labelContainer}>
                         <button title="View Transcript"

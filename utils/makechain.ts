@@ -9,6 +9,7 @@ import isUserPremium from '@/config/isUserPremium';
 export const makeChain = async (
   vectorstore: PineconeStore,
   personality: keyof typeof PERSONALITY_PROMPTS,
+  tokensCount: number,
   userId: string,
   onTokenStream?: (token: string) => void,
 ) => {
@@ -23,11 +24,16 @@ export const makeChain = async (
   let documentsReturned = 8;
 
   let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.9 : 0.5;
-  let maxTokens = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet' || personality == 'VideoEngineer' || personality == 'Engineer' || personality == 'Coder') ? 1000 : 500;
   let logInterval = 33; // Adjust this value to log less or more frequently
   let tokenCount = 0;  
   let isPremium = await isUserPremium();
   const isAdmin = await isUserAdmin(userId!);
+
+  let maxTokens = tokensCount;
+
+  if (maxTokens == 0) {
+    maxTokens = 4096;
+  }
 
   // Adjust maxTokens and documentsReturned based on premium status
   if (!isPremium && !isAdmin) {
