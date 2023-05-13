@@ -662,6 +662,26 @@ function Home({ user }: HomeProps) {
     }
   };
 
+  const autoResize = () => {
+    if (textAreaRef.current) {
+      textAreaRef.current.style.height = 'inherit';
+      const computed = window.getComputedStyle(textAreaRef.current);
+
+      // Subtract the padding and border from the scrollHeight
+      const height = parseInt(computed.getPropertyValue('border-top-width'), 10)
+                   + parseInt(computed.getPropertyValue('padding-top'), 10)
+                   + textAreaRef.current.scrollHeight
+                   + parseInt(computed.getPropertyValue('padding-bottom'), 10)
+                   + parseInt(computed.getPropertyValue('border-bottom-width'), 10);
+
+      textAreaRef.current.style.height = `${height}px`;
+    }
+  }
+
+  useEffect(() => {
+    autoResize();
+  }, [query]); // re-run autoResize every time 'query' changes
+
   // handle the form submission
   return (
     <>
@@ -715,7 +735,7 @@ function Home({ user }: HomeProps) {
                       ref={textAreaRef}
                       autoFocus={true}
                       rows={3}
-                      maxLength={600}
+                      maxLength={4096}
                       id="userInput"
                       name="userInput"
                       placeholder={
@@ -728,7 +748,10 @@ function Home({ user }: HomeProps) {
                             : 'Give me a question to answer? Please end all spoken commands with "GAIB".'
                       }
                       value={query}
-                      onChange={(e) => setQuery(e.target.value)}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        autoResize();
+                      }}              
                       className={styles.textarea}
                     />
                   </div>
