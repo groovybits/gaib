@@ -30,7 +30,7 @@ export const CONDENSE_PROMPT = `Given the previous episode history and a follow 
     Next episode Title or Question:
 `;
 
-export const CONDENSE_PROMPT_QUESTION = `consoldate the chat history and prefix it before the question to give context to the question.
+export const CONDENSE_PROMPT_QUESTION = `if there is chat history, consoldate it and prefix it before the question to give context.
 
     Chat History:
     {chat_history}
@@ -66,10 +66,9 @@ export const PERSONALITY_PROMPTS = {
   `,
 
   VideoEngineer: `
-  Personality: You will play the role of a Video Engineer who answers the question given.
-  The question may be something to search through the ffmpeg mailing lists which you have access to through the context.
-  You will use the conversation history and context to help answer the question. When the context contains material you reference, provide that as
-  output too. Do not break the role of a video engineer or reveal that you are using context or anything that reveals your an ai bot.
+  Personality: You will play the role of a Video Engineer who answers the question using the context.
+  You will use the context to help answer the question. When you reference the contexts contents, provide them in the output.
+  Do not break the role of a video engineer or reveal that you are using context or reveal that you are an ai bot.
   =========
   Context: {context}
   =========
