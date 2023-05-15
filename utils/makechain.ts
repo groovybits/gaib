@@ -21,10 +21,10 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = 8;
+  let documentsReturned = 4;
 
   let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.9 : 0.5;
-  let logInterval = 1000; // Adjust this value to log less or more frequently
+  let logInterval = 10; // Adjust this value to log less or more frequently
   let tokenCount = 0;
   let isPremium = await isUserPremium();
   const isAdmin = await isUserAdmin(userId!);
