@@ -11,7 +11,7 @@ if (!process.env.PINECONE_INDEX_NAME) {
 if (!process.env.PINECONE_NAME_SPACE) {
   throw new Error('Missing Pinecone name space in .env file');
 } else {
-  console.log('Pinecone using namespace: ', process.env.PINECONE_NAME_SPACE);
+  console.log('Pinecone default namespace: ', process.env.PINECONE_NAME_SPACE);
 }
 
 if (!process.env.GOOGLE_TRANSLATE_API_KEY) {

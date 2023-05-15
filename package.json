@@ -6,7 +6,7 @@
     "node": ">=18"
   },
   "license": "MIT",
-  "author": "Mayooear<twitter:@mayowaoshin>",
+  "author": "Chris Kennedy",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -45,6 +45,7 @@
     "next-firebase-auth": "^0.15.0",
     "node-fetch": "^3.3.1",
     "openai": "^3.2.1",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "1.1.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
