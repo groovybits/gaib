@@ -3,7 +3,7 @@ import React, { ChangeEvent } from 'react';
 import styles from '@/styles/Home.module.css';
 
 const NAMESPACE_VALUES = {
-  groovybits: "Magic Mix",
+  groovypdf: "Magic Mix",
   videoengineer: "Video Engineer"
 };
 
