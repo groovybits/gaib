@@ -12,7 +12,7 @@ interface PersonalityNamespaceDropdownProps {
 }
 
 const PersonalityNamespaceDropdown: React.FC<PersonalityNamespaceDropdownProps> = ({ setSelectedNamespace }) => {
-  const [selectedNamespace, setSelectedNamespaceState] = React.useState("groovybits");
+  const [selectedNamespace, setSelectedNamespaceState] = React.useState("groovypdf");
 
   React.useEffect(() => {
     setSelectedNamespace(selectedNamespace);
