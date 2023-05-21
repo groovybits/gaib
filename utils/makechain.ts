@@ -9,7 +9,8 @@ import { PERSONALITY_PROMPTS,
          QUESTION_FOOTER, 
          ANSWER_FOOTER, 
          ANALYZE_FOOTER, 
-         POET_FOOTER } from '@/config/personalityPrompts';
+         POET_FOOTER,
+         SONG_FOOTER } from '@/config/personalityPrompts';
 import firestoreAdmin from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
 
@@ -31,7 +32,9 @@ export const makeChain = async (
   } else if (personality == 'Stories') {
     prompt = `You are a professional screenplay writer for TV Espisodes. ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Poet') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;  
+  } else if (personality == 'SongWriter') {
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
   } else if (personality == 'Analyst') {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
   } else if (personality == 'Interviewer') {

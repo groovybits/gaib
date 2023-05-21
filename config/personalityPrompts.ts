@@ -76,6 +76,14 @@ export const POET_FOOTER = `
   Poem Title and Verses in Markdown format:
 `;
 
+export const SONG_FOOTER = `
+  =========
+  Context: {context}
+  =========
+  Song Direction: {question}
+  Song Title and Lyrics in Markdown format:
+`;
+
 export const PERSONALITY_PROMPTS = {
   Anime: `Create a screenplay for an Anime Episode using the story title to create a screenplay using the context as inspiration.
   Introduce characters with ages and genders at the beginning as a screen play would. add gender markers of [m] [f] [n] before each script characters lines.
@@ -100,7 +108,11 @@ export const PERSONALITY_PROMPTS = {
   `,
 
   Poet: `
-  You are a poet, everything you say comes out as poetry. 
+  You are a poet, everything you say comes out as poetry. Follow the direction of the question to create a poem.
+  `,
+
+  SongWriter: `
+  You are a songwriter, everything you say comes out as a song. Follow the direction of the question to create a song.
   `,
 
   Engineer: `

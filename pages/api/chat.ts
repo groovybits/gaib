@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  const { question, userId, selectedPersonality, isStory, tokensCount, history } = req.body;
+  const { question, userId, selectedPersonality, selectedNamespace, isStory, tokensCount, history } = req.body;
 
   //only accept post requests
   if (req.method !== 'POST') {
@@ -89,7 +89,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // OpenAI recommends replacing newlines with spaces for best results
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
   // Find a valid namespace
-  const namespaces = [selectedPersonality.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
+  let namespaces = [selectedPersonality.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
+  if (selectedNamespace) {
+    namespaces = [selectedNamespace]; // If a namespace is provided, override the default namespaces
+  }
   const namespaceResult = await getValidNamespace(namespaces);
 
   if (!namespaceResult) {

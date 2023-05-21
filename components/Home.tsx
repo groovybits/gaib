@@ -14,6 +14,7 @@ import PexelsCredit from '@/components/PexelsCredit'; // Update the path if requ
 import firebase from '@/config/firebaseClientInit';
 import TokensDropdown from '@/components/TokensDropdown';
 import ModeDropdown from '@/components/ModeDropDown';
+import PersonalityNamespaceDropdown from '@/components/PersonalityNamespaceDropdown';
 
 type PendingMessage = {
   type: string;
@@ -69,6 +70,7 @@ function Home({ user }: HomeProps) {
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('Anime');
+  const [selectedNamespace, setSelectedNamespace] = useState<string>('groovybits');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
   const [isPaused, setIsPaused] = useState(false);
@@ -407,6 +409,7 @@ function Home({ user }: HomeProps) {
           question,
           userId: user.uid,
           selectedPersonality,
+          selectedNamespace,
           isStory,
           tokensCount,
           history,
@@ -690,6 +693,10 @@ function Home({ user }: HomeProps) {
     }
   }
 
+  const handleNamespaceChange = (value: string) => {
+    setSelectedNamespace(value);
+  };
+
   useEffect(() => {
     autoResize();
   }, [query]); // re-run autoResize every time 'query' changes
@@ -923,6 +930,9 @@ function Home({ user }: HomeProps) {
                               </option>
                             ))}
                           </select>
+                        </div>
+                        <div className={styles.labelContainer}>
+                        <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
                         </div>
                         <div className={styles.labelContainer}>
                           <select
