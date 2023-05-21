@@ -2,7 +2,14 @@ import { OpenAI } from 'langchain/llms/openai';
 import { ConversationalRetrievalQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { CallbackManager } from 'langchain/callbacks';
-import { PERSONALITY_PROMPTS, CONDENSE_PROMPT, CONDENSE_PROMPT_QUESTION } from '@/config/personalityPrompts';
+import { PERSONALITY_PROMPTS, 
+         CONDENSE_PROMPT, 
+         CONDENSE_PROMPT_QUESTION, 
+         STORY_FOOTER, 
+         QUESTION_FOOTER, 
+         ANSWER_FOOTER, 
+         ANALYZE_FOOTER, 
+         POET_FOOTER } from '@/config/personalityPrompts';
 import firestoreAdmin from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
 
@@ -11,11 +18,29 @@ export const makeChain = async (
   personality: keyof typeof PERSONALITY_PROMPTS,
   tokensCount: number,
   userId: string,
+  storyMode: boolean,
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
-  const CONDENSE_PROMPT_STRING = (personality == 'GAIB' || personality == 'Stories') ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
+  const CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
+  
+  // Create the prompt using the personality and the footer depending on a question or a story
+  let prompt : string = '';
+  if (personality == 'Anime') {
+    prompt = `You are an Anime Otaku expert. ${storyMode ? PERSONALITY_PROMPTS['Anime'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+  } else if (personality == 'Stories') {
+    prompt = `You are a professional screenplay writer for TV Espisodes. ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+  } else if (personality == 'Poet') {
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
+  } else if (personality == 'Analyst') {
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
+  } else if (personality == 'Interviewer') {
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
+  } else {
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+  }
 
+  // take the 
   let title_finished = false;
   let accumulatedBodyTokens = '';
   let accumulatedTitleTokens = '';
@@ -23,7 +48,7 @@ export const makeChain = async (
   let accumulatedBodyTokenCount = 0;
   let documentsReturned = 8;
 
-  let temperature = (personality == 'GAIB' || personality == 'Stories' || personality == 'Poet') ? 0.9 : 0.5;
+  let temperature = (storyMode) ? 1.0 : 0.2;
   let logInterval = 33; // Adjust this value to log less or more frequently
   let tokenCount = 0;
   let isPremium = await isUserPremium();
@@ -122,7 +147,7 @@ export const makeChain = async (
     model,
     vectorstore.asRetriever(documentsReturned), // get more source documents, override default of 4
     {
-      qaTemplate: PERSONALITY_PROMPTS[personality],
+      qaTemplate: prompt,
       questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
       returnSourceDocuments: true,   
     },

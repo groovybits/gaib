@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  const { question, userId, selectedPersonality, tokensCount, history } = req.body;
+  const { question, userId, selectedPersonality, isStory, tokensCount, history } = req.body;
 
   //only accept post requests
   if (req.method !== 'POST') {
@@ -117,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Create chain
   let token_count = 0;
-  const chain = await makeChain(namespaceResult.vectorStore, selectedPersonality, tokensCount, userId, (token: string) => {
+  const chain = await makeChain(namespaceResult.vectorStore, selectedPersonality, tokensCount, userId, isStory, (token: string) => {
     token_count++;
     if (token_count % 33 === 0) {
       console.log('Chat Token count:', token_count);

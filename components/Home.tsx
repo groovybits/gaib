@@ -13,6 +13,7 @@ import { ImageData } from '@/types/imageData'; // Update the path if required
 import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
 import firebase from '@/config/firebaseClientInit';
 import TokensDropdown from '@/components/TokensDropdown';
+import ModeDropdown from '@/components/ModeDropDown';
 
 type PendingMessage = {
   type: string;
@@ -64,10 +65,10 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [subtitle, setSubtitle] = useState<string>('');
-  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || 'https://groovy.org/gaib/1.png';
+  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || 'https://ai.groovy.org/gaib/1.png';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('Anime');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
   const [isPaused, setIsPaused] = useState(false);
@@ -79,6 +80,7 @@ function Home({ user }: HomeProps) {
   const [photographerUrl, setPhotographerUrl] = useState<string>('');
   const [pexelsUrl, setPexelsUrl] = useState<string>('');
   const [tokensCount, setTokensCount] = useState<number>(0);
+  const [isStory, setIsStory] = useState<boolean>(true);
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -405,6 +407,7 @@ function Home({ user }: HomeProps) {
           question,
           userId: user.uid,
           selectedPersonality,
+          isStory,
           tokensCount,
           history,
         }),
@@ -589,6 +592,15 @@ function Home({ user }: HomeProps) {
     setTokensCount(value);
   };
 
+  // handle the change in the story or question mode
+  const handleIsStoryChange = (value: string) => {
+    if (value === 'story') {
+      setIsStory(true);
+    } else {
+      setIsStory(false);
+    }
+  };
+
   // pause speaking output
   const handlePause = () => {
     if (isPaused) {
@@ -740,10 +752,10 @@ function Home({ user }: HomeProps) {
                       name="userInput"
                       placeholder={
                         loading
-                          ? selectedPersonality === 'GAIB'
+                          ? selectedPersonality === 'Anime'
                             ? 'GAIB is generating your Anime...'
                             : 'Thinking upon your question...'
-                          : selectedPersonality === 'GAIB'
+                          : selectedPersonality === 'Anime'
                             ? 'Give me an Anime plotline to generate? Please end all spoken commands with "GAIB".'
                             : 'Give me a question to answer? Please end all spoken commands with "GAIB".'
                       }
@@ -962,8 +974,9 @@ function Home({ user }: HomeProps) {
                         </div>
                       </div>
                     </div>
-                    <div>
+                    <div className={styles.labelContainer}>
                       <TokensDropdown onChange={handleTokensChange} />
+                      <ModeDropdown onChange={handleIsStoryChange} />
                     </div>
                     <div className={styles.labelContainer}>
                         <button title="View Transcript"
