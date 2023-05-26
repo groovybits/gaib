@@ -49,9 +49,9 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = 8;
+  let documentsReturned = (storyMode) ? 8 : 4;
 
-  let temperature = (storyMode) ? 1.0 : 0.2;
+  let temperature = (storyMode) ? 0.6 : 0.3;
   let logInterval = 33; // Adjust this value to log less or more frequently
   let tokenCount = 0;
   let isPremium = await isUserPremium();
@@ -60,7 +60,7 @@ export const makeChain = async (
   let maxTokens = tokensCount;
 
   if (maxTokens == 0) {
-    maxTokens = 1000;
+    maxTokens = 2000;
   }
 
   async function getUserDetails(userId: string) {

@@ -3,6 +3,7 @@ import openai
 import subprocess
 import os
 import json
+import re
 from dotenv import load_dotenv
 
 # Load .env file
@@ -15,7 +16,7 @@ framework = 'serverless.yaml'
 cloud_service = 'aws'
 default_function_name = 'encodeVideoFFmpeg'
 default_prompt = "encode a video as an input arg with ffmpeg to x264 animation tune option and slow preset with aac audio and using two pass mode without b frames and key frames every 10 seconds. output to a file encode.mp4, keep output simple without all the license and extra stuff, just the output frames activity input/output details and warnings."
-code_only = "do not conversate, do not add anything to the output except code. output with ``` at the beginning and end of the code using markdown formatting. make sure to include the needed imports in the script."
+code_only = "do not conversate, do not add anything to the output except code. output with ``` at the beginning and end of the code using markdown formatting. make sure to include the needed imports in the script. type the variables, don't take the easy way out and use 'any' as a type, guard against nulls and undefined, and behave like the strict compiler option."
 
 model = 'gpt-3.5-turbo'
 max_tokens = 500  # Increase this number as needed
@@ -33,7 +34,23 @@ def setup_tsconfig():
     with open('tsconfig.json', 'w') as f:
         json.dump(tsconfig, f, indent=2)
 
-def setup_npm_project(project_name):
+def install_dependencies(dependencies):
+    builtin_modules = [
+        "assert", "buffer", "child_process", "cluster", "console", "constants", "crypto", "dgram", "dns", "domain", "events", 
+        "fs", "http", "http2", "https", "inspector", "module", "net", "os", "path", "perf_hooks", "process", "punycode", 
+        "querystring", "readline", "repl", "stream", "string_decoder", "sys", "timers", "tls", "trace_events", "tty", "url", 
+        "util", "v8", "vm", "wasi", "worker_threads", "zlib"
+    ]
+    for dep in dependencies:
+        if dep not in builtin_modules:
+            subprocess.run(['npm', 'install', '--save', dep])
+
+def install_required_modules(code):
+    # Find all import statements in the code
+    imports = re.findall(r'import .* from \'(.*)\'', code)
+    install_dependencies(imports)
+
+def setup_npm_project(project_name, function_name):
     if not os.path.exists(project_name):
         os.makedirs(project_name)
     os.chdir(project_name)
@@ -51,8 +68,10 @@ def setup_npm_project(project_name):
      # Update the scripts in package.json
     with open('package.json') as f:
         data = json.load(f)
-    data['scripts']['install'] = 'npm install'
-    data['scripts']['build'] = 'tsc'
+        data['main'] = function_name + '.ts'
+        data['scripts']['install'] = 'npm install'
+        data['scripts']['build'] = 'tsc'
+        data['scripts']['test'] = f'jest {function_name}.test.ts'
     with open('package.json', 'w') as f:
         json.dump(data, f, indent=2)
 
@@ -76,12 +95,12 @@ def setup_npm_project(project_name):
     # Commit the initial setup
     subprocess.run(['git', 'commit', '-m', 'Initial setup'])
 
-def generate_unit_test(function_name):
+def generate_unit_test(function_name, filename, code):
     while True:
         try:
             messages = [
                 {"role": "system", "content": f"You are a coder that writes {language} code and doesn't conversate. {code_only}"},
-                {"role": "user", "content": f"Write a unit test for a function named '{function_name}' in {language}. {code_only}"}
+                {"role": "user", "content": f"{code_only} Write a unit test for the following function named '{function_name}' located in the file '{filename}' in {language}. Here is the function code for reference:\n```{language}\n{code}\n```"}
             ]
             response = openai.ChatCompletion.create(model=model, messages=messages, max_tokens=max_tokens)
             print("Unit Test response was: %s" % json.dumps(response))
@@ -90,17 +109,19 @@ def generate_unit_test(function_name):
             # If the code block starts with 'typescript', remove it
             if unit_test_code.startswith('typescript'):
                 unit_test_code = unit_test_code.replace('typescript', '', 1)
+            # Replace the incorrect import path with the correct one
+            unit_test_code = re.sub(r'import { ' + function_name + r' } from \'[^\']*\'', f'import { function_name } from \'./{filename.replace(".ts", "")}\'', unit_test_code)
             return unit_test_code.strip()
         except openai.error.RateLimitError:
             print("Generate Unit Tests: Model is currently overloaded. Retrying in 10 seconds...")
             time.sleep(10)
 
-def generate_code(prompt):
+def generate_code(prompt, function_name):
     while True:
         try:
             messages = [
                 {"role": "system", "content": f"You are a coder that writes {language} code and doesn't conversate. {code_only}"},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": f"{prompt} Export the name function as a default export. Name the function as {function_name}"}
             ]
             response = openai.ChatCompletion.create(model=model, messages=messages, max_tokens=max_tokens)
             print("\n*** Code response was: %s" % json.dumps(response))
@@ -128,24 +149,28 @@ def run_test(filename):
     return result.stdout.decode('utf-8')
 
 def iterate_development(function_name, project_name):
-    setup_npm_project(project_name)
+    setup_npm_project(project_name, function_name)
     history = ""
 
     # Generate filenames based on the project name
-    code_filename = f'{project_name}.ts'
-    test_filename = f'{project_name}Test.ts'
+    code_filename = f'{function_name}.ts'
+    test_filename = f'{function_name}.test.ts'   
 
     # Generate the function code first
-    code = generate_code(prompt)
+    code = generate_code(prompt, function_name)
     history += f"\n{code}"
     print(f"\n*** Generated code:\n{code}")
     write_to_file(code, code_filename)  # Write the code to the code file
 
     # Then generate the unit test
-    unit_test = generate_unit_test(function_name)
+    unit_test = generate_unit_test(function_name, code_filename, code)
     history += f"\n{unit_test}"
     print(f"\n*** Generated unit test:\n{unit_test}")
     write_to_file(unit_test, test_filename)  # Write the unit test to the test file
+
+    # Install the required modules and run the code and the test
+    install_required_modules(code)
+    install_required_modules(unit_test)
 
     test_result = run_test(test_filename)
     print(f"Test result: {test_result}")
@@ -163,6 +188,9 @@ def iterate_development(function_name, project_name):
         test_result = run_test(test_filename)
         print(f"\n*** Test result: {test_result}")
 
+    if 'failed' in test_result:
+        print(f"\n*** Test failed. Here is the history of the code:\n\n{history}\n\ntest result: {test_result}")
+        return 'FAIL'
     return 'PASS'
 
 project_name = input("Enter the directory name for the project: ")
