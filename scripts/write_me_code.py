@@ -28,7 +28,7 @@ def setup_tsconfig():
             "module": "commonjs",
             "strict": True,
             "esModuleInterop": True,
-            "types": ["jest"]
+            "types": ["jest", "node"]
         }
     }
     with open('tsconfig.json', 'w') as f:
@@ -61,6 +61,7 @@ def setup_npm_project(project_name, function_name):
     subprocess.run(['npx', 'jest', '--init'])
     subprocess.run(['npm', 'install', '--save-dev', '@types/jest'])
     subprocess.run(['npm', 'install', '--save-dev', 'serverless-offline'])
+    subprocess.run(['npm', 'install', '--save-dev', '@types/node']);
 
     # Initialize git
     subprocess.run(['git', 'init'])
@@ -100,7 +101,7 @@ def generate_unit_test(function_name, filename, code):
         try:
             messages = [
                 {"role": "system", "content": f"You are a coder that writes {language} code and doesn't conversate. {code_only}"},
-                {"role": "user", "content": f"{code_only} Write a unit test for the following function named '{function_name}' located in the file '{filename}' in {language}. Here is the function code for reference:\n```{language}\n{code}\n```"}
+                {"role": "user", "content": f"{code_only} Write a unit test for the following function named '{function_name}' located in the file '{filename}' in {language}, include it as an import DO NOT INCLUDE THE FUNCTION CODE IN THE UNIT TEST CODE, import the function from the code file. Make sure to properly mock any dependencies or external calls in the unit tests. Use Jest's mocking capabilities to simulate the behavior of these dependencies. This includes mocking any calls to the 'child_process' module's 'exec' function, specifying the types of the callback function arguments in the mock implementation. Here is the function code for reference:\n```{language}\n{code}\n```"}
             ]
             response = openai.ChatCompletion.create(model=model, messages=messages, max_tokens=max_tokens)
             print("Unit Test response was: %s" % json.dumps(response))
@@ -150,6 +151,10 @@ def run_test(filename):
 
 def iterate_development(function_name, project_name):
     setup_npm_project(project_name, function_name)
+    #if not os.path.exists(project_name):
+    #    os.makedirs(project_name)
+    #os.chdir(project_name)  # Change to the project directory
+
     history = ""
 
     # Generate filenames based on the project name
@@ -172,15 +177,20 @@ def iterate_development(function_name, project_name):
     install_required_modules(code)
     install_required_modules(unit_test)
 
-    test_result = run_test(test_filename)
-    print(f"Test result: {test_result}")
+    test_result = ""
+    try:
+        test_result = run_test(test_filename)
+        print(f"Test result: {test_result}")
+    except Exception as e:
+        print("ERROR: Test failed to run with error: " + str(e))
+        test_result = str(e)        
   
     while 'failed' in test_result:
         if input("ERROR! Do you want to keep iterating? (yes/no) ") == "no":
             break
 
         print("\n*** Test failed. Generating new code...")
-        code = generate_code(prompt + " There was an error, please fix it. see: " + test_result)
+        code = generate_code(prompt + " There was an problem with the code, please fix it. see the error(s): " + test_result)
         history += f"\n{code}"
         print(f"\n*** Generated code:\n{code}")
         write_to_file(code, code_filename)  # Write the new code to the code file

@@ -24,7 +24,7 @@ export const makeChain = async (
 ) => {
   // Condense Prompt depending on a question or a story
   const CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
-  
+
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt : string = '';
   if (personality == 'Anime') {
@@ -49,10 +49,10 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = (storyMode) ? 8 : 4;
+  let documentsReturned = (storyMode) ? 4 : 4;
 
-  let temperature = (storyMode) ? 0.6 : 0.3;
-  let logInterval = 33; // Adjust this value to log less or more frequently
+  let temperature = (storyMode) ? 0.8 : 0.2;
+  let logInterval = 100; // Adjust this value to log less or more frequently
   let tokenCount = 0;
   let isPremium = await isUserPremium();
   const isAdmin = await isUserAdmin(userId!);
@@ -60,7 +60,7 @@ export const makeChain = async (
   let maxTokens = tokensCount;
 
   if (maxTokens == 0) {
-    maxTokens = 2000;
+    maxTokens = (storyMode) ? 1200 : 600;
   }
 
   async function getUserDetails(userId: string) {

@@ -2,12 +2,12 @@
 import React, { ChangeEvent, useState } from 'react';
 import styles from '@/styles/Home.module.css';
 
-interface ModeDropdownProps {
+interface ThemeDropdownProps {
   onChange: (value: string) => void;
 }
 
-const ModeDropdown: React.FC<ModeDropdownProps> = ({ onChange }) => {
-  const [mode, setMode] = useState<string>('story');
+const ThemeDropdown: React.FC<ThemeDropdownProps> = ({ onChange }) => {
+  const [mode, setMode] = useState<string>('Anime');
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
@@ -17,10 +17,10 @@ const ModeDropdown: React.FC<ModeDropdownProps> = ({ onChange }) => {
 
   return (
     <select id="mode" value={mode} onChange={handleChange} className={styles.dropdown}>
-        <option value='story'>Story Mode</option>
-        <option value='question'>Question Mode</option>
+        <option value='Anime'>Anime Theme</option>
+        <option value='Terminal'>Terminal Theme</option>
       </select>
   );
 };
 
-export default ModeDropdown;
+export default ThemeDropdown;

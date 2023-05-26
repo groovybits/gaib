@@ -14,7 +14,9 @@ import PexelsCredit from '@/components/PexelsCredit'; // Update the path if requ
 import firebase from '@/config/firebaseClientInit';
 import TokensDropdown from '@/components/TokensDropdown';
 import ModeDropdown from '@/components/ModeDropDown';
+import ThemeDropdown from '@/components/ThemeDropdown';
 import PersonalityNamespaceDropdown from '@/components/PersonalityNamespaceDropdown';
+import ReactMarkdown from 'react-markdown';
 
 type PendingMessage = {
   type: string;
@@ -83,6 +85,9 @@ function Home({ user }: HomeProps) {
   const [pexelsUrl, setPexelsUrl] = useState<string>('');
   const [tokensCount, setTokensCount] = useState<number>(0);
   const [isStory, setIsStory] = useState<boolean>(true);
+  const [selectedTheme, setSelectedTheme] = useState<string>('Anime');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -112,13 +117,13 @@ function Home({ user }: HomeProps) {
     async function setPexelImageUrls(gaibImage: ImageData | string) {
       if (typeof gaibImage === 'string') {
         if (gaibImage !== '') {
-          setImageUrl(gaibImage); 
+          setImageUrl(gaibImage);
         }
         setPhotographer('GAIB');
         setPhotographerUrl('https://groovy.org');
         setPexelsUrl('https://gaib.groovy.org');
       } else {
-        setImageUrl(gaibImage.url); 
+        setImageUrl(gaibImage.url);
         setPhotographer(gaibImage.photographer);
         setPhotographerUrl(gaibImage.photographer_url);
         setPexelsUrl(gaibImage.pexels_url);
@@ -336,8 +341,14 @@ function Home({ user }: HomeProps) {
       if (autoFullScreen && !isFullScreen) {
         setIsFullScreen(true);
       }
-      displayImagesAndSubtitles();
-      setLastSpokenMessageIndex(lastMessageIndex);
+      // Anime theme
+      if (selectedTheme === 'Anime') {
+        displayImagesAndSubtitles();
+        setLastSpokenMessageIndex(lastMessageIndex);
+      } else {
+        setLastSpokenMessageIndex(lastMessageIndex);
+        setIsSpeaking(false);
+      }
     }
   }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime]);
 
@@ -510,6 +521,12 @@ function Home({ user }: HomeProps) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  useEffect(() => {
+    if (messagesEndRef.current && messagesEndRef.current.scrollIntoView) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [latestMessage]);
 
   // Update the autoFullScreen state
   useEffect(() => {
@@ -684,10 +701,10 @@ function Home({ user }: HomeProps) {
 
       // Subtract the padding and border from the scrollHeight
       const height = parseInt(computed.getPropertyValue('border-top-width'), 10)
-                   + parseInt(computed.getPropertyValue('padding-top'), 10)
-                   + textAreaRef.current.scrollHeight
-                   + parseInt(computed.getPropertyValue('padding-bottom'), 10)
-                   + parseInt(computed.getPropertyValue('border-bottom-width'), 10);
+        + parseInt(computed.getPropertyValue('padding-top'), 10)
+        + textAreaRef.current.scrollHeight
+        + parseInt(computed.getPropertyValue('padding-bottom'), 10)
+        + parseInt(computed.getPropertyValue('border-bottom-width'), 10);
 
       textAreaRef.current.style.height = `${height}px`;
     }
@@ -695,6 +712,10 @@ function Home({ user }: HomeProps) {
 
   const handleNamespaceChange = (value: string) => {
     setSelectedNamespace(value);
+  };
+
+  const handleThemeChange = (value: string) => {
+    setSelectedTheme(value);
   };
 
   useEffect(() => {
@@ -731,17 +752,30 @@ function Home({ user }: HomeProps) {
                 >
                   {isFullScreen ? "Exit Full Screen" : "Full Screen"}
                 </button>
-                <div className={styles.generatedImage}>
-                  <img
-                    src={imageUrl}
-                    alt="GAIB"
-                  />
-                </div>
-                <div className={
-                  isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
-                }>{subtitle}
-                </div>
-                <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
+                {selectedTheme === 'Anime' ? (
+                  <div className={styles.generatedImage}>
+                    <div className={styles.generatedImage}>
+                      <img
+                        src={imageUrl}
+                        alt="GAIB"
+                      />
+                    </div>
+                    <div className={
+                      isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+                    }>{subtitle}
+                    </div>
+                    <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
+                  </div>
+                ) : (
+                    <div className={styles.generatedImage}>
+                      <div className={styles.markdownanswer}>
+                        <ReactMarkdown linkTarget="_blank">
+                          {latestMessage.message}
+                        </ReactMarkdown>
+                        <div ref={messagesEndRef} /> {/* This div will be scrolled into view */}
+                      </div>
+                    </div>
+                )}
               </div>
             </div>
             <div className={styles.center}>
@@ -770,7 +804,7 @@ function Home({ user }: HomeProps) {
                       onChange={(e) => {
                         setQuery(e.target.value);
                         autoResize();
-                      }}              
+                      }}
                       className={styles.textarea}
                     />
                   </div>
@@ -932,95 +966,96 @@ function Home({ user }: HomeProps) {
                           </select>
                         </div>
                         <div className={styles.labelContainer}>
-                        <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
+                          <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
                         </div>
-                        <div className={styles.labelContainer}>
-                          <select
-                            id="gender-select"
-                            className={styles.dropdown}
-                            disabled={isSpeaking || loading}
-                            value={gender}
-                            onChange={(e) => setGender(e.target.value)}
-                          >
-                            <option value="" disabled>
-                              Choose Voice Gender
-                            </option>
-                            <option value="FEMALE">Female</option>
-                            <option value="MALE">Male</option>
-                            <option value="NEUTRAL">Neutral</option>
-                          </select>
-                        </div>
-                        <div className={styles.labelContainer}>
-                          <select
-                            id="audio-language-select"
-                            className={styles.dropdown}
-                            disabled={isSpeaking || loading}
-                            value={audioLanguage}
-                            onChange={(e) => setAudioLanguage(e.target.value)}
-                          >
-                            <option value="" disabled>
-                              Choose Audio Language
-                            </option>
-                            {audioLanguages.map((lang: Language) => (
-                              <option key={lang.code} value={lang.code}>{lang.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className={styles.labelContainer}>
-                          <select
-                            id="subtitle-language-select"
-                            className={styles.dropdown}
-                            disabled={isSpeaking || loading}
-                            value={subtitleLanguage}
-                            onChange={(e) => setSubtitleLanguage(e.target.value)}
-                          >
-                            <option value="" disabled>
-                              Choose Subtitle Language
-                            </option>
-                            {subtitleLanguages.map((lang: Language) => (
-                              <option key={lang.code} value={lang.code}>{lang.name}</option>
-                            ))}
-                          </select>
-                        </div>
+                        {selectedTheme === 'Anime' ? (
+                          <><div className={styles.labelContainer}>
+                            <select
+                              id="gender-select"
+                              className={styles.dropdown}
+                              disabled={isSpeaking || loading}
+                              value={gender}
+                              onChange={(e) => setGender(e.target.value)}
+                            >
+                              <option value="" disabled>
+                                Choose Voice Gender
+                              </option>
+                              <option value="FEMALE">Female</option>
+                              <option value="MALE">Male</option>
+                              <option value="NEUTRAL">Neutral</option>
+                            </select>
+                          </div><div className={styles.labelContainer}>
+                              <select
+                                id="audio-language-select"
+                                className={styles.dropdown}
+                                disabled={isSpeaking || loading}
+                                value={audioLanguage}
+                                onChange={(e) => setAudioLanguage(e.target.value)}
+                              >
+                                <option value="" disabled>
+                                  Choose Audio Language
+                                </option>
+                                {audioLanguages.map((lang: Language) => (
+                                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                ))}
+                              </select>
+                            </div><div className={styles.labelContainer}>
+                              <select
+                                id="subtitle-language-select"
+                                className={styles.dropdown}
+                                disabled={isSpeaking || loading}
+                                value={subtitleLanguage}
+                                onChange={(e) => setSubtitleLanguage(e.target.value)}
+                              >
+                                <option value="" disabled>
+                                  Choose Subtitle Language
+                                </option>
+                                {subtitleLanguages.map((lang: Language) => (
+                                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                ))}
+                              </select>
+                            </div></>
+                        ) : null}
                       </div>
                     </div>
                     <div className={styles.labelContainer}>
                       <TokensDropdown onChange={handleTokensChange} />
                       <ModeDropdown onChange={handleIsStoryChange} />
+                      <ThemeDropdown onChange={handleThemeChange} />
                     </div>
                     <div className={styles.labelContainer}>
-                        <button title="View Transcript"
-                          type="button"
-                          onClick={togglePopup}
-                          className={`${styles.copyButton} ${styles.shrinkedButton}`}
+                      <button title="View Transcript"
+                        type="button"
+                        onClick={togglePopup}
+                        className={`${styles.copyButton} ${styles.shrinkedButton}`}
+                      >
+                        <svg
+                          className={`${styles.documentIcon} ${styles.centeredSvg}`}
+                          width="24"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
                         >
-                          <svg
-                            className={`${styles.documentIcon} ${styles.centeredSvg}`}
-                            width="24"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
+                          <path
+                            d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      </button>
+                      {showPopup && (
+                        <div className="popup" onClick={togglePopup}>
+                          <div
+                            className="popupContent"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
                           >
-                            <path
-                              d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
-                              fill="currentColor"
-                            />
-                          </svg>
-                        </button>
-                        {showPopup && (
-                          <div className="popup" onClick={togglePopup}>
-                            <div
-                              className="popupContent"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                            >
-                              <pre className={styles.preWrap}>{latestMessage.message}</pre>
-                            </div>
+                            <pre className={styles.preWrap}>{latestMessage.message}</pre>
                           </div>
-                        )}
                         </div>
+                      )}
+                    </div>
                   </div>
                 </form>
               </div>

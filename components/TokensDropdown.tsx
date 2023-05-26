@@ -1,5 +1,6 @@
 // components/TokensDropdown.tsx
 import React, { ChangeEvent, useState } from 'react';
+import styles from '@/styles/Home.module.css';
 
 interface TokensDropdownProps {
   onChange: (value: number) => void;
@@ -9,15 +10,15 @@ const TokensDropdown: React.FC<TokensDropdownProps> = ({ onChange }) => {
   const [tokensCount, setTokensCount] = useState<number>(0);
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = parseInt(event.target.value, 10);
+    const selectedValue = parseInt(event.target.value, 8);
     setTokensCount(selectedValue);
     onChange(selectedValue);
   };
 
   return (
-    <div>
       <select
         id="tokensCount"
+        className={styles.dropdown}
         value={tokensCount}
         onChange={handleChange}
       >
@@ -30,7 +31,6 @@ const TokensDropdown: React.FC<TokensDropdownProps> = ({ onChange }) => {
           );
         })}
       </select>
-    </div>
   );
 };
 

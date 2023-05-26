@@ -90,6 +90,36 @@
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
 }
 
+.markdownanswer {
+  line-height: 1.2;
+  white-space: pre-wrap !important;
+  color: #e5f810;
+  background: transparent;
+  animation: fadein 0.5s;
+  font-family: 'Trebuchet MS', monospace; /* Added font family */
+  font-size: 20px;
+  font-weight: 300;
+  max-width: 800px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  padding: 10px; /* Adjust the padding to reduce the black area around the image */
+  padding-top: 30px;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.markdownanswer a:hover {
+  opacity: 0.8;
+}
+
+.markdownanswer a {
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 18px;
+}
+
 .mainlogin {
   display: flex;
   flex-direction: column;
