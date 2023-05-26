@@ -90,8 +90,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
   // Find a valid namespace
   let namespaces = [selectedPersonality.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
-  if (selectedNamespace) {
+  if (selectedNamespace && selectedNamespace !== 'none') {
     namespaces = [selectedNamespace]; // If a namespace is provided, override the default namespaces
+  } else {
+    namespaces = []
   }
   const namespaceResult = await getValidNamespace(namespaces);
 

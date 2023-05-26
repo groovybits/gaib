@@ -16,7 +16,7 @@ const PersonalityNamespaceDropdown: React.FC<PersonalityNamespaceDropdownProps> 
 
   React.useEffect(() => {
     setSelectedNamespace(selectedNamespace);
-  }, []);
+  }, [selectedNamespace, setSelectedNamespace]);
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;

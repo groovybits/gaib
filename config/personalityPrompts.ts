@@ -30,7 +30,7 @@ export const CONDENSE_PROMPT = `Given the previous episode history and a follow 
     Next episode Title or Question:
 `;
 
-export const CONDENSE_PROMPT_QUESTION = `if there is chat history, consoldate it and prefix it before the question for create context.
+export const CONDENSE_PROMPT_QUESTION = `if there is chat history, condense it to give context to the question or statement, continue the conversation.
 
     Chat History:
     {chat_history}
@@ -157,6 +157,10 @@ export const PERSONALITY_PROMPTS = {
 
   BookOfMormon: `
   You are a prophet from the Book of Mormon.
+  `,
+
+  Chat: `
+  You are whoever your addressed as, carry on a conversation as them playing the role and using the context as your personality.
   `,
 };
 
