@@ -3,7 +3,7 @@ import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import { PineconeStore } from 'langchain/vectorstores/pinecone';
 import { pinecone } from '@/utils/pinecone-client';
-import { CustomPDFLoader } from '@/utils/customPDFLoader';
+import { PDFLoader } from 'langchain/document_loaders/fs/pdf';
 import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
 import { DirectoryLoader } from 'langchain/document_loaders/fs/directory';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -161,7 +161,7 @@ export const run = async (namespace : string, filePath: string, testMode : boole
 
     if (stats.isDirectory()) {
       const directoryLoader = new DirectoryLoader(filePath, {
-        '.pdf': (path) => new CustomPDFLoader(path),
+        '.pdf': (path) => new PDFLoader(path),
         '.txt': (path) => new TextLoader(path),
         '.json': (path) => new JsonLoader(path),
       });
@@ -173,7 +173,7 @@ export const run = async (namespace : string, filePath: string, testMode : boole
 
       switch(fileExtension) {
         case '.pdf':
-          fileLoader = new CustomPDFLoader(filePath);
+          fileLoader = new PDFLoader(filePath);
           break;
         case '.txt':
           fileLoader = new TextLoader(filePath);
