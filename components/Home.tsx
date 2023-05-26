@@ -768,7 +768,7 @@ function Home({ user }: HomeProps) {
                   </div>
                 ) : (
                     <div className={styles.generatedImage}>
-                      <div className={styles.markdownanswer}>
+                      <div className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
                         <ReactMarkdown linkTarget="_blank">
                           {latestMessage.message}
                         </ReactMarkdown>
