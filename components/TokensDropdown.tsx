@@ -10,7 +10,7 @@ const TokensDropdown: React.FC<TokensDropdownProps> = ({ onChange }) => {
   const [tokensCount, setTokensCount] = useState<number>(0);
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = parseInt(event.target.value, 8);
+    const selectedValue = parseInt(event.target.value, 10);
     setTokensCount(selectedValue);
     onChange(selectedValue);
   };
@@ -22,11 +22,11 @@ const TokensDropdown: React.FC<TokensDropdownProps> = ({ onChange }) => {
         value={tokensCount}
         onChange={handleChange}
       >
-        {[...Array(30)].map((_, index) => {
+        {[...Array(20)].map((_, index) => {
           const value = index * 100;
           return (
             <option key={value} value={value}>
-              {(value !== 0)? value : "Max"} Tokens
+              {value} Tokens
             </option>
           );
         })}

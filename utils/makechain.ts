@@ -49,7 +49,7 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = (storyMode) ? 4 : 4;
+  let documentsReturned = (storyMode) ? 6 : 4;
 
   let temperature = (storyMode) ? 0.8 : 0.2;
   let logInterval = 100; // Adjust this value to log less or more frequently
@@ -59,8 +59,8 @@ export const makeChain = async (
 
   let maxTokens = tokensCount;
 
-  if (maxTokens == 0) {
-    maxTokens = (storyMode) ? 1200 : 600;
+  if (maxTokens === 0) {
+    maxTokens = (storyMode) ? 1000 : 600;
   }
 
   async function getUserDetails(userId: string) {
@@ -98,8 +98,8 @@ export const makeChain = async (
   const model = new OpenAI({
     temperature: temperature,
     maxTokens: maxTokens,
-    presencePenalty: 0.1,
-    frequencyPenalty: 0.1,
+    presencePenalty: 0.2,
+    frequencyPenalty: 0.3,
     modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
     streaming: Boolean(onTokenStream),
     callbackManager: onTokenStream
