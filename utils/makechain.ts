@@ -2,17 +2,60 @@ import { OpenAI } from 'langchain/llms/openai';
 import { ConversationalRetrievalQAChain } from 'langchain/chains';
 import { PineconeStore } from 'langchain/vectorstores';
 import { CallbackManager } from 'langchain/callbacks';
-import { PERSONALITY_PROMPTS, 
-         CONDENSE_PROMPT, 
-         CONDENSE_PROMPT_QUESTION, 
-         STORY_FOOTER, 
-         QUESTION_FOOTER, 
-         ANSWER_FOOTER, 
-         ANALYZE_FOOTER, 
-         POET_FOOTER,
-         SONG_FOOTER } from '@/config/personalityPrompts';
+import {
+  PERSONALITY_PROMPTS,
+  CONDENSE_PROMPT,
+  CONDENSE_PROMPT_QUESTION,
+  STORY_FOOTER,
+  QUESTION_FOOTER,
+  ANSWER_FOOTER,
+  ANALYZE_FOOTER,
+  POET_FOOTER,
+  SONG_FOOTER
+} from '@/config/personalityPrompts';
 import firestoreAdmin from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
+import { BaseLanguageModel } from 'langchain/dist/base_language';
+import GPT3Tokenizer from 'gpt3-tokenizer';
+const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
+
+function countTokens(textArray: string[]): number {
+  let totalTokens = 0;
+  for (const text of textArray) {
+    if (typeof text !== 'string') {
+      // text is an array of strings
+      totalTokens += countTokens(text);
+      continue;
+    }
+    const encoded = tokenizer.encode(text);
+    totalTokens += encoded.bpe.length;
+  }
+  return totalTokens;
+}
+
+// Function to clean a document
+function cleanDocument(document: string): string {
+  // Add your cleaning logic here
+  return document.replace(/[^a-zA-Z0-9\s]/g, "");
+}
+
+// Function to retry with a smaller context
+async function retryWithSmallerContext(model: BaseLanguageModel, vectorstore: PineconeStore, documentsReturned: number, smallerPrompt: string, CONDENSE_PROMPT_STRING: string) {
+  try {
+    return ConversationalRetrievalQAChain.fromLLM(
+      model,
+      vectorstore.asRetriever(documentsReturned),
+      {
+        qaTemplate: smallerPrompt,
+        questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
+        returnSourceDocuments: true,
+      },
+    );
+  } catch (error: any) {
+    console.log("Retry Error in ConversationalRetrievalQAChain.fromLLM: ", error);
+    throw error;
+  }
+}
 
 export const makeChain = async (
   vectorstore: PineconeStore,
@@ -26,13 +69,13 @@ export const makeChain = async (
   const CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
 
   // Create the prompt using the personality and the footer depending on a question or a story
-  let prompt : string = '';
+  let prompt: string = '';
   if (personality == 'Anime') {
     prompt = `You are an Anime Otaku expert. ${storyMode ? PERSONALITY_PROMPTS['Anime'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Stories') {
     prompt = `You are a professional screenplay writer for TV Espisodes. ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Poet') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;  
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
   } else if (personality == 'SongWriter') {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
   } else if (personality == 'Analyst') {
@@ -49,19 +92,31 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = (storyMode) ? 6 : 4;
+  let documentsReturned = (storyMode) ? 8 : 4;
 
-  let temperature = (storyMode) ? 0.8 : 0.2;
+  let temperature = (storyMode) ? 0.7 : 0.1;
   let logInterval = 100; // Adjust this value to log less or more frequently
   let tokenCount = 0;
   let isPremium = await isUserPremium();
   const isAdmin = await isUserAdmin(userId!);
+  const maxTokens = (tokensCount - countTokens([prompt]) - 1) > 0 ? tokensCount - countTokens([prompt]) - 1 : 0;
 
-  let maxTokens = tokensCount;
+  // Adjust the number of documents returned based on the number of tokens allocated for output, see if prefer output or input
+  const maxModelCapacity = 4096;
+  documentsReturned = Math.max(0, Math.floor((documentsReturned / (maxTokens / (maxModelCapacity / 4)))));
+  console.log("documentsReturned: ", documentsReturned);
 
-  if (maxTokens === 0) {
-    maxTokens = (storyMode) ? 1000 : 600;
+  // Check if user has enough tokens to run this model
+  if (maxTokens <= 0) {
+    console.log(
+      `${userId} does not have enough tokens to run this model [only ${maxTokens} of ${tokensCount} needed].`
+    );
+    // Send signal that user does not have enough tokens to run this model
+    return null;
   }
+
+  // Clean the documents returned from the document store
+  //vectorstore = vectorstore.map(cleanDocument);
 
   async function getUserDetails(userId: string) {
     const userDoc = await firestoreAdmin.collection("users").doc(userId).get();
@@ -82,7 +137,7 @@ export const makeChain = async (
     const userDoc = await firestoreAdmin.collection("users").doc(userId).get();
     const userData = userDoc.data();
     return userData ? userData.isAdmin : false;
-  }  
+  }
 
   const userTokenBalance = await getUserTokenBalance(userId!);
   if (userTokenBalance < maxTokens && !isAdmin) {
@@ -95,7 +150,28 @@ export const makeChain = async (
     return null;
   }
 
-  const model = new OpenAI({
+  // Function to create a model with specific parameters
+  async function createModel(params: any, userId: string, userTokenBalance: number, isAdmin: boolean) {
+    let model: BaseLanguageModel;
+    try {
+      model = new OpenAI(params);
+    } catch (error: any) {
+      if (error.response && error.response.data && error.response.data.error && error.response.data.error.code === 'model_not_found') {
+        console.warn("Model not found. Retrying with a smaller context...");
+        // Retry with a smaller context
+        params.maxTokens = params.maxTokens / 1.5; // Use a smaller context
+        model = new OpenAI(params);
+      } else {
+        console.error(error);
+        throw error;
+      }
+    }
+
+    return model;
+  }
+
+  // Create the model
+  let model = await createModel({
     temperature: temperature,
     maxTokens: maxTokens,
     presencePenalty: 0.2,
@@ -144,15 +220,30 @@ export const makeChain = async (
         },
       })
       : undefined,
-  });
+  }, userId, userTokenBalance, isAdmin);
 
-  return ConversationalRetrievalQAChain.fromLLM(
-    model,
-    vectorstore.asRetriever(documentsReturned), // get more source documents, override default of 4
-    {
-      qaTemplate: prompt,
-      questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
-      returnSourceDocuments: true,   
-    },
-  );
+  let chain;
+  try {
+    chain = ConversationalRetrievalQAChain.fromLLM(model,
+      vectorstore.asRetriever(documentsReturned), // get more source documents, override default of 4
+      {
+        qaTemplate: prompt,
+        questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
+        returnSourceDocuments: true,
+      },
+    );
+  } catch (error: any) {
+    if (error.response && error.response.data && error.response.data.error && error.response.data.error.code === 'context_length_exceeded') {
+      // The context length was exceeded. Retry with a smaller context...
+      console.warn("Context length exceeded. Retrying with a smaller context...");
+      const smallerPrompt = prompt.slice(-1000); // Retry #1 with a smaller context
+      chain = await retryWithSmallerContext(model, vectorstore, documentsReturned, smallerPrompt, CONDENSE_PROMPT_STRING);
+    } else {
+      // Some other error occurred. Handle it as appropriate for your application...
+      console.error("Error in ConversationalRetrievalQAChain.fromLLM: ", error);
+      throw error;
+    }
+  }
+
+  return chain;
 };

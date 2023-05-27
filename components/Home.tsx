@@ -253,6 +253,8 @@ function Home({ user }: HomeProps) {
       let gaibImage = await gptGeneratedImageUrl('', false);
       setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
+
+      let genderMarkedNames = [];
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -270,24 +272,66 @@ function Home({ user }: HomeProps) {
             setSubtitle(splitSentence(sentence));
           }
 
+          // auto-detect gender by markers
+          const genderMarkerMatches = sentence.match(/\[(f|m|n)\]\s*([a-zA-Z]+)/g);
+          let detectedGender: string = gender;
+          if (genderMarkerMatches) {
+            for (const match of genderMarkerMatches) {
+              const [marker, name] = match.split(' ');
+              genderMarkedNames.push({ name, marker });
+              // Override the gender based on the marker
+              switch (marker) {
+                case '[f]':
+                case '[F]':
+                  detectedGender = 'FEMALE';
+                  break;
+                case '[m]':
+                case '[M]':
+                  detectedGender = 'MALE';
+                  break;
+                case '[n]':
+                case '[N]':
+                case '[GAIB]':
+                  detectedGender = 'NEUTRAL';
+                  break;
+              }
+            }
+          }
+
           // Speak the sentence if speech output is enabled
-          // determine the model to use
-          let model = "en-US-Neural2-H";
+          // Determine the model to use
+          let model = "";
           if (audioLanguage === 'en-US') {
-            if (gender === 'MALE') {
+            if (detectedGender === 'MALE') {
               model = 'en-US-Wavenet-A';
-            } else if (gender === 'FEMALE') {
+            } else if (detectedGender === 'FEMALE') {
               model = 'en-US-Wavenet-C';
             } else {
-              model = "";
+              model = 'en-US-Neural2-H';
             }
           } else if (audioLanguage === 'ja-JP') {
-            if (gender === 'MALE') {
+            if (detectedGender === 'MALE') {
               model = "ja-JP-Wavenet-B";
-            } else if (gender === 'FEMALE') {
+            } else if (detectedGender === 'FEMALE') {
               model = 'ja-JP-Wavenet-A';
             } else {
-              model = "";
+              model = 'ja-JP-Neural2-H';
+            }
+          } else if (audioLanguage === 'es-ES') {
+            if (detectedGender === 'MALE') {
+              model = "es-ES-Wavenet-A";
+            } else if (detectedGender === 'FEMALE') {
+              model = 'es-ES-Wavenet-C';
+            } else {
+              model = 'es-ES-Neural2-H';
+            }
+          } else if (audioLanguage === 'en-GB') {
+            if (detectedGender === 'MALE') {
+              model = "en-GB-Wavenet-B";
+            } else if (detectedGender === 'FEMALE') {
+              model = 'en-GB-Wavenet-A';
+            } else {
+              model = 'en-GB-Neural2-H';
             }
           } else {
             model = "";
@@ -298,8 +342,8 @@ function Home({ user }: HomeProps) {
             // Speak the sentence
             if (audioLanguage === 'en-US') {
               // Speak the original text
-              console.log('Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
-              await speakText(sentence, 1, gender, audioLanguage, model);
+              console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
+              await speakText(sentence, 1, detectedGender, audioLanguage, model);
             } else {
               // Speak the translated text
               let translationEntry: string = '';
@@ -310,8 +354,8 @@ function Home({ user }: HomeProps) {
                 // Translate the text
                 translationEntry = await fetchTranslation(sentence, audioLanguage);
               }
-              console.log('Speaking as - ', gender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
-              await speakText(translationEntry, 1, gender, audioLanguage, model);
+              console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
+              await speakText(translationEntry, 1, detectedGender, audioLanguage, model);
             }
           } else {
             // Wait for the sentence to be spoken, measure sentence length to know how long to wait for
@@ -350,7 +394,7 @@ function Home({ user }: HomeProps) {
         setIsSpeaking(false);
       }
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -767,14 +811,14 @@ function Home({ user }: HomeProps) {
                     <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
                   </div>
                 ) : (
-                    <div className={styles.generatedImage}>
-                      <div className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
-                        <ReactMarkdown linkTarget="_blank">
-                          {latestMessage.message}
-                        </ReactMarkdown>
-                        <div ref={messagesEndRef} /> {/* This div will be scrolled into view */}
-                      </div>
+                  <div className={styles.generatedImage}>
+                    <div className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
+                      <ReactMarkdown linkTarget="_blank">
+                        {latestMessage.message}
+                      </ReactMarkdown>
+                      <div ref={messagesEndRef} /> {/* This div will be scrolled into view */}
                     </div>
+                  </div>
                 )}
               </div>
             </div>

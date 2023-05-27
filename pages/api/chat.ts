@@ -8,6 +8,70 @@ import {
   PINECONE_NAME_SPACE,
   OTHER_PINECONE_NAMESPACES,
 } from '@/config/pinecone';
+import GPT3Tokenizer from 'gpt3-tokenizer';
+
+const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
+
+function countTokens(textArray: string[]): number {
+  let totalTokens = 0;
+  for (const text of textArray) {
+    if (typeof text !== 'string') {
+      // text is an array of strings
+      totalTokens += countTokens(text);
+      continue;
+    }
+    const encoded = tokenizer.encode(text);
+    totalTokens += encoded.bpe.length;
+  }
+  return totalTokens;
+}
+
+function truncateStory(story: string, maxTokens: number): string {
+  // Split the story into words
+  const words = story.split(' ');
+
+  // If the story is already shorter than maxTokens, return it as is
+  if (words.length <= maxTokens) {
+    return story;
+  }
+
+  // Otherwise, return the first maxTokens words joined together
+  return words.slice(0, maxTokens).join(' ') + '...';  // Add '...' to indicate that the story has been truncated
+}
+
+function condenseHistory(history: [string, string][], maxTokens: number): [string, string][] {
+  let condensedHistory: [string, string][] = [];
+  let totalTokens = 0;
+
+  for (let i = history.length - 1; i >= 0; i--) {
+    const [title, story] = history[i];
+    const titleTokens = countTokens([title]);
+
+    if ((totalTokens + titleTokens) > maxTokens) {
+      break;
+    }
+
+    totalTokens += titleTokens;
+
+    let summarizedStory = summarize(story);
+    let storyTokens = countTokens([summarizedStory]);
+
+    if ((totalTokens + storyTokens) > maxTokens) {
+      const remainingTokens = maxTokens - totalTokens;
+      summarizedStory = truncateStory(summarizedStory, remainingTokens);
+      storyTokens = countTokens([summarizedStory]);
+    }
+
+    if ((totalTokens + storyTokens) <= maxTokens) {
+      totalTokens += storyTokens;
+      condensedHistory.unshift([title, summarizedStory]);
+    } else {
+      break;
+    }
+  }
+
+  return condensedHistory;
+}
 
 async function consoleLog(level: string, ...args: any[]) {
   const message = args
@@ -86,6 +150,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  let requestedTokens = tokensCount;
+  if (tokensCount === 0) {
+    requestedTokens = (isStory) ? 1000 : 600;
+  }
+
+  // Check if the history + question is too long
+  let maxCount = 4076; // max tokens for GPT-3, overhead subtracted 20 for safety
+  // calcuate tokens, avoid less than 0
+  maxCount = (maxCount - countTokens([question]) - tokensCount) > 0 ? (maxCount - countTokens([question]) - requestedTokens) : 0;
+  console.log('Chat GPT maxCount tokens available for history:', maxCount);
+  const condensedHistory = countTokens(history) > maxCount ? condenseHistory(history, maxCount) : history;
+  console.log('Chat GPT History total history token count:', countTokens(condensedHistory));
+
   // OpenAI recommends replacing newlines with spaces for best results
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
   // Find a valid namespace
@@ -124,10 +201,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let token_count = 0;
   const chain = await makeChain(namespaceResult.vectorStore, selectedPersonality, tokensCount, userId, isStory, (token: string) => {
     token_count++;
-    if (token_count % 33 === 0) {
+    if (token_count % 100 === 0) {
       console.log('Chat Token count:', token_count);
     }
-    sendData(JSON.stringify({ data: token }));
+    if (typeof token === 'string') {
+      sendData(JSON.stringify({ data: token }));
+    } else {
+      consoleLog('error', 'Invalid token:', token ? token : 'null');
+    }
   });
 
   let response = await chain?.call({
@@ -145,3 +226,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   sendData('[DONE]');
   res.end();
 }
+
+// TODO: Implement this function with NLP or GPT-3 summarization
+function summarize(story: string):string {
+  return story;
+}
+
