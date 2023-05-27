@@ -273,28 +273,45 @@ function Home({ user }: HomeProps) {
           }
 
           // auto-detect gender by markers
-          const genderMarkerMatches = sentence.match(/\[(f|m|n)\]\s*([a-zA-Z]+)/g);
+          const genderMarkerMatches = sentence.match(/\[(f|m|n|F|M|N|GAIB)\]\s*(\w+)/gi);
           let detectedGender: string = gender;
           if (genderMarkerMatches) {
             for (const match of genderMarkerMatches) {
-              const [marker, name] = match.split(' ');
+              const marker = match.slice(1, match.indexOf(']')).toLowerCase();
+              const name = match.slice(match.indexOf(']') + 1, match.lastIndexOf('-')).trim();
               genderMarkedNames.push({ name, marker });
               // Override the gender based on the marker
               switch (marker) {
-                case '[f]':
-                case '[F]':
+                case 'f':
                   detectedGender = 'FEMALE';
                   break;
-                case '[m]':
-                case '[M]':
+                case 'm':
+                case 'gaib':
                   detectedGender = 'MALE';
                   break;
-                case '[n]':
-                case '[N]':
-                case '[GAIB]':
+                case 'n':
                   detectedGender = 'NEUTRAL';
                   break;
               }
+            }
+          }
+
+          // Check if sentence contains a name from genderMarkedNames
+          for (const { name, marker } of genderMarkedNames) {
+            if (sentence.includes(name)) {
+              switch (marker) {
+                case 'f':
+                  detectedGender = 'FEMALE';
+                  break;
+                case 'm':
+                  detectedGender = 'MALE';
+                  break;
+                case 'n':
+                case 'gaib':
+                  detectedGender = 'NEUTRAL';
+                  break;
+              }
+              break;  // Exit the loop as soon as a name is found
             }
           }
 
@@ -307,7 +324,7 @@ function Home({ user }: HomeProps) {
             } else if (detectedGender === 'FEMALE') {
               model = 'en-US-Wavenet-C';
             } else {
-              model = 'en-US-Neural2-H';
+              model = 'en-US-Wavenet-A';
             }
           } else if (audioLanguage === 'ja-JP') {
             if (detectedGender === 'MALE') {
@@ -315,7 +332,7 @@ function Home({ user }: HomeProps) {
             } else if (detectedGender === 'FEMALE') {
               model = 'ja-JP-Wavenet-A';
             } else {
-              model = 'ja-JP-Neural2-H';
+              model = 'a-JP-Wavenet-B';
             }
           } else if (audioLanguage === 'es-ES') {
             if (detectedGender === 'MALE') {
@@ -323,7 +340,7 @@ function Home({ user }: HomeProps) {
             } else if (detectedGender === 'FEMALE') {
               model = 'es-ES-Wavenet-C';
             } else {
-              model = 'es-ES-Neural2-H';
+              model = 'es-ES-Wavenet-A';
             }
           } else if (audioLanguage === 'en-GB') {
             if (detectedGender === 'MALE') {
@@ -331,7 +348,7 @@ function Home({ user }: HomeProps) {
             } else if (detectedGender === 'FEMALE') {
               model = 'en-GB-Wavenet-A';
             } else {
-              model = 'en-GB-Neural2-H';
+              model = 'en-GB-Wavenet-B';
             }
           } else {
             model = "";

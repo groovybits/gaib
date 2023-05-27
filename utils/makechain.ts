@@ -92,7 +92,7 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = (storyMode) ? 8 : 4;
+  let documentsReturned = (storyMode) ? 6 : 4;
 
   let temperature = (storyMode) ? 0.7 : 0.1;
   let logInterval = 100; // Adjust this value to log less or more frequently
@@ -103,7 +103,7 @@ export const makeChain = async (
 
   // Adjust the number of documents returned based on the number of tokens allocated for output, see if prefer output or input
   const maxModelCapacity = 4096;
-  documentsReturned = Math.max(0, Math.floor((documentsReturned / (maxTokens / (maxModelCapacity / 4)))));
+  documentsReturned = Math.max(1, Math.floor(((maxModelCapacity - maxTokens) / 500)));
   console.log("documentsReturned: ", documentsReturned);
 
   // Check if user has enough tokens to run this model
@@ -237,11 +237,11 @@ export const makeChain = async (
       // The context length was exceeded. Retry with a smaller context...
       console.warn("Context length exceeded. Retrying with a smaller context...");
       const smallerPrompt = prompt.slice(-1000); // Retry #1 with a smaller context
-      chain = await retryWithSmallerContext(model, vectorstore, documentsReturned, smallerPrompt, CONDENSE_PROMPT_STRING);
+      chain = await retryWithSmallerContext(model, vectorstore, 1, smallerPrompt, CONDENSE_PROMPT_STRING);
     } else {
       // Some other error occurred. Handle it as appropriate for your application...
       console.error("Error in ConversationalRetrievalQAChain.fromLLM: ", error);
-      throw error;
+      return null;
     }
   }
 

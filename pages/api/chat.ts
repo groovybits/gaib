@@ -152,11 +152,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let requestedTokens = tokensCount;
   if (tokensCount === 0) {
-    requestedTokens = (isStory) ? 1000 : 600;
+    requestedTokens = (isStory) ? 2000 : 800;
   }
 
   // Check if the history + question is too long
-  let maxCount = 4076; // max tokens for GPT-3, overhead subtracted 20 for safety
+  let maxCount = 3500; // max tokens for GPT-3, overhead for document store context space
   // calcuate tokens, avoid less than 0
   maxCount = (maxCount - countTokens([question]) - tokensCount) > 0 ? (maxCount - countTokens([question]) - requestedTokens) : 0;
   console.log('Chat GPT maxCount tokens available for history:', maxCount);
