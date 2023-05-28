@@ -235,24 +235,72 @@ function Home({ user }: HomeProps) {
       setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
 
+      let maleVoiceModels = {
+        'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-E'],
+        'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Wavenet-C', 'ja-JP-Wavenet-D'],
+        'es-ES': ['es-ES-Wavenet-A', 'es-ES-Wavenet-B', 'es-ES-Wavenet-D', 'es-ES-Wavenet-E'],
+        'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-E']
+      };
+
+      let femaleVoiceModels = {
+        'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H'],
+        'ja-JP': ['ja-JP-Wavenet-E', 'ja-JP-Wavenet-F', 'ja-JP-Wavenet-G', 'ja-JP-Wavenet-H'],
+        'es-ES': ['es-ES-Wavenet-C', 'es-ES-Wavenet-F', 'es-ES-Wavenet-G', 'es-ES-Wavenet-H'],
+        'en-GB': ['en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-G', 'en-GB-Wavenet-H']
+      };
+
+      let neutralVoiceModels = {
+        'en-US': ['en-US-Wavenet-I', 'en-US-Wavenet-J', 'en-US-Wavenet-K', 'en-US-Wavenet-L'],
+        'ja-JP': ['ja-JP-Wavenet-I', 'ja-JP-Wavenet-J', 'ja-JP-Wavenet-K', 'ja-JP-Wavenet-L'],
+        'es-ES': ['es-ES-Wavenet-I', 'es-ES-Wavenet-J', 'es-ES-Wavenet-K', 'es-ES-Wavenet-L'],
+        'en-GB': ['en-GB-Wavenet-I', 'en-GB-Wavenet-J', 'en-GB-Wavenet-K', 'en-GB-Wavenet-L']
+      };
+
+      let defaultModels = {
+        'en-US': 'en-US-Wavenet-A',
+        'ja-JP': 'ja-JP-Wavenet-A',
+        'es-ES': 'es-ES-Wavenet-A',
+        'en-GB': 'en-GB-Wavenet-A'
+      };
+
+      let voiceModels: { [key: string]: string } = {};
       let genderMarkedNames = [];
       let detectedGender: string = gender;
 
       // Extract gender markers from the entire message
       const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N|GAIB)\]|(\w+):\s*\[(f|m|n|F|M|N|GAIB)\]/gi);
+      let name: string;
       if (genderMarkerMatches) {
         for (const match of genderMarkerMatches) {
           const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
-          let name;
           if (match.includes(':')) {
             name = match.slice(0, match.indexOf(':')).trim();
           } else {
             name = match.slice(0, match.indexOf('[')).trim();
           }
           genderMarkedNames.push({ name, marker });
+
+          // Assign a voice model to the name
+          if (marker === 'm' && !voiceModels[name]) {
+            if (maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].length > 0) {
+              voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
+              maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
+            }
+          } else if (marker === 'f' && !voiceModels[name]) {
+            if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
+              voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
+              femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
+            }
+          } else if (!voiceModels[name]) {
+            if (neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].length > 0) {
+              voiceModels[name] = neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].shift() as string;
+              neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].push(voiceModels[name]);
+            }
+          }
         }
       }
 
+      let currentSpeaker : string = '';
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -270,9 +318,13 @@ function Home({ user }: HomeProps) {
             setSubtitle(splitSentence(sentence));
           }
 
+          let model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
           // Check if sentence contains a name from genderMarkedNames
           for (const { name, marker } of genderMarkedNames) {
-            if (sentence.includes(name)) {
+            const nameWithColon = name + ':';
+            const nameWithAction = name + ' (';
+            if (sentence.startsWith(nameWithColon) || sentence.startsWith(nameWithAction)) {
+              currentSpeaker = name;
               switch (marker) {
                 case 'f':
                   detectedGender = 'FEMALE';
@@ -285,47 +337,19 @@ function Home({ user }: HomeProps) {
                   detectedGender = 'NEUTRAL';
                   break;
               }
+              // Use the voice model for the character if it exists, otherwise use the default voice model
+              model = voiceModels[name] || defaultModels[audioLanguage as keyof typeof defaultModels];
+              console.log(`Switched to ${currentSpeaker}. Gender: ${detectedGender}, Model: ${model}`);
               break;  // Exit the loop as soon as a name is found
             }
           }
 
-          // Speak the sentence if speech output is enabled
-          // Determine the model to use
-          let model = "";
-          if (audioLanguage === 'en-US') {
-            if (detectedGender === 'MALE') {
-              model = 'en-US-Wavenet-A';
-            } else if (detectedGender === 'FEMALE') {
-              model = 'en-US-Wavenet-C';
-            } else {
-              model = 'en-US-Wavenet-A';
-            }
-          } else if (audioLanguage === 'ja-JP') {
-            if (detectedGender === 'MALE') {
-              model = "ja-JP-Wavenet-B";
-            } else if (detectedGender === 'FEMALE') {
-              model = 'ja-JP-Wavenet-A';
-            } else {
-              model = 'a-JP-Wavenet-B';
-            }
-          } else if (audioLanguage === 'es-ES') {
-            if (detectedGender === 'MALE') {
-              model = "es-ES-Wavenet-A";
-            } else if (detectedGender === 'FEMALE') {
-              model = 'es-ES-Wavenet-C';
-            } else {
-              model = 'es-ES-Wavenet-A';
-            }
-          } else if (audioLanguage === 'en-GB') {
-            if (detectedGender === 'MALE') {
-              model = "en-GB-Wavenet-B";
-            } else if (detectedGender === 'FEMALE') {
-              model = 'en-GB-Wavenet-A';
-            } else {
-              model = 'en-GB-Wavenet-B';
-            }
-          } else {
-            model = "";
+          // If the sentence does not start with the current speaker's name, switch back to the default voice
+          if (!sentence.startsWith(currentSpeaker + ':') && !sentence.startsWith(currentSpeaker + ' (')) {
+            currentSpeaker = '';
+            detectedGender = gender;
+            model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+            console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
           }
 
           // Speak the sentence if speech output is enabled
