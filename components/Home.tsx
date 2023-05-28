@@ -304,8 +304,9 @@ function Home({ user }: HomeProps) {
         }
       }
 
-      console.log(`Speaker map: ${JSON.stringify(voiceModels)}`);
+      console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
 
+      let model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -324,7 +325,6 @@ function Home({ user }: HomeProps) {
           }
 
           let speakerChanged = false;
-          let model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
           // Check if sentence contains a name from genderMarkedNames
           for (const { name, marker } of genderMarkedNames) {
             if (sentence.startsWith(name + ':')
@@ -360,22 +360,17 @@ function Home({ user }: HomeProps) {
 
           console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
 
-          // If the sentence starts with an asterisk, it's a scene change
-          if (!speakerChanged && sentence.startsWith('*')) {
-            isSceneChange = true;
-          }
-
           // If the speaker has changed or if it's a scene change, switch back to the default voice
-          if (!speakerChanged && isSceneChange) {
+          if (!speakerChanged && (sentence.startsWith('*') || sentence.startsWith('-'))) {
             detectedGender = gender;
             currentSpeaker = 'GAIB';
             model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
             console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
-            isSceneChange = false;  // Reset the scene change flag
+            isSceneChange = true;  // Reset the scene change flag
           }
 
           // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
-          if (sentence.startsWith('(')) {
+          if (sentence.startsWith('(') || (!sentence.startsWith('*') && !speakerChanged && !isSceneChange)) {
             isContinuingToSpeak = true;
           }
 

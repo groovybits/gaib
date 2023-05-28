@@ -1,19 +1,5 @@
 // personalityPrompts.ts
 //
-/*
-    'Tao': 'You are a prophet of the Tao who gives out information and advice from the Tao.',
-    'Bhagavad Gita': 'You are a prophet of the Bhagavad Gita who gives out information and advice from the Bhagavad Gita.',
-    'Dhammapada': 'You are a prophet of the Dhammapada who gives out information and advice from the Dhammapada.',
-    'Upanishads': 'You are a prophet of the Upanishads who gives out information and advice from the Upanishads.',
-    'Talmud': 'You are a prophet of the Talmud who gives out information and advice from the Talmud.',
-    'Ramayana': 'You are Rama and Hanuman of the Ramayana who gives out information and advice from the Ramayana.',
-    'Mahabharata': 'You are Arjuna of the Mahabharata who gives out information and advice from the Mahabharata.',
-    'Sikh': 'You are a Sikh character who answers questions with wisdom from the Sikh scriptures.',
-    'Finance': 'You are a finance character who answers questions with wisdom from the finance books.',
-    'Law': 'You are a law character who answers questions with wisdom from the law books.',
-    'Medicine': 'You are a medicine character who answers questions with wisdom from the medicine books.',
-    // Add more personalities here
-*/
 
 export const CONDENSE_PROMPT = `Given the previous episode history and a follow up direction for the next episode title,
   sumarize the episode history to help create a relevant title for the next episode using the context as inspiration.
@@ -45,7 +31,7 @@ export const STORY_FOOTER = `
   Context: {context}
   =========
   Story Title: {question}
-  Story Title and Screenplay format in Markdown:
+  Story Title followed by Story Body with characters and gender markers like CHARACTER [GENDER] and dialogue lines like CHARACTER: Dialogue:
 `;
 
 export const QUESTION_FOOTER = `
@@ -84,12 +70,12 @@ export const SONG_FOOTER = `
   Song Title and Lyrics in Markdown format:
 `;
 
-export const GENDER_MARKER = `Please start by introducing all main characters with their names followed by gender markers [m] for male, [f] for female, or [n] for non-binary in a format like this "CHARACTER NAME [GENDER_MARKER] AGE DESCRIPTION" one line each, started at the beginning of the line. Each character's dialogue should start with their name like this: "CHARACTER NAME: Dialogue." without any astricks or other characaters prefixing CHARACTER NAME.`;
+export const GENDER_MARKER = `Start by introducing each main character on a new line starting with their name without any spaces followed by a gender marker using "[m]" for male, "[f]" for female, or "[n]" for non-binary in a format like this "CHARACTER_NAME_NO_SPACES [GENDER_MARKER]" one line for each character. Each character's dialogue line should start with their name like this: "CHARACTER_NAME_NO_SPACES: Dialogue." on one single line without any astricks or other characaters prefixing CHARACTER NAME. Prefix the non dialogue lines using astricks like this: "** NON DIALOGUE LINE".`;
 
 export const PERSONALITY_PROMPTS = {
-  Anime: `Create a screenplay for an Anime Episode. Use the story title and context as inspiration. Begin by introducing all main characters with their names, ages, and genders. Format the story as a screenplay script for an Anime TV show from Japan in markdown format. Include music and sound effects as if they are closed captions, listing these at the beginning of the script to help frame the scene and as they change throughout the story. If there is no context or if the context is not applicable, use the title for inspiration alone. ${GENDER_MARKER}`,
+  Anime: `Create a screenplay for an Anime Episode, list the characters out line by line with gender markers after the title. Use the story title and context as inspiration. Begin by introducing all main characters with their names, ages, and genders one per line like "CHARACTER_NAME: [GENDER]" without spaces in the name. Format the story as a screenplay script for an Anime TV show from Japan. Include music and sound effects as if they are closed captions, listing these at the beginning of the script to help frame the scene and as they change throughout the story. If there is no context or if the context is not applicable, use the title for inspiration alone. ${GENDER_MARKER}`,
 
-  Stories: `Create a short story based on the given context and question as story direction. Begin by introducing all main characters with their names, ages, and genders. Format the story as a screenplay in Markdown format. Include music and sound effects as if they are closed captions. If there is no context or if the context is not applicable, use the title for inspiration alone. At the end of the story, add a section for closing credits. ${GENDER_MARKER}`,
+  Stories: `Create a short story based on the given context and question as story direction. Begin by introducing all main characters with their names, ages, and genders. Format the story as a screenplay. Include music and sound effects as if they are closed captions. If there is no context or if the context is not applicable, use the title for inspiration alone. At the end of the story, add a section for closing credits. ${GENDER_MARKER}`,
 
   VideoEngineer: `You are a Video Engineer, an expert in designing state-of-the-art video systems.`,
 
