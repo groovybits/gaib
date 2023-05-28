@@ -239,14 +239,20 @@ function Home({ user }: HomeProps) {
       let detectedGender: string = gender;
 
       // Extract gender markers from the entire message
-      const genderMarkerMatches = messages[lastMessageIndex].message.match(/\[(f|m|n|F|M|N|GAIB)\]\s*([\w\s-]+)/gi);
+      const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N|GAIB)\]|(\w+):\s*\[(f|m|n|F|M|N|GAIB)\]/gi);
       if (genderMarkerMatches) {
         for (const match of genderMarkerMatches) {
-          const marker = match.slice(1, match.indexOf(']')).toLowerCase();
-          const name = match.slice(match.indexOf(']') + 1).trim();
+          const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
+          let name;
+          if (match.includes(':')) {
+            name = match.slice(0, match.indexOf(':')).trim();
+          } else {
+            name = match.slice(0, match.indexOf('[')).trim();
+          }
           genderMarkedNames.push({ name, marker });
         }
       }
+
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
