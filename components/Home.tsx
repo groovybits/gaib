@@ -45,7 +45,7 @@ function Home({ user }: HomeProps) {
         type: 'systemMessage',
       },
       {
-        message: '[GAIB] Groovy AI Bot: Nice to meet you!',
+        message: 'Welcome, I am The Groovy AI Bot GAIB!',
         type: 'apiMessage',
       },
     ],
@@ -257,20 +257,24 @@ function Home({ user }: HomeProps) {
       };
 
       let defaultModels = {
-        'en-US': 'en-US-Wavenet-A',
-        'ja-JP': 'ja-JP-Wavenet-A',
-        'es-ES': 'es-ES-Wavenet-A',
-        'en-GB': 'en-GB-Wavenet-A'
+        'en-US': 'en-US-Wavenet-C',
+        'ja-JP': 'ja-JP-Wavenet-E',
+        'es-ES': 'es-ES-Wavenet-C',
+        'en-GB': 'en-GB-Wavenet-C'
       };
 
       let voiceModels: { [key: string]: string } = {};
       let genderMarkedNames = [];
       let detectedGender: string = gender;
+      let currentSpeaker: string = 'GAIB';
+      let isContinuingToSpeak = false;
+      let isSceneChange = false;
+      let lastSpeaker = '';
 
       // Extract gender markers from the entire message
       const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N|GAIB)\]|(\w+):\s*\[(f|m|n|F|M|N|GAIB)\]/gi);
-      let name: string;
       if (genderMarkerMatches) {
+        let name: string;
         for (const match of genderMarkerMatches) {
           const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
           if (match.includes(':')) {
@@ -300,7 +304,8 @@ function Home({ user }: HomeProps) {
         }
       }
 
-      let currentSpeaker : string = '';
+      console.log(`Speaker map: ${JSON.stringify(voiceModels)}`);
+
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -318,13 +323,23 @@ function Home({ user }: HomeProps) {
             setSubtitle(splitSentence(sentence));
           }
 
+          let speakerChanged = false;
           let model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
           // Check if sentence contains a name from genderMarkedNames
           for (const { name, marker } of genderMarkedNames) {
-            const nameWithColon = name + ':';
-            const nameWithAction = name + ' (';
-            if (sentence.startsWith(nameWithColon) || sentence.startsWith(nameWithAction)) {
-              currentSpeaker = name;
+            if (sentence.startsWith(name + ':')
+              || sentence.startsWith(name + ' (')
+              || sentence.startsWith(name + '[')
+              || sentence.startsWith('*' + name + ':*')
+              || sentence.startsWith('**' + name + ':**')
+            ) {
+              console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
+              if (currentSpeaker !== name) {
+                lastSpeaker = currentSpeaker;
+                speakerChanged = true;
+                currentSpeaker = name;
+                isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
+              }
               switch (marker) {
                 case 'f':
                   detectedGender = 'FEMALE';
@@ -339,17 +354,29 @@ function Home({ user }: HomeProps) {
               }
               // Use the voice model for the character if it exists, otherwise use the default voice model
               model = voiceModels[name] || defaultModels[audioLanguage as keyof typeof defaultModels];
-              console.log(`Switched to ${currentSpeaker}. Gender: ${detectedGender}, Model: ${model}`);
               break;  // Exit the loop as soon as a name is found
             }
           }
 
-          // If the sentence does not start with the current speaker's name, switch back to the default voice
-          if (!sentence.startsWith(currentSpeaker + ':') && !sentence.startsWith(currentSpeaker + ' (')) {
-            currentSpeaker = '';
+          console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+
+          // If the sentence starts with an asterisk, it's a scene change
+          if (!speakerChanged && sentence.startsWith('*')) {
+            isSceneChange = true;
+          }
+
+          // If the speaker has changed or if it's a scene change, switch back to the default voice
+          if (!speakerChanged && isSceneChange) {
             detectedGender = gender;
+            currentSpeaker = 'GAIB';
             model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
             console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
+            isSceneChange = false;  // Reset the scene change flag
+          }
+
+          // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
+          if (sentence.startsWith('(')) {
+            isContinuingToSpeak = true;
           }
 
           // Speak the sentence if speech output is enabled
@@ -380,6 +407,8 @@ function Home({ user }: HomeProps) {
           }
           // Set the last message displayed
           setLastMessageDisplayed(lastMessageIndex);
+          // Update the last speaker
+          lastSpeaker = currentSpeaker;
         }
       }
       // Reset the subtitle after all sentences have been spoken
