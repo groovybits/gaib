@@ -84,21 +84,22 @@ export const SONG_FOOTER = `
   Song Title and Lyrics in Markdown format:
 `;
 
-export const GENDER_MARKER = `add gender markers of [m] [f] [n] before each script characters name at the start of the answers.`;
+export const GENDER_MARKER = `add gender markers of [m] or [f] or [n] appending each characters name, start all lines with speaker name[gender]: prefixes. 
+    Do not include multiple characters names on a single line and keep it easy for text to speech to know each speakers gender and specific line`;
 
 export const PERSONALITY_PROMPTS = {
   Anime: `Create a screenplay for an Anime Episode using the story title to create a screenplay using the context as inspiration.
-  Introduce characters with ages and genders at the beginning as a screen play would. ${GENDER_MARKER}
+  Introduce characters with ages and genders at the beginning as a screen play would.
   Format the story as a screenplay script for a Anime TV show from Japan in markdown format with the story title and script body.
   Make up music and sound effects for the story like they are closed captions, list these at the beginning of the script to help frame the scene and as
-  they change.  Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone.
+  they change.  Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone. ${GENDER_MARKER}
   `,
 
   Stories: `Create a short story based on the given context and question as story direction.
-  Take characters from the context and use them in the story.  ${GENDER_MARKER}
+  Take characters from the context and use them in the story.
   Introduce characters with ages and genders at the beginning, and add closing credits at the end. focus on the question as the story direction.
   Format the story as a screenplay in Markdown format. Make up little music and sound effects for the story.
-  Do not mention if there is no context or the context is not applicable.
+  Do not mention if there is no context or the context is not applicable. ${GENDER_MARKER}
   `,
 
   VideoEngineer: `

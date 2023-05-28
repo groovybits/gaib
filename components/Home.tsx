@@ -223,27 +223,8 @@ function Home({ user }: HomeProps) {
         return;
       }
       try {
-        // Split the message into lines
-        const lines = messages[lastMessageIndex].message.split('\n');
-        const splitLines = lines.flatMap(line => line.split(/(?<=\.|\?|!)\s+/));
-
-        // Collect sentences with a maximum character limit per group
-        const maxCharsPerGroup = 60;
-        sentences = [];
-        let currentGroup = '';
-        splitLines.forEach((sentence, index) => {
-          if (currentGroup.length + sentence.length <= maxCharsPerGroup) {
-            currentGroup += `${currentGroup ? ' ' : ''}${sentence}`;
-          } else {
-            sentences.push(currentGroup.trim());
-            currentGroup = sentence;
-          }
-        });
-
-        // Add the last group if it's not empty
-        if (currentGroup.trim() !== '') {
-          sentences.push(currentGroup.trim());
-        }
+        const doc = nlp(messages[lastMessageIndex].message);
+        sentences = doc.sentences().out('array');
       } catch (e) {
         console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
@@ -255,6 +236,17 @@ function Home({ user }: HomeProps) {
       setSubtitle(''); // Clear the subtitle
 
       let genderMarkedNames = [];
+      let detectedGender: string = gender;
+
+      // Extract gender markers from the entire message
+      const genderMarkerMatches = messages[lastMessageIndex].message.match(/\[(f|m|n|F|M|N|GAIB)\]\s*([\w\s-]+)/gi);
+      if (genderMarkerMatches) {
+        for (const match of genderMarkerMatches) {
+          const marker = match.slice(1, match.indexOf(']')).toLowerCase();
+          const name = match.slice(match.indexOf(']') + 1).trim();
+          genderMarkedNames.push({ name, marker });
+        }
+      }
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -270,30 +262,6 @@ function Home({ user }: HomeProps) {
             setSubtitle(splitSentence(translatedText));
           } else {
             setSubtitle(splitSentence(sentence));
-          }
-
-          // auto-detect gender by markers
-          const genderMarkerMatches = sentence.match(/\[(f|m|n|F|M|N|GAIB)\]\s*(\w+)/gi);
-          let detectedGender: string = gender;
-          if (genderMarkerMatches) {
-            for (const match of genderMarkerMatches) {
-              const marker = match.slice(1, match.indexOf(']')).toLowerCase();
-              const name = match.slice(match.indexOf(']') + 1, match.lastIndexOf('-')).trim();
-              genderMarkedNames.push({ name, marker });
-              // Override the gender based on the marker
-              switch (marker) {
-                case 'f':
-                  detectedGender = 'FEMALE';
-                  break;
-                case 'm':
-                case 'gaib':
-                  detectedGender = 'MALE';
-                  break;
-                case 'n':
-                  detectedGender = 'NEUTRAL';
-                  break;
-              }
-            }
           }
 
           // Check if sentence contains a name from genderMarkedNames
