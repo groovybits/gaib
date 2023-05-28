@@ -106,15 +106,6 @@ export const makeChain = async (
   documentsReturned = Math.max(1, Math.floor(((maxModelCapacity - maxTokens) / 500)));
   console.log("documentsReturned: ", documentsReturned);
 
-  // Check if user has enough tokens to run this model
-  if (maxTokens <= 0) {
-    console.log(
-      `${userId} does not have enough tokens to run this model [only ${maxTokens} of ${tokensCount} needed].`
-    );
-    // Send signal that user does not have enough tokens to run this model
-    return null;
-  }
-
   // Clean the documents returned from the document store
   //vectorstore = vectorstore.map(cleanDocument);
 
@@ -159,7 +150,9 @@ export const makeChain = async (
       if (error.response && error.response.data && error.response.data.error && error.response.data.error.code === 'model_not_found') {
         console.warn("Model not found. Retrying with a smaller context...");
         // Retry with a smaller context
-        params.maxTokens = params.maxTokens / 1.5; // Use a smaller context
+        if (maxTokens > 0 && params.maxTokens) {
+          params.maxTokens = params.maxTokens / 1.5; // Use a smaller context
+        }
         model = new OpenAI(params);
       } else {
         console.error(error);
@@ -173,8 +166,8 @@ export const makeChain = async (
   // Create the model
   let model = await createModel({
     temperature: temperature,
-    maxTokens: maxTokens,
     presencePenalty: 0.2,
+    maxTokens: (maxTokens > 0) ? maxTokens : null,
     frequencyPenalty: 0.3,
     modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
     streaming: Boolean(onTokenStream),
