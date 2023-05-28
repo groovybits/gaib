@@ -332,6 +332,7 @@ function Home({ user }: HomeProps) {
               || sentence.startsWith(name + '[')
               || sentence.startsWith('*' + name + ':*')
               || sentence.startsWith('**' + name + ':**')
+              || sentence.startsWith(name + ' [')
             ) {
               console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
               if (currentSpeaker !== name) {
