@@ -305,6 +305,7 @@ function Home({ user }: HomeProps) {
       }
 
       console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
+      console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
 
       let model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
       for (const sentence of sentences) {
@@ -326,6 +327,7 @@ function Home({ user }: HomeProps) {
 
           let speakerChanged = false;
           // Check if sentence contains a name from genderMarkedNames
+          console.log(`Checking if sentence: ${sentence} contains a name from genderMarkedNames`);
           for (const { name, marker } of genderMarkedNames) {
             if (sentence.startsWith(name + ':')
               || sentence.startsWith(name + ' (')
