@@ -278,9 +278,9 @@ function Home({ user }: HomeProps) {
         for (const match of genderMarkerMatches) {
           const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
           if (match.includes(':')) {
-            name = match.slice(0, match.indexOf(':')).trim();
+            name = match.slice(0, match.indexOf(':')).trim().toLowerCase();
           } else {
-            name = match.slice(0, match.indexOf('[')).trim();
+            name = match.slice(0, match.indexOf('[')).trim().toLowerCase();
           }
           genderMarkedNames.push({ name, marker });
 
@@ -329,12 +329,13 @@ function Home({ user }: HomeProps) {
           // Check if sentence contains a name from genderMarkedNames
           console.log(`Checking if sentence: ${sentence} contains a name from genderMarkedNames`);
           for (const { name, marker } of genderMarkedNames) {
-            if (sentence.startsWith(name + ':')
-              || sentence.startsWith(name + ' (')
-              || sentence.startsWith(name + '[')
-              || sentence.startsWith('*' + name + ':*')
-              || sentence.startsWith('**' + name + ':**')
-              || sentence.startsWith(name + ' [')
+            const lcSentence = sentence.toLowerCase();
+            if (lcSentence.startsWith(name + ':')
+              || lcSentence.startsWith(name + ' (')
+              || lcSentence.startsWith(name + '[')
+              || lcSentence.startsWith('*' + name + ':*')
+              || lcSentence.startsWith('**' + name + ':**')
+              || lcSentence.startsWith(name + ' [')
             ) {
               console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
               if (currentSpeaker !== name) {

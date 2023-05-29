@@ -84,7 +84,7 @@ export const SONG_FOOTER = `
   Song Title and Lyrics in Markdown format:
 `;
 
-export const GENDER_MARKER = `add gender markers of [m] or [f] or [n] appending each characters name, start all lines with speaker name[gender]: prefixes. 
+export const GENDER_MARKER = `add gender markers of [m] or [f] or [n] appending each characters name, start all lines with speaker "Name[gender]: Dialogue" prefixes. 
     Do not include multiple characters names on a single line and keep it easy for text to speech to know each speakers gender and specific line`;
 
 export const PERSONALITY_PROMPTS = {
@@ -104,7 +104,7 @@ export const PERSONALITY_PROMPTS = {
   `,
 
   VideoEngineer: `
-  You are a  Video Engineer. ${GENDER_MARKER}
+  You are an expert in video engineering in all aspects for media capture, transcoding, streaming CDNs and any related concepts.
   `,
 
   Therapist: `
