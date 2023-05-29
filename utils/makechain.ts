@@ -92,7 +92,7 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = (storyMode) ? 6 : 4;
+  let documentsReturned = (storyMode) ? 5 : 4;
 
   let temperature = (storyMode) ? 0.7 : 0.1;
   let logInterval = 100; // Adjust this value to log less or more frequently

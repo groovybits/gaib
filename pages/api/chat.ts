@@ -156,12 +156,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Check if the history + question is too long
-  let maxCount = 3500; // max tokens for GPT-3, overhead for document store context space
+  let maxCount = 3000; // max tokens for GPT-3, overhead for document store context space
   // calcuate tokens, avoid less than 0
-  maxCount = (maxCount - countTokens([question]) - tokensCount) > 0 ? (maxCount - countTokens([question]) - requestedTokens) : 0;
-  console.log('Chat GPT maxCount tokens available for history:', maxCount);
-  const condensedHistory = countTokens(history) > maxCount ? condenseHistory(history, maxCount) : history;
-  console.log('Chat GPT History total history token count:', countTokens(condensedHistory));
+  let spaceLeft = maxCount - countTokens([question]) - requestedTokens;
+
+  console.log('OpenAI GPT maxCount tokens available for history:', spaceLeft, 'history length:', countTokens(history));
+  const condensedHistory = (countTokens(history) > spaceLeft) ? condenseHistory(history, spaceLeft) : history;
+  console.log('OpenAI GPT History total history token count:', countTokens(condensedHistory));
 
   // OpenAI recommends replacing newlines with spaces for best results
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');

@@ -330,13 +330,27 @@ function Home({ user }: HomeProps) {
           console.log(`Checking if sentence: ${sentence} contains a name from genderMarkedNames`);
           for (const { name, marker } of genderMarkedNames) {
             const lcSentence = sentence.toLowerCase();
-            if (lcSentence.startsWith(name + ':')
-              || lcSentence.startsWith(name + ' (')
-              || lcSentence.startsWith(name + '[')
-              || lcSentence.startsWith('*' + name + ':*')
-              || lcSentence.startsWith('**' + name + ':**')
-              || lcSentence.startsWith(name + ' [')
-            ) {
+            let nameFound = false;
+
+            const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
+            const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
+            for (const prefix of prefixes) {
+              if (lcSentence.startsWith(name + prefix)) {
+                nameFound = true;
+                break;
+              }
+            }
+            for (const prefix of regprefixes) {
+              if (nameFound) {
+                break;
+              }
+              if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
+                nameFound = true;
+                break;
+              }
+            }
+
+            if (nameFound) {
               console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
               if (currentSpeaker !== name) {
                 lastSpeaker = currentSpeaker;
