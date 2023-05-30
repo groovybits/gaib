@@ -3,11 +3,27 @@
 **Project by Chris Kennedy**
 
 GAIB, the Groovy AI Bot, is a chatbot that can understand, speak, and translate any language in both text and audio formats. It can also take on various AI bot modes or personalities, each designed for specific tasks. Furthermore, GAIB has an Anime generation theme that creates stories based on the data from PDFs stored in the vector database.
+<https://ai.groovy.org> Try it out.
 
-Vercel compatible as of May 2023! https://ai.groovy.org Try it out.
+## Features
+
+- Speaking, multilingual, differntian of male/female speakers + different actors voices.
+- Listening via button for speaking into GAIB for voice command control.
+- Chat context and episodic story context to create story arcs.
+- Configurable personalities for many modes.
+- Story or question mode for each personality.
+- Subtitles multilingual, Anime quality.
+- Meme images per subtitle line for visual story telling via memes.
+- Control of number of maxTokens, Documents used, Number of episodes created on topic.
+- Transcript view to copy/paste in markup output.
+- Anime view mode or basic Terminal output mode.
+- Full screen view to display only the images and subtitles or terminal output on TVs etc casting.
+- Login per user, token tracking via firebase.
+- Stripe payments for premium users with token allocation per month, configure free user tokens.
 
 ## AI Bot Modes
 
+0. **Anime**: Create Anime like stories based on the given context and story direction.
 1. **Stories**: Create a short story based on the given context and story direction, using characters from the context.
 2. **Video Engineer**: Answer questions about video and audio media handling, using the context to solve problems.
 3. **Therapist**: Provide advice on mindfulness and meditation techniques based on the context and question.
@@ -25,7 +41,7 @@ Vercel compatible as of May 2023! https://ai.groovy.org Try it out.
 
 The goal of GAIB is to ingest and create personalities for a universal, wise AI Bot that is groovy.
 
-### Text to Speech:
+### Text to Speech
 
 To set up Google Cloud authentication for the Text-to-Speech API:
 
@@ -114,6 +130,5 @@ This project is forked and customized from "GPT-4 & LangChain - Create a ChatGPT
 [GitHub Repository](https://github.com/mayooear/gpt4-pdf-chatbot-langchain)
 
 This fork will include customizations to become a more generalized chatbot.
-
 
 ### 2023 Chris Kennedy The Groovy Organization
