@@ -4,7 +4,7 @@
 
 GAIB, the Groovy AI Bot, is a chatbot that can understand, speak, and translate any language in both text and audio formats. It can also take on various AI bot modes or personalities, each designed for specific tasks. Furthermore, GAIB has an Anime generation theme that creates stories based on the data from PDFs stored in the vector database.
 
-Vercel compatible as of May 2023! https://gaib.groovy.org Try it out.
+Vercel compatible as of May 2023! https://ai.groovy.org Try it out.
 
 ## AI Bot Modes
 
