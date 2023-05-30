@@ -136,7 +136,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  const { question, userId, selectedPersonality, selectedNamespace, isStory, tokensCount, history } = req.body;
+  const { question, userId, selectedPersonality, selectedNamespace, isStory, tokensCount, documentCount, episodeCount, history } = req.body;
+
 
   //only accept post requests
   if (req.method !== 'POST') {
@@ -198,31 +199,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
   sendData(JSON.stringify({ data: '' }));
 
-  // Create chain
-  let token_count = 0;
-  const chain = await makeChain(namespaceResult.vectorStore, selectedPersonality, tokensCount, userId, isStory, (token: string) => {
-    token_count++;
-    if (token_count % 100 === 0) {
-      console.log('Chat Token count:', token_count);
+  // iterate the number of episodes requested
+  let total_token_count = 0;
+  for (let i = 0; i < episodeCount; i++) {
+    if (i > 0) {
+      // next episode after first initial reponse
+      sanitizedQuestion = 'Next episode';
     }
-    if (typeof token === 'string') {
-      sendData(JSON.stringify({ data: token }));
-    } else {
-      consoleLog('error', 'Invalid token:', token ? token : 'null');
-    }
-  });
+    console.log('Episode:', i);
+    // Create chain
+    let token_count = 0;
+    const chain = await makeChain(namespaceResult.vectorStore, selectedPersonality, tokensCount, documentCount, userId, isStory, (token: string) => {
+      token_count++;
+      total_token_count++;
+      if (token_count % 100 === 0) {
+        console.log('Chat Token count:', token_count);
+      }
+      if (typeof token === 'string') {
+        sendData(JSON.stringify({ data: token }));
+      } else {
+        consoleLog('error', 'Invalid token:', token ? token : 'null');
+      }
+    });
 
-  let response = await chain?.call({
-    question: sanitizedQuestion,
-    chat_history: history ? [history] : [],
-  });
-  if (!response) {
-    consoleLog("error", 'GPT API error, not enough tokens left to generate a response.');
-    sendData('[OUT_OF_TOKENS]');
-    res.end();
-    return;
+    let response = await chain?.call({
+      question: sanitizedQuestion,
+      chat_history: history ? [history] : [],
+    });
+    if (!response) {
+      consoleLog("error", 'GPT API error, not enough tokens left to generate a response.');
+      sendData('[OUT_OF_TOKENS]');
+      res.end();
+      return;
+    }
+    consoleLog('info', "\n===\nResponse: \n", response.text, "\n===\nSource Documents:", response.sourceDocuments, "\n===\n");
+    consoleLog('info', 'Total Chat Token count:', total_token_count);
+    consoleLog('info', 'Chat Token count:', countTokens([response.text]));
+    consoleLog('info', 'Episode Number:', i);
   }
-  consoleLog('info', "\n===\nResponse: \n", response.text, "\n===\nSource Documents:", response.sourceDocuments, "\n===\n");
 
   sendData('[DONE]');
   res.end();

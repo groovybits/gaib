@@ -61,6 +61,7 @@ export const makeChain = async (
   vectorstore: PineconeStore,
   personality: keyof typeof PERSONALITY_PROMPTS,
   tokensCount: number,
+  documentCount: number,
   userId: string,
   storyMode: boolean,
   onTokenStream?: (token: string) => void,
@@ -92,7 +93,7 @@ export const makeChain = async (
   let accumulatedTitleTokens = '';
   let accumulatedTitleTokenCount = 0;
   let accumulatedBodyTokenCount = 0;
-  let documentsReturned = (storyMode) ? 5 : 4;
+  let documentsReturned = documentCount;
 
   let temperature = (storyMode) ? 0.7 : 0.1;
   let logInterval = 100; // Adjust this value to log less or more frequently
@@ -101,9 +102,6 @@ export const makeChain = async (
   const isAdmin = await isUserAdmin(userId!);
   const maxTokens = (tokensCount - countTokens([prompt]) - 1) > 0 ? tokensCount - countTokens([prompt]) - 1 : 0;
 
-  // Adjust the number of documents returned based on the number of tokens allocated for output, see if prefer output or input
-  const maxModelCapacity = 4096;
-  documentsReturned = Math.max(1, Math.floor(((maxModelCapacity - maxTokens) / 500)));
   console.log("documentsReturned: ", documentsReturned);
 
   // Clean the documents returned from the document store
@@ -164,56 +162,62 @@ export const makeChain = async (
   }
 
   // Create the model
-  let model = await createModel({
-    temperature: temperature,
-    presencePenalty: 0.2,
-    maxTokens: (maxTokens > 0) ? maxTokens : null,
-    frequencyPenalty: 0.3,
-    modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
-    streaming: Boolean(onTokenStream),
-    callbackManager: onTokenStream
-      ? CallbackManager.fromHandlers({
-        async handleLLMNewToken(token) {
-          tokenCount += 1;
+  let model : BaseLanguageModel;
+  try {
+    model = await createModel({
+      temperature: temperature,
+      presencePenalty: 0.2,
+      maxTokens: (maxTokens > 0) ? maxTokens : null,
+      frequencyPenalty: 0.3,
+      modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
+      streaming: Boolean(onTokenStream),
+      callbackManager: onTokenStream
+        ? CallbackManager.fromHandlers({
+          async handleLLMNewToken(token) {
+            tokenCount += 1;
 
-          if (title_finished == true) {
-            accumulatedBodyTokenCount += 1;
-            accumulatedBodyTokens += token;
-            onTokenStream(token);
+            if (title_finished == true) {
+              accumulatedBodyTokenCount += 1;
+              accumulatedBodyTokens += token;
+              onTokenStream(token);
 
-            if (accumulatedBodyTokenCount % logInterval === 0) {
-              console.log(
-                `${personality} Body Accumulated: ${accumulatedBodyTokenCount} tokens and ${accumulatedBodyTokens.length} characters.`
-              );
-            }
-            // Deduct tokens based on the tokenCount
-            if (!isAdmin) {
-              const newTokenBalance = userTokenBalance - tokenCount;
-              await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });
-            }
-          } else {
-            accumulatedTitleTokens += token;
-            accumulatedTitleTokenCount += 1;
+              if (accumulatedBodyTokenCount % logInterval === 0) {
+                console.log(
+                  `${personality} Body Accumulated: ${accumulatedBodyTokenCount} tokens and ${accumulatedBodyTokens.length} characters.`
+                );
+              }
+              // Deduct tokens based on the tokenCount
+              if (!isAdmin) {
+                const newTokenBalance = userTokenBalance - tokenCount;
+                await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });
+              }
+            } else {
+              accumulatedTitleTokens += token;
+              accumulatedTitleTokenCount += 1;
 
-            if (accumulatedTitleTokenCount % logInterval === 0) {
-              console.log(
-                `${personality} Title Accumulated: ${accumulatedTitleTokenCount} tokens.`
-              );
+              if (accumulatedTitleTokenCount % logInterval === 0) {
+                console.log(
+                  `${personality} Title Accumulated: ${accumulatedTitleTokenCount} tokens.`
+                );
+              }
             }
-          }
-        },
-        async handleLLMEnd() {
-          if (title_finished === false) {
-            title_finished = true;
-            console.log(personality, "Stories Title: [", accumulatedTitleTokens.trim(), "]\nTitle Accumulated: ", accumulatedTitleTokenCount, " tokens.");
-          } else {
-            console.log(personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
-            console.log(`Deducting ${tokenCount} tokens from ${userId}...`);
-          }
-        },
-      })
-      : undefined,
-  }, userId, userTokenBalance, isAdmin);
+          },
+          async handleLLMEnd() {
+            if (title_finished === false) {
+              title_finished = true;
+              console.log(personality, "Stories Title: [", accumulatedTitleTokens.trim(), "]\nTitle Accumulated: ", accumulatedTitleTokenCount, " tokens.");
+            } else {
+              console.log(personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
+              console.log(`Deducting ${tokenCount} tokens from ${userId}...`);
+            }
+          },
+        })
+        : undefined,
+    }, userId, userTokenBalance, isAdmin);
+  } catch (error: any) {
+    console.error("Error in createModel: ", error);
+    return null;
+  }
 
   let chain;
   try {

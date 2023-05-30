@@ -17,6 +17,8 @@ import ModeDropdown from '@/components/ModeDropDown';
 import ThemeDropdown from '@/components/ThemeDropdown';
 import PersonalityNamespaceDropdown from '@/components/PersonalityNamespaceDropdown';
 import ReactMarkdown from 'react-markdown';
+import DocumentDropdown from '@/components/DocumentDropdown';
+import EpisodeDropdown from '@/components/EpisodeDropdown';
 
 type PendingMessage = {
   type: string;
@@ -87,6 +89,8 @@ function Home({ user }: HomeProps) {
   const [isStory, setIsStory] = useState<boolean>(true);
   const [selectedTheme, setSelectedTheme] = useState<string>('Anime');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [documentCount, setDocumentCount] = useState<number>(4);
+  const [episodeCount, setEpisodeCount] = useState<number>(1);
 
 
   const togglePopup = () => {
@@ -524,6 +528,8 @@ function Home({ user }: HomeProps) {
           selectedNamespace,
           isStory,
           tokensCount,
+          documentCount,
+          episodeCount,
           history,
         }),
         signal: ctrl.signal,
@@ -711,6 +717,16 @@ function Home({ user }: HomeProps) {
   // handle the change in the number of tokens
   const handleTokensChange = (value: number) => {
     setTokensCount(value);
+  };
+
+  // handle the change in the number of documents
+  const handleDocumentsChange = (value: number) => {
+    setDocumentCount(value);
+  };
+
+  // handle the change in the number of episodes
+  const handleEpisodesChange = (value: number) => {
+    setEpisodeCount(value);
   };
 
   // handle the change in the story or question mode
@@ -1123,6 +1139,8 @@ function Home({ user }: HomeProps) {
                       <TokensDropdown onChange={handleTokensChange} />
                       <ModeDropdown onChange={handleIsStoryChange} />
                       <ThemeDropdown onChange={handleThemeChange} />
+                      <DocumentDropdown onChange={handleDocumentsChange} />
+                      <EpisodeDropdown onChange={handleEpisodesChange} />
                     </div>
                     <div className={styles.labelContainer}>
                       <button title="View Transcript"
