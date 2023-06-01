@@ -26,7 +26,7 @@ const EpisodeDropdown: React.FC<EpisodeDropdownProps> = ({ onChange }) => {
           const value = index + 1;
           return (
             <option key={value} value={value}>
-              {value + 1} Episodes
+              {value} Episodes
             </option>
           );
         })}

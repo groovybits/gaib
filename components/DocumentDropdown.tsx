@@ -22,7 +22,7 @@ const DocumentDropdown: React.FC<DocumentDropdownProps> = ({ onChange }) => {
         value={documentCount}
         onChange={handleChange}
       >
-        {[...Array(16)].map((_, index) => {
+        {[...Array(13)].map((_, index) => {
           const value = index * 1;
           return (
             <option key={value} value={value}>

@@ -240,31 +240,31 @@ function Home({ user }: HomeProps) {
       setSubtitle(''); // Clear the subtitle
 
       let maleVoiceModels = {
-        'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-E'],
-        'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Wavenet-C', 'ja-JP-Wavenet-D'],
-        'es-ES': ['es-ES-Wavenet-A', 'es-ES-Wavenet-B', 'es-ES-Wavenet-D', 'es-ES-Wavenet-E'],
-        'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-E']
+        'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
+        'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
+        'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
+        'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
       };
 
       let femaleVoiceModels = {
-        'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H'],
-        'ja-JP': ['ja-JP-Wavenet-E', 'ja-JP-Wavenet-F', 'ja-JP-Wavenet-G', 'ja-JP-Wavenet-H'],
-        'es-ES': ['es-ES-Wavenet-C', 'es-ES-Wavenet-F', 'es-ES-Wavenet-G', 'es-ES-Wavenet-H'],
-        'en-GB': ['en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-G', 'en-GB-Wavenet-H']
+        'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+        'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+        'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+        'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
       };
 
       let neutralVoiceModels = {
         'en-US': ['en-US-Wavenet-I', 'en-US-Wavenet-J', 'en-US-Wavenet-K', 'en-US-Wavenet-L'],
         'ja-JP': ['ja-JP-Wavenet-I', 'ja-JP-Wavenet-J', 'ja-JP-Wavenet-K', 'ja-JP-Wavenet-L'],
-        'es-ES': ['es-ES-Wavenet-I', 'es-ES-Wavenet-J', 'es-ES-Wavenet-K', 'es-ES-Wavenet-L'],
+        'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
         'en-GB': ['en-GB-Wavenet-I', 'en-GB-Wavenet-J', 'en-GB-Wavenet-K', 'en-GB-Wavenet-L']
       };
 
       let defaultModels = {
         'en-US': 'en-US-Wavenet-C',
-        'ja-JP': 'ja-JP-Wavenet-E',
-        'es-ES': 'es-ES-Wavenet-C',
-        'en-GB': 'en-GB-Wavenet-C'
+        'ja-JP': 'ja-JP-Wavenet-A',
+        'es-US': 'es-US-Wavenet-C',
+        'en-GB': 'en-GB-Wavenet-A'
       };
 
       let voiceModels: { [key: string]: string } = {};
@@ -414,7 +414,15 @@ function Home({ user }: HomeProps) {
                 translationEntry = await fetchTranslation(sentence, audioLanguage);
               }
               console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
-              await speakText(translationEntry, 1, detectedGender, audioLanguage, model);
+              try {
+                await speakText(translationEntry, 1, detectedGender, audioLanguage, model);
+              } catch (e) {
+                console.log('Error speaking text: ', e);
+                // Wait anyways even if speaking fails so that the subtitles are displayed
+                const sentenceLength = sentence.length;
+                const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+              }
             }
           } else {
             // Wait for the sentence to be spoken, measure sentence length to know how long to wait for

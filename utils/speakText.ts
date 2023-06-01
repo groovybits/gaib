@@ -14,7 +14,7 @@ export const useSpeakText = () => {
     text: string,
     rate: number = 1,
     ssmlGender: string = 'FEMALE',
-    languageCode: string = 'ja-JP',
+    languageCode: string = 'en-US',
     name: string = ''
   ): Promise<void> => {
     return new Promise(async (resolve) => {
@@ -22,7 +22,7 @@ export const useSpeakText = () => {
         if (audioRef.current && !audioRef.current.paused) {
           console.log('Audio is already playing');
           resolve();
-          return;
+          throw new Error('Audio is already playing');
         }
 
         let apiBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -33,7 +33,7 @@ export const useSpeakText = () => {
         if (typeof window === 'undefined') {
           console.log('Audio playback is not available in this environment');
           resolve();
-          return;
+          throw new Error('Audio playback is not available in this environment');
         }
 
         let response = null;
@@ -72,6 +72,7 @@ export const useSpeakText = () => {
       } catch (error) {
         console.error('Error in synthesizing speech, error:', error);
         resolve();
+        throw error;
       }
     });
   };
