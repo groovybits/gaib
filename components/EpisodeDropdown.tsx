@@ -22,11 +22,11 @@ const EpisodeDropdown: React.FC<EpisodeDropdownProps> = ({ onChange }) => {
         value={episodeCount}
         onChange={handleChange}
       >
-        {[...Array(10)].map((_, index) => {
+        {[...Array(20)].map((_, index) => {
           const value = index + 1;
           return (
             <option key={value} value={value}>
-              {value} Episodes
+              {value + 1} Episodes
             </option>
           );
         })}

@@ -251,15 +251,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Generate a title for the next episode
     let title;
     if (i > 0) {
-      // Use GPT-3 to generate a summary of the previous episode
-      /*const previousEpisode = chatHistory[chatHistory.length - 1][1];
-      const summaryPrompt = `Summarize the following text as a description for the next episode: "${previousEpisode}"`;
-      const summaryResponse = await chain?.call({ question: summaryPrompt, chat_history: [] });
-      title = summaryResponse?.text;
-      if (!title) {*/
-        //consoleLog('error', `ChatAPI: Could not generate next episode summary for Episode #${episodeNumber} of ${episodeCount} episodes.}`);
-      title = "summarize the chat history using it as the next episodes title.";
-      //}
+      title = "summarize the chat history using it as the next episodes title and plot based on the original topic of: " + sanitizedQuestion;
     } else {
       // For the first episode, use the original question as the title
       title = sanitizedQuestion;
