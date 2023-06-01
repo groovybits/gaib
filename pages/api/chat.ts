@@ -252,13 +252,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Generate a title for the next episode
     if (i > 0) {
       if (isStory) {
-        sendData(JSON.stringify({ data: `\nEnd of Episode #${episodeNumber - 1} Title: ${title}` }));
+        sendData(JSON.stringify({ data: `\nEnd of Episode #${episodeNumber - 1}.\n` }));
         title = "summarize the chat history using it as the next episodes title and plot based on the original topic of: " + sanitizedQuestion;
-        sendData(JSON.stringify({ data: `Next Episode #${episodeNumber} Title: ${title}` }));
+        sendData(JSON.stringify({ data: `Next Episode #${episodeNumber}.\n` }));
       } else {
-        sendData(JSON.stringify({ data: `\nEnd of Answer #${episodeNumber - 1} Question: ${title}` }));
+        sendData(JSON.stringify({ data: `\nEnd of Answer #${episodeNumber - 1}.\n` }));
         title = "summarize the chat history using it to for a follow up question to the previous answers for the original question of: " + sanitizedQuestion;
-        sendData(JSON.stringify({ data: `Next Answer #${episodeNumber} Question: ${title}` }));
+        sendData(JSON.stringify({ data: `Next Answer #${episodeNumber}.\n` }));
       }
     } else {
       // For the first episode, use the original question as the title
