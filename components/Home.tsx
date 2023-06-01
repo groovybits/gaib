@@ -557,7 +557,7 @@ function Home({ user }: HomeProps) {
                 ...state.messages,
                 {
                   type: 'apiMessage',
-                  message: 'Sorry, I have run out of tokens. Please purchase more.',
+                  message: 'Sorry, either not enough tokens were allocated or available for story generation.',
                 },
               ],
               pending: undefined,
