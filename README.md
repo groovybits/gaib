@@ -7,6 +7,8 @@ GAIB, the Groovy AI Bot, is a chatbot that can understand, speak, and translate 
 
 ## Features
 
+- Episode generation, allows generation of a series of storie Episodes for a "season" set maintaining context.
+- Question iteration, allows a chain of questions and answers following an initial question posed to GAIB.
 - Speaking, multilingual, differntian of male/female speakers + different actors voices.
 - Listening via button for speaking into GAIB for voice command control.
 - Chat context and episodic story context to create story arcs.
