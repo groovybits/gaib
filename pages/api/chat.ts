@@ -244,17 +244,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let total_token_count = 0;
 
   // Now, run each chain sequentially per episode
+  let title = sanitizedQuestion;
   for (let i = 0; i < chains.length; i++) {
     const chain = chains[i];
     const episodeNumber = i + 1;
 
     // Generate a title for the next episode
-    let title;
     if (i > 0) {
       if (isStory) {
+        sendData(JSON.stringify({ data: `\nEnd of Episode #${episodeNumber - 1} Title: ${title}` }));
         title = "summarize the chat history using it as the next episodes title and plot based on the original topic of: " + sanitizedQuestion;
+        sendData(JSON.stringify({ data: `Next Episode #${episodeNumber} Title: ${title}` }));
       } else {
+        sendData(JSON.stringify({ data: `\nEnd of Answer #${episodeNumber - 1} Question: ${title}` }));
         title = "summarize the chat history using it to for a follow up question to the previous answers for the original question of: " + sanitizedQuestion;
+        sendData(JSON.stringify({ data: `Next Answer #${episodeNumber} Question: ${title}` }));
       }
     } else {
       // For the first episode, use the original question as the title

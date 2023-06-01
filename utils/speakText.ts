@@ -38,12 +38,14 @@ export const useSpeakText = () => {
 
         let response = null;
         if (name === '') {
+          console.log(`Synthesizing speech ${ssmlGender} ${languageCode} for text: ${text}`);
           response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text, rate, ssmlGender, languageCode }),
           });
         } else {
+          console.log(`Synthesizing speech ${ssmlGender} ${name} ${languageCode} for text: ${text}`);
           response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
