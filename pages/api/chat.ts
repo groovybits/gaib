@@ -251,7 +251,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Generate a title for the next episode
     let title;
     if (i > 0) {
-      title = "summarize the chat history using it as the next episodes title and plot based on the original topic of: " + sanitizedQuestion;
+      if (isStory) {
+        title = "summarize the chat history using it as the next episodes title and plot based on the original topic of: " + sanitizedQuestion;
+      } else {
+        title = "summarize the chat history using it to for a follow up question to the previous answers for the original question of: " + sanitizedQuestion;
+      }
     } else {
       // For the first episode, use the original question as the title
       title = sanitizedQuestion;
