@@ -1,4 +1,5 @@
-# Groovy AI Bot (GAIB) [Fan Fiction Generation + QA Chain Iteration]
+# Groovy AI Bot (GAIB)
+## [Fan Fiction Generation + QA Chain Iteration]
 
 **Project by Chris Kennedy**
 
