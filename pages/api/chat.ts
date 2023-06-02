@@ -285,9 +285,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       if (!response) {
         consoleLog("error", 'ChatAPI: GPT API Error, Not enough tokens available to generate a response!!!');
-        sendData('[OUT_OF_TOKENS]');
-        res.end();
-        return;
+        sendData(JSON.stringify({ data: 'Out of tokens, please request more.' }));
+        break;
       }
       total_token_count = total_token_count + countTokens([response.text]);
       consoleLog('info', `ChatAPI: Finished Episode #${episodeNumber} of ${episodeCount} episodes.`);
@@ -300,15 +299,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       chatHistory = [...chatHistory, [currentQuestion, response.text]];
     } catch (error: any) {
-      consoleLog('error', 'ChatAPI: Error generating response:', error);
-      sendData('[ERROR]');
-      res.end();
-      return;
+      consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
+      sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}, please report it.` }));
+      break;
     }
 
     // check if we have used the max tokens requested
     if (total_token_count >= totalTokens) {
       consoleLog('info', `ChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.`);
+      sendData(JSON.stringify({ data: `ChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.` }));
       break;
     }
   }

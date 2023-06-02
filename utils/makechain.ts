@@ -193,7 +193,13 @@ export const makeChain = async (
               // Deduct tokens based on the tokenCount
               if (!isAdmin) {
                 const newTokenBalance = userTokenBalance - tokenCount;
-                await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });
+                if (newTokenBalance >= 0) {
+                  await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });
+                } else {
+                  console.log(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
+                  // Send signal that user does not have enough tokens to run this model
+                  throw new Error(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
+                }
               }
             } else {
               accumulatedTitleTokens += token;
