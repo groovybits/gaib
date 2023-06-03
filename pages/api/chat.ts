@@ -334,7 +334,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         for (const reference of uniqueSourceDocuments) {
           if (reference.metadata && reference.metadata.source && reference.metadata.pdf_numpages) {
             consoleLog('info', `ChatAPI: Reference ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages.`);
-            sendData(JSON.stringify({ data: `\n[Reference: ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages]\n` }));
+            sendData(JSON.stringify({ data: `\nReference: [${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages]\n` }));
           }
         }
       } else {

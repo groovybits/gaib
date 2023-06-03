@@ -9,21 +9,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return;
   }
 
-  function removeMarkdownAndSpecialSymbols(text: string): string {
-    // Remove markdown formatting
-    const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
-    const cleanedText = text.replace(markdownRegex, '');
-  
-    // Remove special symbols (including periods)
-    const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
-    const finalText = cleanedText.replace(specialSymbolsRegex, '');
-  
-    return finalText;
-  }  
-
   let { text, ssmlGender, languageCode, name } = req.body;
 
-  text = removeMarkdownAndSpecialSymbols(text);
+  text = text.trim();
 
   if (!text) {
     res.status(400).json({ message: 'Missing text in request body' });

@@ -205,6 +205,18 @@ function Home({ user }: HomeProps) {
       }
     }
 
+    function removeMarkdownAndSpecialSymbols(text: string): string {
+      // Remove markdown formatting
+      const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
+      const cleanedText = text.replace(markdownRegex, '');
+
+      // Remove special symbols (including periods)
+      const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
+      const finalText = cleanedText.replace(specialSymbolsRegex, '');
+
+      return finalText;
+    }  
+
     async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
       const response = await fetch('/api/translate', {
         method: 'POST',
@@ -403,7 +415,15 @@ function Home({ user }: HomeProps) {
             if (audioLanguage === 'en-US') {
               // Speak the original text
               console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
-              await speakText(sentence, 1, detectedGender, audioLanguage, model);
+              const cleanText = removeMarkdownAndSpecialSymbols(sentence);
+              if (cleanText !== '') {
+                await speakText(cleanText, 1, detectedGender, audioLanguage, model);
+              } else {
+                // Wait anyways even if speaking fails so that the subtitles are displayed
+                const sentenceLength = sentence.length;
+                const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+              }
             } else {
               // Speak the translated text
               let translationEntry: string = '';
@@ -416,7 +436,15 @@ function Home({ user }: HomeProps) {
               }
               console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
               try {
-                await speakText(translationEntry, 1, detectedGender, audioLanguage, model);
+                const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
+                if (cleanText !== '') {
+                  await speakText(translationEntry, 1, detectedGender, audioLanguage, model);
+                } else {
+                  // Wait anyways even if speaking fails so that the subtitles are displayed
+                  const sentenceLength = sentence.length;
+                  const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
               } catch (e) {
                 console.log('Error speaking text: ', e);
                 // Wait anyways even if speaking fails so that the subtitles are displayed
