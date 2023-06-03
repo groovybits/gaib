@@ -205,6 +205,7 @@ export const makeChain = async (
             } else {
               accumulatedTitleTokens += token;
               accumulatedTitleTokenCount += 1;
+              onTokenStream(token);
 
               if (accumulatedTitleTokenCount % logInterval === 0) {
                 console.log(
