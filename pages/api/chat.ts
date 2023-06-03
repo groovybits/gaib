@@ -265,9 +265,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let title: string = sanitizedQuestion;
     if (i > 0) { // not the first episode
       if (isStory) {
-        title = "continue the story arc with a follow up episode title that is taken from the episode history.";
+        title = `keeping context of the original topic "${sanitizedQuestion}", continue the story arc with a follow up episode title that is taken from the episode history.`;
       } else {
-        title = "continue the conversation with a follow up question to the previous answer.";
+        title = `keeping context of the initial question "${sanitizedQuestion}", continue the conversation with a follow up question to the previous answer.`;
       }
     }
 
