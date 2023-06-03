@@ -263,7 +263,7 @@ function Home({ user }: HomeProps) {
       let defaultModels = {
         'en-US': 'en-US-Wavenet-C',
         'ja-JP': 'ja-JP-Wavenet-A',
-        'es-US': 'es-US-Wavenet-C',
+        'es-US': 'es-US-Wavenet-A',
         'en-GB': 'en-GB-Wavenet-A'
       };
 
@@ -311,7 +311,8 @@ function Home({ user }: HomeProps) {
       console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
       console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
 
-      let model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+      let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+      let model = defaultModel;
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -371,11 +372,11 @@ function Home({ user }: HomeProps) {
                   break;
                 case 'n':
                 case 'gaib':
-                  detectedGender = 'NEUTRAL';
+                  detectedGender = 'FEMALE';
                   break;
               }
               // Use the voice model for the character if it exists, otherwise use the default voice model
-              model = voiceModels[name] || defaultModels[audioLanguage as keyof typeof defaultModels];
+              model = voiceModels[name] || defaultModel;
               break;  // Exit the loop as soon as a name is found
             }
           }
@@ -386,7 +387,7 @@ function Home({ user }: HomeProps) {
           if (!speakerChanged && (sentence.startsWith('*') || sentence.startsWith('-'))) {
             detectedGender = gender;
             currentSpeaker = 'GAIB';
-            model = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+            model = defaultModel;
             console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
             isSceneChange = true;  // Reset the scene change flag
           }

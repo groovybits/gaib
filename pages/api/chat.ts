@@ -3,6 +3,7 @@ import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import { PineconeStore } from 'langchain/vectorstores/pinecone';
 import { makeChain } from '@/utils/makechain';
 import { pinecone } from '@/utils/pinecone-client';
+import path from 'path';
 import {
   PERSONALITY_PROMPTS,
     CONDENSE_PROMPT,
@@ -164,10 +165,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Tokens count is the number of tokens to generate
   let requestedTokens = tokensCount;
-  if (tokensCount === 0) {
-    requestedTokens = (isStory) ? 2000  : 800;
-  }
-  let totalTokens = requestedTokens * episodeCount;
+  let totalTokens = ((requestedTokens <= 0) ? ((isStory) ? 1000 : 500) : requestedTokens) * episodeCount;
+  let documentsReturned = documentCount;
 
   // OpenAI recommends replacing newlines with spaces for best results
   let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
@@ -175,7 +174,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Set the default history
   let currentQuestion = sanitizedQuestion;
   let chatHistory = history;
-  let maxCount = 3000; // max tokens for GPT-3, overhead for document store context space
+  let maxCount: number = 4097; // max tokens for GPT-3
+  if (process.env.GPT_MAX_TOKENS) {
+    maxCount = parseInt(process.env.GPT_MAX_TOKENS);
+    if (isNaN(maxCount)) {
+      consoleLog('error', `ChatAPI: Invalid GPT_MAX_TOKENS value of ${process.env.GPT_MAX_TOKENS}, using default of 4097.`);
+      maxCount = 4097;
+    }
+  }
 
   if (requestedTokens > maxCount) {
     consoleLog('info', `ChatAPI: Requested tokens ${requestedTokens} exceeds max tokens ${maxCount}, limiting to ${maxCount} tokens.`);
@@ -215,7 +221,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Function to create a single chain
   async function createChain(i: number, namespaceResult: any, selectedPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
     let token_count = 0;
-    consoleLog('info', `createChain: Episode #${i + 1} of ${episodeCount} episodes. Question: ${currentQuestion}}`);
+    consoleLog('info', `createChain: Episode #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
     return await makeChain(namespaceResult.vectorStore, selectedPersonality, requestedTokens, documentCount, userId, isStory, (token: string) => {
       token_count++;
       if (token_count % 100 === 0) {
@@ -224,58 +230,72 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof token === 'string') {
         sendData(JSON.stringify({ data: token }));
       } else {
-        consoleLog('error', `ChatAPI: createChain Episode #${i + 1} Invalid token:`, token ? token : 'null');
+        consoleLog('warning', `ChatAPI: createChain Episode #${i + 1} Invalid token:`, token ? token : 'null');
       }
     });
   }
 
+  // calcuate tokens for space to accomodate history
+  let spaceLeft = maxCount - (countTokens([sanitizedQuestion]) + requestedTokens ? requestedTokens : ((isStory) ? 1000 : 500));
+  spaceLeft = spaceLeft - (documentCount * 300); // tokens per document
+  if (spaceLeft < ((isStory) ? 1000 : 500)) { // min tokens for history of a question vs story
+    consoleLog('warning', `ChatAPI: May not have enough tokens to generate a response, only ${spaceLeft} tokens available.`);
+    while (spaceLeft <= ((isStory) ? 1000 : 500)) {
+      spaceLeft = spaceLeft + 300; // add back tokens for each document we remove
+      if (documentsReturned > 0) {
+        documentsReturned = documentsReturned - 1;
+        consoleLog('warning', `ChatAPI: Reducing documents returned from #${documentsReturned + 1} to #${documentsReturned} to fit into token restriction of ${maxCount} tokens allowing ${spaceLeft} more token space.`);
+      } else {
+        break; // no more documents to reduce
+      }
+    }
+  }
+
   // Create an array to hold the chains
   const chains = [];
+  const titles : string[] = [];
 
   // Create a chain for each episode
   for (let i = 0; i < episodeCount; i++) {
     consoleLog('info', `ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
-    const chain = await createChain(i, namespaceResult, selectedPersonality, requestedTokens, documentCount, userId, isStory);
+    const chain = await createChain(i, namespaceResult, selectedPersonality, requestedTokens, documentsReturned, userId, isStory);
+    let title: string = sanitizedQuestion;
+    if (i > 0) { // not the first episode
+      if (isStory) {
+        title = "summarize the chat history using it as the next episodes title and plot based on the original topic of: " + sanitizedQuestion;
+      } else {
+        title = "summarize the chat history using it to for a follow up question to the previous answers for the original question of: " + sanitizedQuestion;
+      }
+    }
+
     // Add the chain to the array
     chains.push(chain);
+    titles.push(title);
   }
 
   // Track the total token count
   let total_token_count = 0;
 
   // Now, run each chain sequentially per episode
-  let title = sanitizedQuestion;
   for (let i = 0; i < chains.length; i++) {
     const chain = chains[i];
+    const title = titles[i];
     const episodeNumber = i + 1;
 
     // Generate a title for the next episode
     if (i > 0) {
       if (isStory) {
-        sendData(JSON.stringify({ data: `\nEnd of Episode #${episodeNumber - 1}.\n` }));
-        title = "summarize the chat history using it as the next episodes title and plot based on the original topic of: " + sanitizedQuestion;
-        sendData(JSON.stringify({ data: `Next Episode #${episodeNumber}.\n` }));
+        sendData(JSON.stringify({ data: `\nEpisode #${episodeNumber}.\n` }));
       } else {
-        sendData(JSON.stringify({ data: `\nEnd of Answer #${episodeNumber - 1}.\n` }));
-        title = "summarize the chat history using it to for a follow up question to the previous answers for the original question of: " + sanitizedQuestion;
-        sendData(JSON.stringify({ data: `Next Answer #${episodeNumber}.\n` }));
+        sendData(JSON.stringify({ data: `\nAnswer #${episodeNumber}.\n` }));
       }
-    } else {
-      // For the first episode, use the original question as the title
-      title = sanitizedQuestion;
-    }
-
-    // calcuate tokens for space to accomodate history
-    let spaceLeft = maxCount - countTokens([currentQuestion]) - requestedTokens;
-    if (spaceLeft < 0) {
-      spaceLeft = 0;
-    }
+    } 
 
     // condense history if needed
-    consoleLog('info', `ChatAPI: OpenAI GPT maxCount tokens available for history: ${spaceLeft} history length: ${countTokens(chatHistory)}`);
+    consoleLog('info', `ChatAPI: OpenAI GPT ${spaceLeft} tokens free for ${chatHistory.length} history items totaling ${countTokens(chatHistory)} tokens.`);
     const condensedHistory = (countTokens(chatHistory) > spaceLeft) ? condenseHistory(chatHistory, spaceLeft) : chatHistory;
     if (condensedHistory.length != chatHistory.length) {
-      consoleLog('info', `ChatAPI: Condensed history from ${chatHistory.length} to ${condensedHistory.length} items.`);
+      consoleLog('info', `ChatAPI: Condensed history from ${chatHistory.length} to ${condensedHistory.length} items condensed to ${countTokens(condensedHistory)} tokens.`);
     }
 
     try {
@@ -283,24 +303,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         question: title,
         chat_history: condensedHistory ? [condensedHistory] : [],
       });
-      if (!response) {
+      if (!response || !response.text || response.text.length === 0 || response.text.startsWith('Error: ')) {
         consoleLog("error", 'ChatAPI: GPT API Error, Not enough tokens available to generate a response!!!');
         sendData(JSON.stringify({ data: 'Out of tokens, please request more.' }));
+        if (response && response.text) {
+          sendData(JSON.stringify({ data: response.text }));
+        }
         break;
       }
       total_token_count = total_token_count + countTokens([response.text]);
       consoleLog('info', `ChatAPI: Finished Episode #${episodeNumber} of ${episodeCount} episodes.`);
-      consoleLog('info', `ChatAPI: Question: ${ title }`);
-      consoleLog('info', `ChatAPI: Chat History:`, chatHistory);
-      consoleLog('info', `ChatAPI: Current Episode #${episodeNumber}: ${response.text}`);
-      consoleLog('info', `ChatAPI: Source Documents:`, response.sourceDocuments);
+      consoleLog('info', `ChatAPI: Question: ${title}`);
+      if (chatHistory.length > 0) {
+        for (const [question, answer] of chatHistory) {
+          let msgNum = chatHistory.indexOf([question, answer]) + 1;
+          consoleLog('info', `ChatAPI: History #${msgNum}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80)}..."`);
+        }
+      } else {
+        consoleLog('info', `ChatAPI: Chat History is empty [].`);
+      }
+      consoleLog('info', `ChatAPI: Current Episode #${episodeNumber}: ${response.text.substring(0, 80)}...`);
+      if (response.sourceDocuments) {
+        // Create a new array with only unique objects
+        const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; pdf_numpages: any; }; }, index: any, self: { metadata: { source: any; pdf_numpages: any; }; }[]) =>
+          index === self.findIndex((t: { metadata: { source: any; pdf_numpages: any; }; }) => (
+            t.metadata && t.metadata.source === obj.metadata.source && t.metadata.pdf_numpages === obj.metadata.pdf_numpages
+          ))
+        );
+
+        for (const reference of uniqueSourceDocuments) {
+          if (reference.metadata && reference.metadata.source && reference.metadata.pdf_numpages) {
+            consoleLog('info', `ChatAPI: Reference ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages.`);
+            sendData(JSON.stringify({ data: `\n[Reference: ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages].` }));
+          }
+        }
+      } else {
+        consoleLog('info', `ChatAPI: No reference documents.`);
+      }
       consoleLog('info', `ChatAPI: Total Chat Token count: ${total_token_count}`);
       consoleLog('info', `ChatAPI: Chat History Token count: ${countTokens(chatHistory)}`);
 
       chatHistory = [...chatHistory, [currentQuestion, response.text]];
     } catch (error: any) {
       consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
-      sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}, please report it.` }));
+      sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error.message}.` }));
       break;
     }
 

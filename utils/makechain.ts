@@ -19,6 +19,8 @@ import { BaseLanguageModel } from 'langchain/dist/base_language';
 import GPT3Tokenizer from 'gpt3-tokenizer';
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 
+const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === 'false' ? false : true;
+
 function countTokens(textArray: string[]): number {
   let totalTokens = 0;
   for (const text of textArray) {
@@ -86,7 +88,6 @@ export const makeChain = async (
   } else {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   }
-  console.log(`makeChain Prompt:\n${prompt}\n`);
 
   // take the 
   let title_finished = false;
@@ -101,12 +102,7 @@ export const makeChain = async (
   let tokenCount = 0;
   let isPremium = await isUserPremium();
   const isAdmin = await isUserAdmin(userId!);
-  const maxTokens = tokensCount - countTokens([prompt]) - 1;
-  if (maxTokens < 0) {
-    console.log("makeChain: maxTokens less than 0, prompt is too long.");
-    return null;
-  }
-  console.log("makeChain: number of documents returned set to: ", documentsReturned);
+  const maxTokens = tokensCount;
 
   // Clean the documents returned from the document store
   //vectorstore = vectorstore.map(cleanDocument);
@@ -133,14 +129,14 @@ export const makeChain = async (
   }
 
   const userTokenBalance = await getUserTokenBalance(userId!);
-  if (userTokenBalance < maxTokens && !isAdmin) {
+  if (userTokenBalance <= 0 && !isAdmin) {
     const userDetails = await getUserDetails(userId!);
     console.log(
       `makeChain: ${userId} (${userDetails.displayName}, 
-        ${userDetails.email}) Premium:${isPremium} does not have enough tokens to run this model [only ${userTokenBalance} of ${maxTokens} needed].`
+        ${userDetails.email}) Premium:${isPremium} does not have enough tokens to run this model, only ${userTokenBalance} left.`
     );
     // Send signal that user does not have enough tokens to run this model
-    return null;
+    throw new Error(`Not enough tokens, only ${userTokenBalance} left.`);
   }
 
   // Function to create a model with specific parameters
@@ -149,13 +145,18 @@ export const makeChain = async (
     try {
       model = new OpenAI(params);
     } catch (error: any) {
-      if (error.response && error.response.data && error.response.data.error && error.response.data.error.code === 'model_not_found') {
-        console.warn("makeChain: Model not found. Retrying with a smaller context...");
+      if (error.response && error.response.data && error.response.data.error && error.response.data.error.code === 'context_length_exceeded') {
+        console.warn("makeChain: Too much context. Retrying with a smaller context...");
         // Retry with a smaller context
         if (params.maxTokens) {
           params.maxTokens = params.maxTokens / 1.5; // Use a smaller context
         }
-        model = new OpenAI(params);
+        try {
+          model = new OpenAI(params);
+        } catch (error: any) {
+          console.error(error);
+          throw error;
+        }
       } else {
         console.error(error);
         throw error;
@@ -215,9 +216,10 @@ export const makeChain = async (
           async handleLLMEnd() {
             if (title_finished === false) {
               title_finished = true;
-              console.log('makeChain:', personality, "Stories Title: [", accumulatedTitleTokens.trim(), "] Title Accumulated: ", accumulatedTitleTokenCount, " tokens.");
+              console.log('makeChain:', personality, "Stories Title: [\n", accumulatedTitleTokens.trim(), "\n] Title Accumulated: ", accumulatedTitleTokenCount, " tokens.");
             } else {
               console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
+              console.log('makeChain:', personality, "Stories Body: [\n", accumulatedBodyTokens.trim(), "\n]");
               console.log(`makeChain: Deducting ${tokenCount} tokens from ${userId}...`);
             }
           },
@@ -226,7 +228,7 @@ export const makeChain = async (
     }, userId, userTokenBalance, isAdmin);
   } catch (error: any) {
     console.error("makeChain: Error in createModel: ", error);
-    return null;
+    throw new Error("makeChain: Error in createModel: " + error);
   }
 
   let chain;
@@ -236,7 +238,7 @@ export const makeChain = async (
       {
         qaTemplate: prompt,
         questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
-        returnSourceDocuments: true,
+        returnSourceDocuments: RETURN_SOURCE_DOCUMENTS,
       },
     );
   } catch (error: any) {
@@ -248,7 +250,7 @@ export const makeChain = async (
     } else {
       // Some other error occurred. Handle it as appropriate for your application...
       console.error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: ", error);
-      return null;
+      throw new Error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: " + error);
     }
   }
 

@@ -56,7 +56,8 @@ const client = new TextToSpeechClient({ credentials });
   try {
     client.synthesizeSpeech(request, (err: Error | null | undefined, response: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechResponse | null | undefined ) => {
       if (err) {
-        console.error('Error in synthesizing speech:', err);
+        console.error(`Error in synthesizing speech for name: ${name}, languageCode: ${languageCode}, ssmlGender: ${ssmlGender}:`, err);
+        console.error(`Request: ${JSON.stringify(request)}`);
         res.status(500).json({ message: 'Error in synthesizing speech' });
       } else {
         res.setHeader('Content-Type', 'audio/mpeg');
@@ -64,7 +65,8 @@ const client = new TextToSpeechClient({ credentials });
       }
     });
   } catch (error) {
-    console.error('Error in synthesizing speech:', error);
+    console.error(`Error in synthesizing speech for name: ${name}, languageCode: ${languageCode}, ssmlGender: ${ssmlGender}:`, error);
+    console.error(`Request: ${JSON.stringify(request)}`);
     res.status(500).json({ message: 'Error in synthesizing speech' });
   }
 };
