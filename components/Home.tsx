@@ -266,10 +266,10 @@ function Home({ user }: HomeProps) {
       };
 
       let neutralVoiceModels = {
-        'en-US': ['en-US-Wavenet-I', 'en-US-Wavenet-J', 'en-US-Wavenet-K', 'en-US-Wavenet-L'],
-        'ja-JP': ['ja-JP-Wavenet-I', 'ja-JP-Wavenet-J', 'ja-JP-Wavenet-K', 'ja-JP-Wavenet-L'],
+        'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+        'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
         'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-        'en-GB': ['en-GB-Wavenet-I', 'en-GB-Wavenet-J', 'en-GB-Wavenet-K', 'en-GB-Wavenet-L']
+        'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
       };
 
       let defaultModels = {
@@ -288,7 +288,7 @@ function Home({ user }: HomeProps) {
       let lastSpeaker = '';
 
       // Extract gender markers from the entire message
-      const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N|GAIB)\]|(\w+):\s*\[(f|m|n|F|M|N|GAIB)\]/gi);
+      const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
       if (genderMarkerMatches) {
         let name: string;
         for (const match of genderMarkerMatches) {
@@ -306,7 +306,7 @@ function Home({ user }: HomeProps) {
               voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
               maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
             }
-          } else if (marker === 'f' && !voiceModels[name]) {
+          } else if ((marker == 'n' || marker === 'f') && !voiceModels[name]) {
             if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
               voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
               femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
@@ -383,7 +383,6 @@ function Home({ user }: HomeProps) {
                   detectedGender = 'MALE';
                   break;
                 case 'n':
-                case 'gaib':
                   detectedGender = 'FEMALE';
                   break;
               }
