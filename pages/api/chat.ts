@@ -24,6 +24,10 @@ import GPT3Tokenizer from 'gpt3-tokenizer';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 
+const TOKEN_PER_DOCUMENT = 300;
+const TOKEN_PER_STORY = 2000;
+const TOKEN_PER_QUESTION = 500;
+
 function countTokens(textArray: string[]): number {
   let totalTokens = 0;
   for (const text of textArray) {
@@ -72,13 +76,12 @@ function condenseHistory(history: [string, string][], maxTokens: number): [strin
       const remainingTokens = maxTokens - totalTokens;
       summarizedStory = truncateStory(summarizedStory, remainingTokens);
       storyTokens = countTokens([summarizedStory]);
-    }
-
-    if ((totalTokens + storyTokens) <= maxTokens) {
       totalTokens += storyTokens;
       condensedHistory.unshift([title, summarizedStory]);
+      break; // Stop condensing the history
     } else {
-      break;
+      totalTokens += storyTokens;
+      condensedHistory.unshift([title, summarizedStory]);
     }
   }
 
@@ -165,7 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Tokens count is the number of tokens to generate
   let requestedTokens = tokensCount;
-  let totalTokens = ((requestedTokens <= 0) ? ((isStory) ? 1000 : 500) : requestedTokens) * episodeCount;
+  let totalTokens = ((requestedTokens <= 0) ? ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION) : requestedTokens) * episodeCount;
   let documentsReturned = documentCount;
 
   // OpenAI recommends replacing newlines with spaces for best results
@@ -236,12 +239,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // calcuate tokens for space to accomodate history
-  let spaceLeft = maxCount - (countTokens([sanitizedQuestion]) + requestedTokens ? requestedTokens : ((isStory) ? 1000 : 500));
-  spaceLeft = spaceLeft - (documentCount * 300); // tokens per document
-  if (spaceLeft < ((isStory) ? 1000 : 500)) { // min tokens for history of a question vs story
+  let spaceLeft = maxCount - (countTokens([sanitizedQuestion]) + requestedTokens ? requestedTokens : ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION));
+  spaceLeft = spaceLeft - (documentCount * TOKEN_PER_DOCUMENT); // tokens per document
+  if (spaceLeft < ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION)) { // min tokens for history of a question vs story
     consoleLog('warning', `ChatAPI: May not have enough tokens to generate a response, only ${spaceLeft} tokens available.`);
-    while (spaceLeft <= ((isStory) ? 1000 : 500)) {
-      spaceLeft = spaceLeft + 300; // add back tokens for each document we remove
+    while (spaceLeft <= ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION)) {
+      spaceLeft = spaceLeft + TOKEN_PER_DOCUMENT; // add back tokens for each document we remove
       if (documentsReturned > 0) {
         documentsReturned = documentsReturned - 1;
         consoleLog('warning', `ChatAPI: Reducing documents returned from #${documentsReturned + 1} to #${documentsReturned} to fit into token restriction of ${maxCount} tokens allowing ${spaceLeft} more token space.`);
@@ -292,7 +295,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } 
 
     // condense history if needed
-    consoleLog('info', `ChatAPI: OpenAI GPT ${spaceLeft} tokens free for ${chatHistory.length} history items totaling ${countTokens(chatHistory)} tokens.`);
+    consoleLog('info', `ChatAPI: OpenAI GPT has ${spaceLeft} tokens available for ${chatHistory.length} chat history items costing ${countTokens(chatHistory)} tokens.`);
     const condensedHistory = (countTokens(chatHistory) > spaceLeft) ? condenseHistory(chatHistory, spaceLeft) : chatHistory;
     if (condensedHistory.length != chatHistory.length) {
       consoleLog('info', `ChatAPI: Condensed history from ${chatHistory.length} to ${condensedHistory.length} items condensed to ${countTokens(condensedHistory)} tokens.`);
