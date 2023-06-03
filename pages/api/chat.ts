@@ -317,7 +317,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (chatHistory.length > 0) {
         for (const [question, answer] of chatHistory) {
           let msgNum = chatHistory.indexOf([question, answer]) + 1;
-          consoleLog('info', `ChatAPI: History #${msgNum}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80)}..."`);
+          consoleLog('info', `ChatAPI: History #${msgNum}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
         }
       } else {
         consoleLog('info', `ChatAPI: Chat History is empty [].`);
@@ -334,7 +334,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         for (const reference of uniqueSourceDocuments) {
           if (reference.metadata && reference.metadata.source && reference.metadata.pdf_numpages) {
             consoleLog('info', `ChatAPI: Reference ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages.`);
-            sendData(JSON.stringify({ data: `\n[Reference: ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages].` }));
+            sendData(JSON.stringify({ data: `\n[Reference: ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages]\n` }));
           }
         }
       } else {
@@ -345,8 +345,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       chatHistory = [...chatHistory, [currentQuestion, response.text]];
     } catch (error: any) {
-      consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
-      sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error.message}.` }));
+      if (error.message) {
+        consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error.message);
+        sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error.message}.` }));
+      } else {
+        consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
+        sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error}.` }));
+      }
       break;
     }
 
