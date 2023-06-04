@@ -17,6 +17,7 @@ import firestoreAdmin from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
 import { BaseLanguageModel } from 'langchain/dist/base_language';
 import GPT3Tokenizer from 'gpt3-tokenizer';
+import { on } from 'events';
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 
 const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === 'false' ? false : true;
@@ -217,6 +218,7 @@ export const makeChain = async (
             if (title_finished === false) {
               title_finished = true;
               console.log('makeChain:', personality, "Stories Title: [\n", accumulatedTitleTokens.trim(), "\n] Title Accumulated: ", accumulatedTitleTokenCount, " tokens.");
+              onTokenStream("[ GAIBs Thinking ]\n" + accumulatedTitleTokens.trim() + "\n\n[ GAIBs Output ]\n");
             } else {
               console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
               console.log('makeChain:', personality, "Stories Body: [\n", accumulatedBodyTokens.trim(), "\n]");
