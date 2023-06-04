@@ -265,9 +265,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let title: string = sanitizedQuestion;
     if (i > 0) { // not the first episode
       if (isStory) {
-        title = `keeping context of the original topic "${sanitizedQuestion}", continue the story arc with a follow up episode title that is taken from the episode history.`;
+        if (episodeCount === (i + 1)) {
+          title = `keeping context of the original story "${sanitizedQuestion}", end the story arc with a final episode title.`;
+        } else {
+          title = `keeping context of the original topic "${sanitizedQuestion}", continue the story arc with a follow up episode title that is taken from the episode history.`;
+        }
       } else {
-        title = `keeping context of the initial question "${sanitizedQuestion}", continue the conversation with a follow up question to the previous answer.`;
+        if (episodeCount === (i + 1)) {
+          title = `keeping context of the initial question "${sanitizedQuestion}", end the conversation with a final answer.`;
+        } else {
+          title = `keeping context of the initial question "${sanitizedQuestion}", continue the conversation with a follow up question to the previous answer.`;
+        }
       }
     }
 
@@ -328,16 +336,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       consoleLog('info', `ChatAPI: Current Episode #${episodeNumber}: ${response.text.substring(0, 80)}...`);
       if (response.sourceDocuments) {
         // Create a new array with only unique objects
-        const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; pdf_numpages: any; }; }, index: any, self: { metadata: { source: any; pdf_numpages: any; }; }[]) =>
-          index === self.findIndex((t: { metadata: { source: any; pdf_numpages: any; }; }) => (
-            t.metadata && t.metadata.source === obj.metadata.source && t.metadata.pdf_numpages === obj.metadata.pdf_numpages
+        const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; }; }, index: any, self: { metadata: { source: any; }; }[]) =>
+          index === self.findIndex((t: { metadata: { source: any; }; }) => (
+            t.metadata && t.metadata.source === obj.metadata.source
           ))
         );
 
         for (const reference of uniqueSourceDocuments) {
-          if (reference.metadata && reference.metadata.source && reference.metadata.pdf_numpages) {
-            consoleLog('info', `ChatAPI: Reference ${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages.`);
-            sendData(JSON.stringify({ data: `\nReference: [${path.basename(reference.metadata.source)} of ${reference.metadata.pdf_numpages} pages]\n` }));
+          if (reference.metadata && reference.metadata.source) {
+            consoleLog('info', `ChatAPI: Reference ${path.basename(reference.metadata.source)}.`);
+            sendData(JSON.stringify({ data: `\n[Reference: ${path.basename(reference.metadata.source)}]\n` }));
           }
         }
       } else {
@@ -345,6 +353,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       consoleLog('info', `ChatAPI: Total Chat Token count: ${total_token_count}`);
       consoleLog('info', `ChatAPI: Chat History Token count: ${countTokens(chatHistory)}`);
+
+      //consoleLog('debug', `ChatAPI: Raw Response: ` + JSON.stringify(response) + '\n');
 
       chatHistory = [...chatHistory, [currentQuestion, response.text]];
     } catch (error: any) {
@@ -359,7 +369,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // check if we have used the max tokens requested
-    if (total_token_count >= totalTokens) {
+    if (total_token_count >= totalTokens && episodeCount > 1) {
       consoleLog('info', `ChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.`);
       sendData(JSON.stringify({ data: `ChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.` }));
       break;
