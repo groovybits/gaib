@@ -4,7 +4,7 @@ import { PineconeStore } from 'langchain/vectorstores';
 import { CallbackManager } from 'langchain/callbacks';
 import {
   PERSONALITY_PROMPTS,
-  CONDENSE_PROMPT,
+  CONDENSE_PROMPT_STORY,
   CONDENSE_PROMPT_QUESTION,
   STORY_FOOTER,
   QUESTION_FOOTER,
@@ -70,7 +70,7 @@ export const makeChain = async (
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
-  const CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT : CONDENSE_PROMPT_QUESTION;
+  const CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_STORY : CONDENSE_PROMPT_QUESTION;
 
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt: string = '';
@@ -89,6 +89,8 @@ export const makeChain = async (
   } else {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   }
+
+  console.log("makeChain: Prompt: ", prompt);
 
   // take the 
   let title_finished = false;
@@ -235,6 +237,7 @@ export const makeChain = async (
 
   let chain;
   try {
+    console.log(`makeChain: Retrieving ${documentsReturned} documents from the document store using [${CONDENSE_PROMPT_STRING}].`)
     chain = ConversationalRetrievalQAChain.fromLLM(model,
       vectorstore.asRetriever(documentsReturned), // get more source documents, override default of 4
       {

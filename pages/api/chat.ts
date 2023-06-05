@@ -5,17 +5,6 @@ import { makeChain } from '@/utils/makechain';
 import { pinecone } from '@/utils/pinecone-client';
 import path from 'path';
 import {
-  PERSONALITY_PROMPTS,
-    CONDENSE_PROMPT,
-    CONDENSE_PROMPT_QUESTION,
-    STORY_FOOTER,
-    QUESTION_FOOTER,
-    ANSWER_FOOTER,
-    ANALYZE_FOOTER,
-    POET_FOOTER,
-    SONG_FOOTER
-} from '@/config/personalityPrompts';
-import {
   PINECONE_INDEX_NAME,
   PINECONE_NAME_SPACE,
   OTHER_PINECONE_NAMESPACES,

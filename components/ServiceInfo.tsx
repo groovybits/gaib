@@ -2,8 +2,6 @@ import React from 'react';
 import styles from '@/styles/Home.module.css';
 import {
   PERSONALITY_PROMPTS,
-  CONDENSE_PROMPT,
-  CONDENSE_PROMPT_QUESTION,
 } from '@/config/personalityPrompts';
 
 const ServiceInfo = () => {
