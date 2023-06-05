@@ -3,7 +3,8 @@
 
 export const CONDENSE_PROMPT_STORY = `Given the previous episode history and a follow up direction for the next episode,
 sumarize the episode history to help create a relevant title and plotline for the next episode.
-If there is no history then just use the follow up direction to derive an Anime style episode title.
+If there is no history then just use the follow up direction to derive an Anime style episode title and plotline.
+Do not output the episode itself, just the title and plotline in markdown format.
 
 Episode History:
 {chat_history}
