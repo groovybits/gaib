@@ -14,6 +14,7 @@ import Modal from "react-modal";
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
 const stripePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+const loginAuth = false;
 
 interface Props { }
 
@@ -224,6 +225,7 @@ function Auth({ }: Props): ReactElement {
             <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>
           </div>
         </div>
+        {loginAuth ? (
         <div className={styles.dropdowncontainer}>
           <input
             type="text"
@@ -242,6 +244,9 @@ function Auth({ }: Props): ReactElement {
           <button className={styles.signInButton} onClick={handleSignIn}>Sign In</button>
           <button className={styles.signInButton} onClick={handleRegister}>Register</button>
         </div>
+        ) : (
+          <div></div>
+        )}
         <div className={styles.footer}>
           {message && <div className={styles.message}>{message}</div>}
           <ServiceInfo /> {/* Add the ServiceInfo component */}
