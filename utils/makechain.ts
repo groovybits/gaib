@@ -177,7 +177,7 @@ export const makeChain = async (
       presencePenalty: 0.2,
       maxTokens: (maxTokens > 0) ? maxTokens : null,
       frequencyPenalty: 0.3,
-      modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
+      modelName: 'gpt-3.5-turbo-16k', //change this to gpt-4 if you have access
       streaming: Boolean(onTokenStream),
       callbackManager: onTokenStream
         ? CallbackManager.fromHandlers({

@@ -166,7 +166,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Set the default history
   let currentQuestion = sanitizedQuestion;
   let chatHistory = history;
-  let maxCount: number = 4097; // max tokens for GPT-3
+  let maxCount: number = 64000; // max tokens for GPT-3-16k
   if (process.env.GPT_MAX_TOKENS) {
     maxCount = parseInt(process.env.GPT_MAX_TOKENS);
     if (isNaN(maxCount)) {
