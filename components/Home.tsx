@@ -89,7 +89,7 @@ function Home({ user }: HomeProps) {
   const [isStory, setIsStory] = useState<boolean>(true);
   const [selectedTheme, setSelectedTheme] = useState<string>('Anime');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [documentCount, setDocumentCount] = useState<number>(4);
+  const [documentCount, setDocumentCount] = useState<number>(8);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
 
 

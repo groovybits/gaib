@@ -7,7 +7,7 @@ interface DocumentDropdownProps {
 }
 
 const DocumentDropdown: React.FC<DocumentDropdownProps> = ({ onChange }) => {
-  const [documentCount, setDocumentCount] = useState<number>(4);
+  const [documentCount, setDocumentCount] = useState<number>(8);
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = parseInt(event.target.value, 10);

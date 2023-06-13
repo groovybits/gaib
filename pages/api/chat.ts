@@ -171,7 +171,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     maxCount = parseInt(process.env.GPT_MAX_TOKENS);
     if (isNaN(maxCount)) {
       consoleLog('error', `ChatAPI: Invalid GPT_MAX_TOKENS value of ${process.env.GPT_MAX_TOKENS}, using default of 4097.`);
-      maxCount = 4097;
+      maxCount = 64000;
     }
   }
 

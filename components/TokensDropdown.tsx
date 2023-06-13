@@ -22,7 +22,7 @@ const TokensDropdown: React.FC<TokensDropdownProps> = ({ onChange }) => {
         value={tokensCount}
         onChange={handleChange}
       >
-        {[...Array(31)].map((_, index) => {
+        {[...Array(81)].map((_, index) => {
           const value = index * 100;
           return (
             <option key={value} value={value}>
