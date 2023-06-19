@@ -14,7 +14,7 @@ import Modal from "react-modal";
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
 const stripePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
-const loginAuth = false;
+const loginAuth = process.env.NEXT_PUBLIC_LOGIN_AUTH_ENABLE ? true : false;
 
 interface Props { }
 
