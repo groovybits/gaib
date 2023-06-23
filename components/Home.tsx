@@ -941,7 +941,7 @@ function Home({ user }: HomeProps) {
                       ref={textAreaRef}
                       autoFocus={true}
                       rows={3}
-                      maxLength={4096}
+                      maxLength={1000000}
                       id="userInput"
                       name="userInput"
                       placeholder={

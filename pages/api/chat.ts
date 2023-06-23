@@ -155,6 +155,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  const sendData = (data: string) => {
+    res.write(`data: ${data}\n\n`);
+  };
+
+  // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
+  if (question.startsWith('REPLAY:')) {
+    consoleLog('info', `ChatAPI: REPLAY: ${question}`);
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    });
+    sendData(JSON.stringify({ data: '' }));
+    sendData(JSON.stringify({ data: question }));
+    sendData('[DONE]');
+    res.end();
+    return;
+  }
+
   // Tokens count is the number of tokens to generate
   let requestedTokens = tokensCount;
   let totalTokens = ((requestedTokens <= 0) ? ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION) : requestedTokens) * episodeCount;
@@ -197,10 +216,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   consoleLog('info', 'ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
-
-  const sendData = (data: string) => {
-    res.write(`data: ${data}\n\n`);
-  };
 
   // Set headers before starting the chain
   res.writeHead(200, {
