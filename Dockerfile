@@ -11,6 +11,7 @@ COPY package*.json pnpm-lock.yaml ./
 # Install production dependencies.
 RUN npm install -g pnpm
 RUN pnpm install --prod
+RUN pnpm install --save-dev eslint
 
 # Copy local code to the container image.
 COPY . .
