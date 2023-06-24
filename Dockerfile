@@ -25,6 +25,3 @@ ENV PORT 3000
 # Run the web service on container startup.
 CMD [ "pnpm", "start" ]
 
-# Expose the port
-EXPOSE 3000
-
