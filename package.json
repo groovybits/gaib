@@ -16,7 +16,8 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint --ignore-path .gitignore \"**/*.+(ts|js|tsx)\"",
     "format": "prettier --ignore-path .gitignore \"**/*.+(ts|js|tsx)\" --write",
-    "ingest": "tsx -r dotenv/config scripts/ingest-data.ts"
+    "ingest": "tsx -r dotenv/config scripts/ingest-data.ts",
+    "docker-build": "docker build . -t gaib"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^4.2.1",
