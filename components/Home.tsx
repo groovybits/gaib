@@ -1178,7 +1178,7 @@ function Home({ user }: HomeProps) {
                         <div className={styles.labelContainer}>
                           <select
                             className={styles.dropdown}
-                            disabled={isSpeaking || loading}
+                            disabled={loading}
                             value={selectedPersonality}
                             onChange={(e) => {
                               setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
@@ -1217,7 +1217,7 @@ function Home({ user }: HomeProps) {
                               <select
                                 id="audio-language-select"
                                 className={styles.dropdown}
-                                disabled={isSpeaking || loading}
+                                disabled={loading}
                                 value={audioLanguage}
                                 onChange={(e) => setAudioLanguage(e.target.value)}
                               >
@@ -1232,7 +1232,7 @@ function Home({ user }: HomeProps) {
                               <select
                                 id="subtitle-language-select"
                                 className={styles.dropdown}
-                                disabled={isSpeaking || loading}
+                                disabled={loading}
                                 value={subtitleLanguage}
                                 onChange={(e) => setSubtitleLanguage(e.target.value)}
                               >
