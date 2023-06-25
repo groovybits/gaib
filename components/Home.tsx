@@ -19,6 +19,8 @@ import PersonalityNamespaceDropdown from '@/components/PersonalityNamespaceDropd
 import ReactMarkdown from 'react-markdown';
 import DocumentDropdown from '@/components/DocumentDropdown';
 import EpisodeDropdown from '@/components/EpisodeDropdown';
+import { time } from 'console';
+
 
 type PendingMessage = {
   type: string;
@@ -91,7 +93,70 @@ function Home({ user }: HomeProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [documentCount, setDocumentCount] = useState<number>(8);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
+  const [news, setNews] = useState<Array<any>>([]);
+  const [isFetching, setIsFetching] = useState<boolean>(false);
+  const [currentNewsIndex, setCurrentNewsIndex] = useState<number>(0);
+  const isProcessingRef = useRef<boolean>(false);
+  const [currentOffset, setCurrentOffset] = useState<number>(0);
 
+
+  // fetch news from mediastack service and set the news state
+  const fetchNews = async () => {
+    const res = await fetch(`/api/mediastack?offset=${currentOffset}`);
+    if (!res.ok) {
+      console.log('Error fetching news: ', res.statusText);
+      return [];
+    }
+    const data = await res.json();
+    // Increment the offset by the limit after each request
+    setCurrentOffset(currentOffset + 25);
+    return data.data;
+  };
+
+  const handleFetchButtonClick = () => {
+    setIsFetching(!isFetching);
+  };
+
+  // News fetching for automating input via a news feed
+  useEffect(() => {
+    const processNewsArticle = async () => {
+      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current) {
+        isProcessingRef.current = true;  // Set isProcessing to true when a news article is being processed
+        let currentNews = news;
+        let index = currentNewsIndex;  // Use a local variable to keep track of the current news index
+        if (index >= currentNews.length || currentNews.length === 0) {
+          console.log(`Reached end of news feed, fetching new news`);
+          currentNews = await fetchNews();
+          console.log(`Fetching news found ${currentNews.length} news articles`);
+          setNews(currentNews);
+          index = 0;  // Reset the local variable to 0 when a new batch of news is fetched
+        }
+        if (currentNews[index]) {  // Check that currentNews[index] is defined
+          const headline = currentNews[index].title;
+          const body = currentNews[index].description.substring(0, 200);
+          const currentQuery = `${headline}\n\n${body}`;
+
+          if (currentQuery === query) {
+            console.log(`Skipping duplicate news headline #${index}: ${headline}`);
+            processNewsArticle();
+          }
+
+          console.log(`Sending News headline #${index}: ${headline}`);
+          setQuery(currentQuery);
+          const mockEvent = {
+            preventDefault: () => { },
+            target: {
+              value: currentQuery,
+            },
+          };
+          handleSubmit(mockEvent);
+          setCurrentNewsIndex(index + 1);  // Increment the state variable after processing a news article
+        }
+        isProcessingRef.current = false;  // Set isProcessing to false when a news article has been processed
+      }
+    };
+    processNewsArticle();
+  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, query]);  // Remove isProcessing from the dependencies
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -507,11 +572,13 @@ function Home({ user }: HomeProps) {
 
     // Don't submit if the query is empty
     if (isSpeaking || !speechRecognitionComplete || !query) {
+      console.log(`Not submitting query: ${query}, isSpeaking: ${isSpeaking}, speechRecognitionComplete: ${speechRecognitionComplete}`);
       return;
     }
 
     // Stop listening
     if (listening) {
+      console.log(`handleSubmit: Speech recognition is listening, not submitting...`);
       setStoppedManually(true);
       if (recognitionInstance) {
         recognitionInstance.stop();
@@ -1069,6 +1136,9 @@ function Home({ user }: HomeProps) {
                             <path d="M9 9l6 6"></path>
                           </svg>
                           }
+                        </button>
+                        <button onClick={handleFetchButtonClick}>
+                          {isFetching ? 'Stop fetching news' : 'Start fetching news'}
                         </button>
                         {/*
                         <button
