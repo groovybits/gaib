@@ -70,7 +70,7 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [subtitle, setSubtitle] = useState<string>('');
-  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE;
+  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('Anime');
