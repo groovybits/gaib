@@ -133,7 +133,7 @@ function Home({ user }: HomeProps) {
         }
         if (currentNews[index]) {  // Check that currentNews[index] is defined
           const headline = currentNews[index].title;
-          const body = currentNews[index].description.substring(0, 200);
+          const body = currentNews[index].description.substring(0, 1000);
           const currentQuery = `${headline}\n\n${body}`;
 
           if (currentQuery === query) {
