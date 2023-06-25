@@ -139,7 +139,7 @@ function Home({ user }: HomeProps) {
       const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
       const randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
 
-      let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || 'https://ai.groovy.org/gaib/1.png';
+      let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
       if (directoryUrl != null && maxNumber > 1 && randomNumber > 0) {
         url = `${directoryUrl}/${randomNumber}.png`;
       }
@@ -907,17 +907,23 @@ function Home({ user }: HomeProps) {
                 </button>
                 {selectedTheme === 'Anime' ? (
                   <div className={styles.generatedImage}>
-                    <div className={styles.generatedImage}>
+                      {(imageUrl === '') ? "" : (
+                      <div className={styles.generatedImage}>
                       <img
                         src={imageUrl}
                         alt="GAIB"
                       />
-                    </div>
+                      </div>
+                      )}
                     <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>{subtitle}
                     </div>
+                    {(imageUrl === '') ? "" : (
+                    <div>
                     <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
+                    </div>
+                    )}
                   </div>
                 ) : (
                   <div className={styles.generatedImage}>
