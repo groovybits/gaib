@@ -22,5 +22,5 @@ RUN pnpm run build
 ENV PORT 3000
 
 # Run the web service on container startup.
-CMD [ "pnpm", "start" ]
+CMD pnpm start -p $PORT
 
