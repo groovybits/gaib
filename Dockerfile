@@ -15,13 +15,13 @@ RUN pnpm install --save-dev eslint
 COPY . .
 
 # Compile TypeScript into JavaScript
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
 RUN pnpm run build
 
 # Service must listen to $PORT environment variable.
 # This default value facilitates local development.
 ENV PORT 3000
-ARG NEXT_PUBLIC_FIREBASE_API_KEY
-ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
 
 # Run the web service on container startup.
 CMD pnpm start -p $PORT
