@@ -102,7 +102,7 @@ function Home({ user }: HomeProps) {
 
   // fetch news from mediastack service and set the news state
   const fetchNews = async () => {
-    const res = await fetch(`/api/mediastack?offset=${currentOffset}`);
+    const res = await fetch(`/api/mediastack?offset=${currentOffset}`); // offset, sort
     if (!res.ok) {
       console.log('Error fetching news: ', res.statusText);
       return [];

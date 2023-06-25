@@ -6,7 +6,7 @@ const mediastackApiKey = process.env.MEDIASTACK_API_KEY;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req;
-  const { offset = 0 } = req.query; // Get the offset from the query parameters
+  const { offset = 0, sort = 'popularity' } = req.query; // Get the offset from the query parameters
 
   if (!mediastackApiKey) {
     res.status(500).json({ error: 'The Mediastack API key is not set' });
@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (method) {
     case 'GET':
       try {
-        const response = await fetch(`http://api.mediastack.com/v1/news?access_key=${mediastackApiKey}&languages=en&offset=${offset}`);
+        const response = await fetch(`http://api.mediastack.com/v1/news?access_key=${mediastackApiKey}&languages=en&offset=${offset}&sort=${sort}&limit=100`);
         const data = await response.json();
         console.log(`Mediastack API call for the current news articles... ${JSON.stringify(data)}`)
         res.status(200).json(data);
