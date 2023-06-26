@@ -19,7 +19,7 @@ import PersonalityNamespaceDropdown from '@/components/PersonalityNamespaceDropd
 import ReactMarkdown from 'react-markdown';
 import DocumentDropdown from '@/components/DocumentDropdown';
 import EpisodeDropdown from '@/components/EpisodeDropdown';
-import { time } from 'console';
+import Modal from 'react-modal';
 
 
 type PendingMessage = {
@@ -98,11 +98,49 @@ function Home({ user }: HomeProps) {
   const [currentNewsIndex, setCurrentNewsIndex] = useState<number>(0);
   const isProcessingRef = useRef<boolean>(false);
   const [currentOffset, setCurrentOffset] = useState<number>(0);
+  const [feedCategory, setFeedCategory] = useState<string>('');
+  const [feedKeywords, setFeedKeywords] = useState<string>('');
+  const [feedSort, setFeedSort] = useState<string>('popularity');
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+
+  const categoryOptions = [
+    { value: '', label: 'All Categories' },
+    { value: 'general', label: 'General' },
+    { value: 'business', label: 'Business' },
+    { value: 'entertainment', label: 'Entertainment' },
+    { value: 'health', label: 'Health' },
+    { value: 'science', label: 'Science' },
+    { value: 'sports', label: 'Sports' },
+    { value: 'technology', label: 'Technology' },
+  ];
+
+  const sortOptions = [
+    { value: '', label: 'Popularity' },
+    { value: 'published_desc', label: 'Published Descending' },
+    { value: 'published_asc', label: 'Published Ascending' },
+  ];
+
+  const feedModalStyle = {
+    content: {
+      top: '50%',
+      left: '50%',
+      right: 'auto',
+      bottom: 'auto',
+      marginRight: '-50%',
+      transform: 'translate(-50%, -50%)',
+      backgroundColor: '#FFC601', // Changed the background color to #FFC601
+      borderRadius: '10px',
+      width: '80%',
+      maxWidth: '400px',
+      padding: '20px',
+      border: '2px double #000', // Added border style
+    },
+  };
 
 
   // fetch news from mediastack service and set the news state
   const fetchNews = async () => {
-    const res = await fetch(`/api/mediastack?offset=${currentOffset}`); // offset, sort
+    const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`); // offset, sort
     if (!res.ok) {
       console.log('Error fetching news: ', res.statusText);
       return [];
@@ -114,7 +152,16 @@ function Home({ user }: HomeProps) {
   };
 
   const handleFetchButtonClick = () => {
-    setIsFetching(!isFetching);
+    if (!isFetching) {
+      setModalIsOpen(true);
+    } else {
+      setIsFetching(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    setModalIsOpen(false);
+    setIsFetching(true);
   };
 
   // News fetching for automating input via a news feed
@@ -530,15 +577,11 @@ function Home({ user }: HomeProps) {
         }
       }
       // Reset the subtitle after all sentences have been spoken
+      stopSpeaking();
+      setIsSpeaking(false);
       setSubtitle('');
       gaibImage = await gptGeneratedImageUrl('', false);
       setPexelImageUrls(gaibImage);
-      stopSpeaking();
-      setIsSpeaking(false);
-
-      if (!autoFullScreen && isFullScreen) {
-        setIsFullScreen(false);
-      }
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -556,7 +599,7 @@ function Home({ user }: HomeProps) {
         setIsSpeaking(false);
       }
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -776,7 +819,13 @@ function Home({ user }: HomeProps) {
         setSpeechRecognitionComplete(true);
 
         if (!stoppedManually) {
-          handleSubmit({ preventDefault: () => { } }, recognition);
+          const mockEvent = {
+            preventDefault: () => { },
+            target: {
+              value: query,
+            },
+          };
+          handleSubmit(mockEvent, recognition);
         }
       };
 
@@ -1140,6 +1189,61 @@ function Home({ user }: HomeProps) {
                         <button onClick={handleFetchButtonClick}>
                           {isFetching ? 'Stop fetching news' : 'Start fetching news'}
                         </button>
+
+                        <Modal
+                          isOpen={modalIsOpen}
+                          onRequestClose={handleModalClose}
+                          shouldCloseOnOverlayClick={false} // Prevents the modal from closing when clicking outside of it
+                          style={feedModalStyle}
+                          contentLabel="News Feed Settings"
+                        >
+                          <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <label>
+                              Keywords (comma separated):
+                              <input type="text" value={feedKeywords} onChange={e => setFeedKeywords(e.target.value)} />
+                            </label>
+                            <label>
+                              Category:
+                              <select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
+                                {categoryOptions.map(option => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              Sort Order:
+                              <select value={feedSort} onChange={e => setFeedSort(e.target.value)}>
+                                {sortOptions.map(option => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                            <button onClick={handleModalClose}>Start Fetching News</button>
+                            <button onClick={() => setModalIsOpen(false)}>Cancel</button>
+                          </div>
+                        </Modal>
+                        {/*<select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
+                          {categoryOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select value={feedSort} onChange={e => setFeedSort(e.target.value)}>
+                          {sortOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                          </select>*/}
                         {/*
                         <button
                           title="Pause"

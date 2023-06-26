@@ -156,11 +156,10 @@ function Auth({ }: Props): ReactElement {
         <div className={styles.header}>
           {!userIsPremium ? (
             <div className={styles.header}>
-              <p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p>
               {showPremium ? (
-              <a href="#" onClick={() => createCheckoutSession(user.uid)} className={styles.header}>
-                Purchase Premium Subscription
-              </a>
+              <><p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p><a href="#" onClick={() => createCheckoutSession(user.uid)} className={styles.header}>
+                  Purchase Premium Subscription
+                </a></>
               ) : (
                 <p>Currently in Beta.</p>
               )}
