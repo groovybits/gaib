@@ -6,12 +6,16 @@ import {
   PERSONALITY_PROMPTS,
   CONDENSE_PROMPT_STORY,
   CONDENSE_PROMPT_QUESTION,
+  CONDENSE_PROMPT_NEWS_STORY,
+  CONDENSE_PROMPT_NEWS_QUESTION,
   STORY_FOOTER,
   QUESTION_FOOTER,
   ANSWER_FOOTER,
   ANALYZE_FOOTER,
   POET_FOOTER,
-  SONG_FOOTER
+  SONG_FOOTER,
+  NEWS_STORY_FOOTER,
+  NEWS_QUESTION_FOOTER,
 } from '@/config/personalityPrompts';
 import firestoreAdmin from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
@@ -70,7 +74,7 @@ export const makeChain = async (
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
-  const CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_STORY : CONDENSE_PROMPT_QUESTION;
+  let CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_STORY : CONDENSE_PROMPT_QUESTION;
 
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt: string = '';
@@ -86,6 +90,9 @@ export const makeChain = async (
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
   } else if (personality == 'Interviewer') {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
+  } else if (personality == 'NewsReporter' || personality == 'CondensedNews' || personality == 'HappyFunNews') {
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
+    CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_NEWS_STORY : CONDENSE_PROMPT_NEWS_QUESTION;
   } else {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   }

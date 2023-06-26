@@ -91,7 +91,7 @@ function Home({ user }: HomeProps) {
   const [isStory, setIsStory] = useState<boolean>(true);
   const [selectedTheme, setSelectedTheme] = useState<string>('Anime');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [documentCount, setDocumentCount] = useState<number>(8);
+  const [documentCount, setDocumentCount] = useState<number>(3);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
   const [news, setNews] = useState<Array<any>>([]);
   const [isFetching, setIsFetching] = useState<boolean>(false);
@@ -137,7 +137,6 @@ function Home({ user }: HomeProps) {
     },
   };
 
-
   // fetch news from mediastack service and set the news state
   const fetchNews = async () => {
     const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`); // offset, sort
@@ -147,7 +146,7 @@ function Home({ user }: HomeProps) {
     }
     const data = await res.json();
     // Increment the offset by the limit after each request
-    setCurrentOffset(currentOffset + 25);
+    setCurrentOffset(currentOffset + 100);
     return data.data;
   };
 
@@ -441,9 +440,11 @@ function Home({ user }: HomeProps) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
           // get the image for the sentence
-          gaibImage = await gptGeneratedImageUrl(sentence, true);
-          setPexelImageUrls(gaibImage);
-          setSubtitle(''); // Clear the subtitle
+          if (sentence !== '' && sentence.length > 16) {
+            gaibImage = await gptGeneratedImageUrl(sentence, true);
+            setPexelImageUrls(gaibImage);
+            setSubtitle(''); // Clear the subtitle
+          }
 
           // Set the subtitle to the translated text if the text is not in English
           let translatedText = '';

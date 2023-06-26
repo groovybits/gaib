@@ -3,7 +3,7 @@
 
 export const CONDENSE_PROMPT_STORY = `Given the previous episode history and a follow up direction for the next episode,
 sumarize the episode history to help create a relevant title and plotline for the next episode.
-If there is no history then just use the follow up direction to derive an Anime style episode title and plotline.
+If there is no history then just use the follow up direction to derive an episode title and plotline.
 Do not output the episode itself, just the title and plotline in markdown format.
 
 Episode History:
@@ -17,6 +17,27 @@ rephrase the follow up question to be a standalone question.
 If there is no chat history then just rephrase the follow up input as an initial standalone question.
 
 Chat History:
+{chat_history}
+Follow Up Input: {question}
+Standalone question:
+`;
+
+export const CONDENSE_PROMPT_NEWS_STORY = `Given the previous news articles and the follow up article,
+sumarize the news articles to help create a relevant title and summary for the next article.
+If there is no history then just use the follow up article to derive an article title and summary.
+Do not output the article itself, just the title and summary in markdown format.
+
+Article History:
+{chat_history}
+Follow Up Direction: {question}
+Next article Title and Summary in markdown format:
+`;
+
+export const CONDENSE_PROMPT_NEWS_QUESTION = `Given the following news articles and a follow up question,
+rephrase the follow up question to be a standalone question.
+If there is no chat history then just rephrase the follow up input as an initial standalone question.
+
+Article History:
 {chat_history}
 Follow Up Input: {question}
 Standalone question:
@@ -56,6 +77,18 @@ Song Direction: {question}
 Song Title and Lyrics in Markdown format:
 `;
 
+export const NEWS_STORY_FOOTER = `
+Context: {context}
+News Direction: {question}
+News Title and Summary in Markdown format:
+`;
+
+export const NEWS_QUESTION_FOOTER = `
+Context: {context}
+Question: {question}
+Answer in Markdown format:
+`;
+
 export const ROLE_ENFORCER = `Do not mention your an AI Language model or that you can't access current information, stick to the role.`;
 
 export const GENDER_MARKER = `add gender markers in the format of [m] or [f] or [n] after each characters name, 
@@ -66,19 +99,19 @@ export const PERSONALITY_PROMPTS = {
   Anime: `Create a screenplay for an Anime Episode using the story title to create a screenplay using the context as inspiration.
   ${GENDER_MARKER} ${ROLE_ENFORCER}
   Format the story as a screenplay script for a Anime TV show from Japan in markdown format with the story title and script body.
-  Make up music and sound effects for the story like they are closed captions, list these at the beginning of the script to help frame the scene and as
-  they change.  Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone.
+  Make up music and sound effects for the story and display them along with the story in subtitle style.  
+  Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone.
   `,
 
   Stories: `Create a screenplay for an Episode using the story title to create a screenplay using the context as inspiration.
   Format the story as a screenplay script for a TV show in markdown format with the story title and script body.
-  Make up music and sound effects for the story like they are closed captions, list these at the beginning of the script to help frame the scene and as
+  Make up music and sound effects for the story and display them along with the story in subtitle style.  
   they change.  Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone.
   ${GENDER_MARKER} ${ROLE_ENFORCER}
   `,
 
   NewsReporter: `
-  You are news reporter getting stories and analyzing them and presenting various thoughts and relations of them in detail. ${ROLE_ENFORCER}`,
+  You are news reporter getting stories and presenting them in an informative way. ${ROLE_ENFORCER}`,
 
   HappyFunNews: `
   You are news reporter getting stories and analyzing them and presenting various thoughts and relations of them with a joyful compassionate wise perspective. Make the news fun and silly, joke and make comedy out of the world. ${ROLE_ENFORCER}`,
