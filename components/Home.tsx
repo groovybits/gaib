@@ -102,6 +102,7 @@ function Home({ user }: HomeProps) {
   const [feedKeywords, setFeedKeywords] = useState<string>('');
   const [feedSort, setFeedSort] = useState<string>('popularity');
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const categoryOptions = [
     { value: '', label: 'All Categories' },
@@ -166,7 +167,7 @@ function Home({ user }: HomeProps) {
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current) {
+      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending) {
         isProcessingRef.current = true;  // Set isProcessing to true when a news article is being processed
         let currentNews = news;
         let index = currentNewsIndex;  // Use a local variable to keep track of the current news index
@@ -195,6 +196,7 @@ function Home({ user }: HomeProps) {
               value: currentQuery,
             },
           };
+          isSubmittingRef.current = true;
           handleSubmit(mockEvent);
           setCurrentNewsIndex(index + 1);  // Increment the state variable after processing a news article
         }
@@ -202,7 +204,7 @@ function Home({ user }: HomeProps) {
       }
     };
     processNewsArticle();
-  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, query]);  // Remove isProcessing from the dependencies
+  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending]);  // Remove isProcessing from the dependencies
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -614,21 +616,25 @@ function Home({ user }: HomeProps) {
   async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
     e.preventDefault();
 
+    const question = e.target?.value ? e.target.value.trim() : query.trim();
+
     // Don't submit if the query is empty
-    if (isSpeaking || !speechRecognitionComplete || !query) {
-      console.log(`Not submitting query: ${query}, isSpeaking: ${isSpeaking}, speechRecognitionComplete: ${speechRecognitionComplete}`);
+    if (isSpeaking || !speechRecognitionComplete || !question) {
+      console.log(`handleSubmit: Not submitting question: '${question}', isSpeaking: ${isSpeaking}, speechRecognitionComplete: ${speechRecognitionComplete}`);
       return;
     }
 
     // Stop listening
     if (listening) {
-      console.log(`handleSubmit: Speech recognition is listening, not submitting...`);
+      console.log(`handleSubmit: Speech recognition is listening, not submitting question: '${question}'`);
       setStoppedManually(true);
       if (recognitionInstance) {
         recognitionInstance.stop();
       }
       return;
     }
+
+    console.log(`handleSubmit: Submitting question: '${question}'`);
 
     // Clear the timeout
     if (timeoutID) {
@@ -637,7 +643,6 @@ function Home({ user }: HomeProps) {
     }
 
     // Set the message state
-    const question = query.trim();
     setMessageState((state) => ({
       ...state,
       messages: [
@@ -733,6 +738,7 @@ function Home({ user }: HomeProps) {
       setError('An error occurred while fetching the data. Please try again.');
       console.log(error);
     }
+    isSubmittingRef.current = false;
   }
 
   // Handle the submit event on Enter
