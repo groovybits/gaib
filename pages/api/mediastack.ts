@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           url += `&categories=${category}`;
         }
         if (keywords != '') {
-          console.log(`News Feed Keywords: ${keywords}`);
+          console.log(`News Feed Keywords: '${keywords}'`);
           url += `&keywords=${keywords}`;
         }
         console.log(`News Feed Sort Order: ${sort}`);

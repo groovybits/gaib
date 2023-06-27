@@ -185,12 +185,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Set the default history
   let currentQuestion = sanitizedQuestion;
   let chatHistory = history;
-  let maxCount: number = 64000; // max tokens for GPT-3-16k
+  let maxCount: number = 16000; // max tokens for GPT-3-16k
   if (process.env.GPT_MAX_TOKENS) {
     maxCount = parseInt(process.env.GPT_MAX_TOKENS);
     if (isNaN(maxCount)) {
-      consoleLog('error', `ChatAPI: Invalid GPT_MAX_TOKENS value of ${process.env.GPT_MAX_TOKENS}, using default of 4097.`);
-      maxCount = 64000;
+      consoleLog('error', `ChatAPI: Invalid GPT_MAX_TOKENS value of ${process.env.GPT_MAX_TOKENS}, using default of 16000.`);
+      maxCount = 16000;
     }
   }
 
@@ -242,8 +242,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // calcuate tokens for space to accomodate history
-  let spaceLeft = maxCount - (countTokens([sanitizedQuestion]) + requestedTokens ? requestedTokens : ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION));
+  // calculate tokens for space to accommodate history
+  let spaceLeft = maxCount - (countTokens([sanitizedQuestion]) + (requestedTokens ? requestedTokens : ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION)));
   spaceLeft = spaceLeft - (documentCount * TOKEN_PER_DOCUMENT); // tokens per document
   if (spaceLeft < ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION)) { // min tokens for history of a question vs story
     consoleLog('warning', `ChatAPI: May not have enough tokens to generate a response, only ${spaceLeft} tokens available.`);

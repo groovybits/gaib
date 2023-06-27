@@ -21,6 +21,7 @@ import DocumentDropdown from '@/components/DocumentDropdown';
 import EpisodeDropdown from '@/components/EpisodeDropdown';
 import Modal from 'react-modal';
 
+const debug = process.env.NEXT_PUBLIC_DEBUG || false;
 
 type PendingMessage = {
   type: string;
@@ -265,7 +266,9 @@ function Home({ user }: HomeProps) {
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
       if (deltaTimeInSeconds < 5) {
-        console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
+        if (debug) {
+          console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
+        }
         return '';
       }
       setStartTime(endTime);
@@ -280,7 +283,7 @@ function Home({ user }: HomeProps) {
         return getGaib();
       } else {
         try {
-          let extracted_keywords = extractKeywords(sentence, 8).join(' ');
+          let extracted_keywords = extractKeywords(sentence, 16).join(' ');
           console.log('Extracted keywords: [', extracted_keywords, ']');
           const keywords = encodeURIComponent(extracted_keywords);
           const response = await fetch('/api/pexels', {
@@ -459,7 +462,6 @@ function Home({ user }: HomeProps) {
 
           let speakerChanged = false;
           // Check if sentence contains a name from genderMarkedNames
-          console.log(`Checking if sentence: ${sentence} contains a name from genderMarkedNames`);
           for (const { name, marker } of genderMarkedNames) {
             const lcSentence = sentence.toLowerCase();
             let nameFound = false;
@@ -528,7 +530,9 @@ function Home({ user }: HomeProps) {
             // Speak the sentence
             if (audioLanguage === 'en-US') {
               // Speak the original text
-              console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
+              if (debug) {
+                console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
+              }
               const cleanText = removeMarkdownAndSpecialSymbols(sentence);
               if (cleanText !== '') {
                 await speakText(cleanText, 1, detectedGender, audioLanguage, model);
@@ -548,7 +552,9 @@ function Home({ user }: HomeProps) {
                 // Translate the text
                 translationEntry = await fetchTranslation(sentence, audioLanguage);
               }
-              console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
+              if (debug) {
+                console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
+              }
               try {
                 const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
                 if (cleanText !== '') {
@@ -634,7 +640,7 @@ function Home({ user }: HomeProps) {
       return;
     }
 
-    console.log(`handleSubmit: Submitting question: '${question}'`);
+    console.log(`handleSubmit: Submitting question: '${question.slice(0, 16)}...'`);
 
     // Clear the timeout
     if (timeoutID) {
@@ -1207,7 +1213,7 @@ function Home({ user }: HomeProps) {
                           <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <label>
-                              Keywords (comma separated):
+                              Keywords (separated by spaces):
                               <input type="text" value={feedKeywords} onChange={e => setFeedKeywords(e.target.value)} />
                             </label>
                             <label>
