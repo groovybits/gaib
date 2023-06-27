@@ -1,21 +1,21 @@
 ## TODO List. Please contribute if you can
 
-## April 2023 Chris Kennedy
+## June 2023 Chris Kennedy
 
 [X] DONE May/2023 * Gender voice differentiation per speaker
 * Save previous stories for recall for a user
 * General information and instructions
 [X] DONE * Token based purchasing of access
 * Premium user with N prompts per month
-* Read input from other sources for display
+[X] Read input from other sources for display (use REPLAY: before prompt)
 * Group AI Chat with other people and GAIB + AI characters
 [X] * Button look/feel
 [X] * General CSS cleanup / style improvements
 [X] * Full screen button match the Pexels API display button
 * Self learn from experiences and store them for recall usage
 * Listening and Speaking like a device you would purchase from a big company
-* Next episode, auto generation mode
-* Feed input listening for generation of content from a feed, create sentiment and stories off any text or media feeds
+[X] Next episode, auto generation mode
+[X] Feed input listening for generation of content from a feed, create sentiment and stories off any text or media feeds
 * More prompt per personality customization on waiting messages and general better "waiting" spinner object
 * Generate Images with AI
 * Generate Video with AI

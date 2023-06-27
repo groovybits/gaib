@@ -2,7 +2,9 @@
 
 **Project by Chris Kennedy**
 
-The Groovy AI Bot (GAIB) is a multilingual chatbot capable of understanding, speaking, and translating any language in both text and audio formats. It can adopt various AI bot modes or personalities, each tailored for specific tasks. GAIB also features an Anime generation theme that crafts stories based on data from PDFs stored in the vector database. You can try it out [here](https://ai.groovy.org).
+The Groovy AI Bot (GAIB) is a multilingual chatbot capable of understanding, speaking, and translating any language in both text and audio formats. It can adopt various AI bot modes or personalities, each tailored for specific tasks. GAIB also features an Anime generation theme that crafts stories based on data from PDFs stored in the vector database. You can try it out [here](https://gaib.groovy.org).
+
+Twitch stream of GAIB: [groovyaibot](https://twitch.tv/groovyaibot)
 
 ## Key Features
 
@@ -21,6 +23,7 @@ The Groovy AI Bot (GAIB) is a multilingual chatbot capable of understanding, spe
 - **Full-Screen View**: This feature allows display of only the images and subtitles or terminal output on TVs etc. casting.
 - **User Login**: GAIB tracks tokens per user via Firebase.
 - **Stripe Payments**: GAIB supports Stripe payments for premium users with token allocation per month. Free user tokens can be configured.
+- **News Feed via Mediastack**: GAIB supports newsfeed input for generation of the output, currently Mediastack is supported.
 
 ## AI Bot Modes
 
