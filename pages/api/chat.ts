@@ -232,7 +232,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return await makeChain(namespaceResult.vectorStore, selectedPersonality, requestedTokens, documentCount, userId, isStory, (token: string) => {
       token_count++;
       if (token_count % 100 === 0) {
-        consoleLog('info', `ChatAPI: createChain Episode #${i+ 1} Chat Token count: ${token_count}`);
+        consoleLog('info', `ChatAPI: createChain Episode #${i + 1} Chat Token count: ${token_count}`);
       }
       if (typeof token === 'string') {
         sendData(JSON.stringify({ data: token }));
@@ -260,7 +260,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Create an array to hold the chains
   const chains = [];
-  const titles : string[] = [];
+  const titles: string[] = [];
 
   // Create a chain for each episode
   for (let i = 0; i < episodeCount; i++) {
@@ -304,7 +304,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } else {
         sendData(JSON.stringify({ data: `\nAnswer #${episodeNumber}.\n` }));
       }
-    } 
+    }
 
     // condense history if needed
     consoleLog('info', `ChatAPI: OpenAI GPT has ${spaceLeft} tokens available for ${chatHistory.length} chat history items costing ${countTokens(chatHistory)} tokens.`);
@@ -346,12 +346,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ))
         );
 
+        let references = '';
         for (const reference of uniqueSourceDocuments) {
           if (reference.metadata && reference.metadata.source) {
             consoleLog('info', `ChatAPI: Reference ${path.basename(reference.metadata.source)}.`);
-            sendData(JSON.stringify({ data: `\n[Reference: ${path.basename(reference.metadata.source)}]\n` }));
+            references = references + `[Reference: ${path.basename(reference.metadata.source)}]\n`;
           }
         }
+        sendData(JSON.stringify({ data: `\nReferences: ${references}\n` }));
       } else {
         consoleLog('info', `ChatAPI: No reference documents.`);
       }

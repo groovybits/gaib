@@ -182,7 +182,7 @@ export const makeChain = async (
   }
 
   // Create the model
-  let model : BaseLanguageModel;
+  let model: BaseLanguageModel;
   try {
     model = await createModel({
       temperature: temperature,
@@ -220,9 +220,6 @@ export const makeChain = async (
             } else {
               accumulatedTitleTokens += token;
               accumulatedTitleTokenCount += 1;
-              if (!storyMode) {
-                onTokenStream(token);
-              }
 
               if (accumulatedTitleTokenCount % logInterval === 0) {
                 console.log(
@@ -236,7 +233,11 @@ export const makeChain = async (
               title_finished = true;
               console.log('makeChain:', personality, "Stories Title: [\n", accumulatedTitleTokens.trim(), "\n] Title Accumulated: ", accumulatedTitleTokenCount, " tokens.");
               if (!storyMode) {
-                onTokenStream("\n\n## Answer Begins:\n\n"); 
+                onTokenStream("Question: " + accumulatedTitleTokens.trim() + ".\n");
+                onTokenStream("\n\n## Answer Begins:\n\n");
+              } else {
+                onTokenStream(accumulatedTitleTokens.trim() + ".\n");
+                onTokenStream("\n\n## Story Begins:\n\n");
               }
             } else {
               console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");

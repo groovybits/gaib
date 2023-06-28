@@ -289,7 +289,7 @@ function Home({ user }: HomeProps) {
         try {
           let response;
           if (imageSource === 'pexels') {
-            let extracted_keywords = extractKeywords(sentence, 24).join(' ');
+            let extracted_keywords = extractKeywords(sentence, 32).join(' ');
             console.log('Extracted keywords: [', extracted_keywords, ']');
             keywords = encodeURIComponent(extracted_keywords);
             response = await fetch('/api/pexels', {
@@ -298,11 +298,11 @@ function Home({ user }: HomeProps) {
               body: JSON.stringify({ keywords }),
             });
           } else if (imageSource === 'deepai') {
-            let context = "Create an anime representation TV frame with characters and objects of the description, leaving room for overlaying subtitles, and a background that is not too distracting";
+            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || "Draw an anime frame in manga style japanese inspired hand drawn art pen ink drawing with flat areas of color using the following scene description. leave an area clear of anything contrasting white text with black boarders near the lower 2/3 of the image for the subtitle.";
             response = await fetch('/api/deepai', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: `${context}: ${sentence}`/*, imageUrl: lastImage*/ }),
+              body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: lastImage }),
             });
           }
 
@@ -361,7 +361,7 @@ function Home({ user }: HomeProps) {
       const finalText = cleanedText.replace(specialSymbolsRegex, '');
 
       return finalText;
-    }  
+    }
 
     async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
       const response = await fetch('/api/translate', {
@@ -385,8 +385,11 @@ function Home({ user }: HomeProps) {
         return;
       }
       try {
-        const doc = nlp(messages[lastMessageIndex].message);
-        sentences = doc.sentences().out('array');
+        /*const doc = nlp(messages[lastMessageIndex].message);
+        sentences = doc.sentences().out('array');*/
+        // Split the message into paragraphs at each empty line
+        const paragraphs = messages[lastMessageIndex].message.split(/\n\s*\n/);
+        sentences = paragraphs.map(paragraph => paragraph.trim());
       } catch (e) {
         console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
@@ -473,21 +476,86 @@ function Home({ user }: HomeProps) {
 
       let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
       let model = defaultModel;
+
+      let sceneTexts: string[] = [];
+      let currentSceneText = "";
       for (const sentence of sentences) {
+        if (sentence.includes('SCENE:')) {
+          // When we encounter a new scene, we push the current scene text to the array
+          // and start a new scene text
+          if (currentSceneText !== "") {
+            sceneTexts.push(currentSceneText.replace('SCENE:', ''));
+          }
+          currentSceneText = sentence;
+        } else {
+          // If it's not a new scene, we append the sentence to the current scene text
+          currentSceneText += " " + sentence;
+        }
+      }
+      // Don't forget to push the last scene text
+      if (currentSceneText !== "") {
+        sceneTexts.push(currentSceneText);
+      }
+
+      if (sceneTexts.length == 0) {
+        sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '')}`);
+      }
+
+      let sceneIndex = 0;
+
+      // Merge sentences that are part of the same paragraph
+      /*let mergedSentences: string[] = [];
+      for (const sentence of sentences) {
+        if (sentence.startsWith('*') || sentence.startsWith('-') || sentence.startsWith('SCENE:') || sentence.startsWith('Episode Title:') || sentence.startsWith('Question: ') || sentence.startsWith('Answer: ') || sentence.startsWith('Story Begins: ') || sentence.startsWith('Plotline: ') || sentence.startsWith('References: ') || sentence === '') {
+          if (sentence !== '') {
+            mergedSentences.push(sentence);
+          }
+        } else {
+          if (mergedSentences.length > 0) {
+            mergedSentences[mergedSentences.length - 1] += ' ' + sentence;
+          } else {
+            mergedSentences.push(sentence);
+          }
+        }
+      }*/
+
+      for (let sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
           if (sentence == '---' || sentence == '') {
             continue;
           }
           // get the image for the sentence
-          if (sentence !== '' && sentence.length > 32 && sentence.includes('SCENE:')) {
-            gaibImage = await generateImageUrl(sentence, true, lastImage);
-            if (gaibImage != '') {
-              lastImage = gaibImage;
+          const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai'
+          if (!sentence.startsWith('References: ')
+            && sentence !== ''
+            && (imageSource == 'pexels'
+              || (sentence.includes('SCENE:')
+                || sentence.includes('Episode Title:')
+                || sentence.includes('Question: ')
+                || sentence.includes('Answer: ')
+                || sentence.includes('Story Begins: ')
+                || sentence.includes('Plotline: ')
+                /*|| (sentence.startsWith('*') && sentence.length > 60)*/))) {
+            let imageDescription = sentence;
+            if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE:')) {
+              sentence = sentence.replace('[', '');
+              sentence = sentence.replace(']', '');
+              if (sentence.includes('SCENE:')) {
+                sentence = sentence.replace('SCENE:', '');
+                imageDescription = sceneTexts[sceneIndex];
+                sceneIndex++;  // Move to the next scene
+              }
+              gaibImage = await generateImageUrl(imageDescription, true, lastImage);
+              if (gaibImage != '') {
+                lastImage = gaibImage;
+              }
+              setPexelImageUrls(gaibImage);
+              setSubtitle(''); // Clear the subtitle
             }
-            setPexelImageUrls(gaibImage);
-            setSubtitle(''); // Clear the subtitle
-            // continue // GPT won't obey us and seems to not just make it a scene change, but part of the plot
+            if (sentence.includes('SCENE:')) {
+              //continue // GPT won't obey us and seems to not just make it a scene change, but part of the plot
+            }
           }
 
           // Set the subtitle to the translated text if the text is not in English
@@ -1075,22 +1143,22 @@ function Home({ user }: HomeProps) {
                 </button>
                 {selectedTheme === 'Anime' ? (
                   <div className={styles.generatedImage}>
-                      {(imageUrl === '') ? "" : (
+                    {(imageUrl === '') ? "" : (
                       <div className={styles.generatedImage}>
-                      <img
-                        src={imageUrl}
-                        alt="GAIB"
-                      />
+                        <img
+                          src={imageUrl}
+                          alt="GAIB"
+                        />
                       </div>
-                      )}
+                    )}
                     <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>{subtitle}
                     </div>
                     {(imageUrl === '') ? "" : (
-                    <div>
-                    <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
-                    </div>
+                      <div>
+                        <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
+                      </div>
                     )}
                   </div>
                 ) : (

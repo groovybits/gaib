@@ -90,10 +90,11 @@ Answer in Markdown format:
 `;
 
 export const ROLE_ENFORCER = `Do not mention your an AI Language model or that you can't access current information, stick to the role. 
-Add lines starting with "[SCENE:...]" that contain a full detailed description of the next upcoming lines scene to use for prompting ai for image generation for giving a visual representation of the story.`;
+Add narrator style lines every new character or change of topic that start with the string "[SCENE:...]" that filles in the ... with
+a full detailed description of the plot and current scene with context to use for prompting ai for image generation for giving a visual representation of the story.`;
 
 export const GENDER_MARKER = `Add gender markers in the format of [m] or [f] or [n] after each characters name, 
-starting all lines like "Name[gender]: Dialogue..." only one line per speaker. Make sure it is exactly like "Name[gender]:" prefixing each speaker line.
+starting all lines like "Name[gender]: Dialogue Line..." filling in Dialogue line... with the speakers line, using a new line after each speakers line. Make sure it is exactly like "Name[gender]:" prefixing each speaker line.
 Do not include spaces between first and last names, give a list of names with gender markers one per line at the start of the script.`;
 
 export const PERSONALITY_PROMPTS = {
