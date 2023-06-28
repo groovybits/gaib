@@ -476,14 +476,18 @@ function Home({ user }: HomeProps) {
       for (const sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
+          if (sentence == '---' || sentence == '') {
+            continue;
+          }
           // get the image for the sentence
-          if (sentence !== '' && sentence.length > 32) {
+          if (sentence !== '' && sentence.length > 32 && sentence.includes('SCENE:')) {
             gaibImage = await generateImageUrl(sentence, true, lastImage);
             if (gaibImage != '') {
               lastImage = gaibImage;
             }
             setPexelImageUrls(gaibImage);
             setSubtitle(''); // Clear the subtitle
+            // continue // GPT won't obey us and seems to not just make it a scene change, but part of the plot
           }
 
           // Set the subtitle to the translated text if the text is not in English
