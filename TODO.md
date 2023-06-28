@@ -23,4 +23,5 @@
 * Ability to avoid any triggers / issue content by AI analysis of images
 * Ability to upvote images and fingerprint them to know what an image is and how popular it is over time
 * Improve AI Image generation with deepai and use model images for consistency, prompt context.
+* Social media site style sharing between users of GAIB. saving of all content generated with sharable options.
 * ... Much more
