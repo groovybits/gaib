@@ -61,6 +61,12 @@ GAIB can adopt various modes, including:
 - **Vedic**: GAIB adopts the persona of a Vedic sage from the Upanishads or other various characters from the Vedic scriptures.
 - **VideoEngineer**: GAIB acts as an expert in video engineering in all aspects for media capture, transcoding, streaming CDNs, and any related concepts.
 
+
+![GAIB Frontend](https://storage.googleapis.com/gaib/gaib/gaib_frontend.png)
+
+
+![GAIB News](https://storage.googleapis.com/gaib/gaib/gaib_news.png)
+
 ## Tech Stack
 
 The tech stack used includes LangChain, Pinecone, TypeScript, OpenAI, and Next.js. LangChain is a framework that makes it easier to build scalable AI/LLM apps and chatbots. Pinecone is a vector store for storing embeddings and your PDF in text to later retrieve similar docs.
