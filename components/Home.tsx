@@ -298,7 +298,7 @@ function Home({ user }: HomeProps) {
               body: JSON.stringify({ keywords }),
             });
           } else if (imageSource === 'deepai') {
-            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || "Draw an anime frame in manga style japanese inspired hand drawn art pen ink drawing with flat areas of color using the following scene description. leave an area clear of anything contrasting white text with black boarders near the lower 2/3 of the image for the subtitle.";
+            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || "Anime episode screenshot of animated hand drawn art.";
             response = await fetch('/api/deepai', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

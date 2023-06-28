@@ -300,9 +300,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Generate a title for the next episode
     if (i > 0) {
       if (isStory) {
-        sendData(JSON.stringify({ data: `\nEpisode #${episodeNumber}.\n` }));
+        sendData(JSON.stringify({ data: `\n\nEpisode #${episodeNumber}.\n\n` }));
       } else {
-        sendData(JSON.stringify({ data: `\nAnswer #${episodeNumber}.\n` }));
+        sendData(JSON.stringify({ data: `\n\nAnswer #${episodeNumber}.\n\n` }));
       }
     }
 
@@ -353,7 +353,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             references = references + `[Reference: ${path.basename(reference.metadata.source)}]\n`;
           }
         }
-        sendData(JSON.stringify({ data: `\nReferences: ${references}\n` }));
+        sendData(JSON.stringify({ data: `\n\n${references}\n` }));
       } else {
         consoleLog('info', `ChatAPI: No reference documents.`);
       }
@@ -377,7 +377,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // check if we have used the max tokens requested
     if (total_token_count >= totalTokens && episodeCount > 1) {
       consoleLog('info', `ChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.`);
-      sendData(JSON.stringify({ data: `ChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.` }));
+      sendData(JSON.stringify({ data: `\n\nChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.` }));
       break;
     }
   }
