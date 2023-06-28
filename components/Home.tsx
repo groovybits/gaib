@@ -389,7 +389,17 @@ function Home({ user }: HomeProps) {
         sentences = doc.sentences().out('array');*/
         // Split the message into paragraphs at each empty line
         const paragraphs = messages[lastMessageIndex].message.split(/\n\s*\n/);
-        sentences = paragraphs.map(paragraph => paragraph.trim());
+        sentences = [];
+        for (const paragraph of paragraphs) {
+          // If the paragraph is too long, split it into sentences
+          if (paragraph.length > 800) { // 10 lines of 80 characters
+            const doc = nlp(paragraph);
+            const paragraphSentences = doc.sentences().out('array');
+            sentences.push(...paragraphSentences);
+          } else {
+            sentences.push(paragraph);
+          }
+        }
       } catch (e) {
         console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
         sentences = [messages[lastMessageIndex].message];
