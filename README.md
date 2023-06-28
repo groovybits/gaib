@@ -17,6 +17,7 @@ Twitch stream of GAIB: [groovyaibot](https://twitch.tv/groovyaibot)
 - **Story or Question Mode**: Each personality can operate in either story or question mode.
 - **Subtitles**: GAIB provides multilingual subtitles of Anime quality.
 - **Meme Images**: GAIB generates meme images for each subtitle line, enabling visual storytelling via memes.
+- **DeepAI Image Generation**: GAIB supports text to image generation of the output, currently DeepAI is supported.
 - **Control**: Users can control the number of maxTokens, documents used, and the number of episodes created on a topic.
 - **Transcript View**: Users can copy/paste the markup output.
 - **Anime View Mode or Basic Terminal Output Mode**: Users can choose between these two modes.
