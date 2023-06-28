@@ -261,7 +261,7 @@ function Home({ user }: HomeProps) {
     }
 
     // Choose Pexles, DeepAI or local images
-    async function generateImageUrl(sentence: string, useImageAPI = false): Promise<ImageData | string> {
+    async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = ''): Promise<ImageData | string> {
       const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai'
       const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
       // Check if it has been 5 seconds since we last generated an image
@@ -279,28 +279,30 @@ function Home({ user }: HomeProps) {
         sentence = 'Anime AI Robot, quantum computing, and the meaning of life.';
       }
 
+      let keywords = '';
+
       // Use local images if requested else use Pexels API to fetch images
       if (!useImageAPI) {
         // use local images
         return getGaib();
       } else {
         try {
-          let extracted_keywords = extractKeywords(sentence, 16).join(' ');
-          console.log('Extracted keywords: [', extracted_keywords, ']');
-          const keywords = encodeURIComponent(extracted_keywords);
-
           let response;
           if (imageSource === 'pexels') {
+            let extracted_keywords = extractKeywords(sentence, 24).join(' ');
+            console.log('Extracted keywords: [', extracted_keywords, ']');
+            keywords = encodeURIComponent(extracted_keywords);
             response = await fetch('/api/pexels', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ keywords }),
             });
           } else if (imageSource === 'deepai') {
+            let context = "Create an anime representation TV frame with characters and objects of the description, leaving room for overlaying subtitles, and a background that is not too distracting";
             response = await fetch('/api/deepai', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: sentence, imageUrl: '' }),
+              body: JSON.stringify({ prompt: `${context}: ${sentence}`/*, imageUrl: lastImage*/ }),
             });
           }
 
@@ -392,6 +394,7 @@ function Home({ user }: HomeProps) {
 
       // Display the images and subtitles
       let gaibImage = await generateImageUrl('', false);
+      let lastImage = gaibImage;
       setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
 
@@ -430,6 +433,7 @@ function Home({ user }: HomeProps) {
       let isContinuingToSpeak = false;
       let isSceneChange = false;
       let lastSpeaker = '';
+
 
       // Extract gender markers from the entire message
       const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
@@ -473,8 +477,11 @@ function Home({ user }: HomeProps) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
           // get the image for the sentence
-          if (sentence !== '' && sentence.length > 16) {
-            gaibImage = await generateImageUrl(sentence, true);
+          if (sentence !== '' && sentence.length > 32) {
+            gaibImage = await generateImageUrl(sentence, true, lastImage);
+            if (gaibImage != '') {
+              lastImage = gaibImage;
+            }
             setPexelImageUrls(gaibImage);
             setSubtitle(''); // Clear the subtitle
           }

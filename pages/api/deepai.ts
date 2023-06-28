@@ -9,7 +9,7 @@ const deepaiHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     const apiKey = process.env.DEEPAI_API_KEY;
     const gridSize = process.env.DEEPAI_GRID_SIZE || '1';
     const width = process.env.DEEPAI_WIDTH || '360';
-    const height = process.env.DEEPAI_HEIGHT || '240';
+    const height = process.env.DEEPAI_HEIGHT || '256';
 
     if (!apiKey) {
       console.error('ERROR: DeepAI API key not found in environment variables, setup .env with DEEPAI_API_KEY.');
