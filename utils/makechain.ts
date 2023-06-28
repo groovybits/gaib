@@ -25,6 +25,11 @@ import { on } from 'events';
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 
 const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === 'false' ? false : true;
+const modelName = process.env.MODEL_NAME || 'gpt-3.5-turbo-16k';  //change this to gpt-4 if you have access
+const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process.env.PRESENCE_PENALTY) : 0.2;
+const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.3;
+const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.7;
+const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.1;
 
 function countTokens(textArray: string[]): number {
   let totalTokens = 0;
@@ -107,7 +112,7 @@ export const makeChain = async (
   let accumulatedBodyTokenCount = 0;
   let documentsReturned = documentCount;
 
-  let temperature = (storyMode) ? 0.7 : 0.1;
+  let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
   let logInterval = 100; // Adjust this value to log less or more frequently
   let tokenCount = 0;
   let isPremium = await isUserPremium();
@@ -181,10 +186,10 @@ export const makeChain = async (
   try {
     model = await createModel({
       temperature: temperature,
-      presencePenalty: 0.2,
+      presencePenalty: presence,
       maxTokens: (maxTokens > 0) ? maxTokens : null,
-      frequencyPenalty: 0.3,
-      modelName: 'gpt-3.5-turbo-16k', //change this to gpt-4 if you have access
+      frequencyPenalty: frequency,
+      modelName: modelName,
       streaming: Boolean(onTokenStream),
       callbackManager: onTokenStream
         ? CallbackManager.fromHandlers({

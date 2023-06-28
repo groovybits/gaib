@@ -260,8 +260,10 @@ function Home({ user }: HomeProps) {
       return url;
     }
 
-    // TODO - use image generation API in the future when it is available
-    async function gptGeneratedImageUrl(sentence: string, useImageAPI = false): Promise<ImageData | string> {
+    // Choose Pexles, DeepAI or local images
+    async function generateImageUrl(sentence: string, useImageAPI = false): Promise<ImageData | string> {
+      const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai'
+      const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
       // Check if it has been 5 seconds since we last generated an image
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
@@ -286,20 +288,46 @@ function Home({ user }: HomeProps) {
           let extracted_keywords = extractKeywords(sentence, 16).join(' ');
           console.log('Extracted keywords: [', extracted_keywords, ']');
           const keywords = encodeURIComponent(extracted_keywords);
-          const response = await fetch('/api/pexels', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ keywords }),
-          });
+
+          let response;
+          if (imageSource === 'pexels') {
+            response = await fetch('/api/pexels', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ keywords }),
+            });
+          } else if (imageSource === 'deepai') {
+            response = await fetch('/api/deepai', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: sentence, imageUrl: '' }),
+            });
+          }
+
+          if (!response) {
+            console.error('ImageGeneration: No response received from DeepAI API');
+            return getGaib();
+          }
 
           const data = await response.json();
-          if (data.photos && data.photos.length > 0) {
+          if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
             return {
               url: data.photos[0].src.large2x,
               photographer: data.photos[0].photographer,
               photographer_url: data.photos[0].photographer_url,
               pexels_url: data.photos[0].url,
             };
+          } else if (imageSource === 'deepai' && data.output_url) {
+            const imageUrl = data.output_url;
+            if (saveImages === 'true') {
+              // Store the image and index it
+              await fetch('/api/storeImage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl, imageName: imageUrl.split('/').pop(), prompt: sentence }),
+              });
+            }
+            return imageUrl;
           } else {
             console.error('No image found for the given keywords: [', keywords, ']');
           }
@@ -363,7 +391,7 @@ function Home({ user }: HomeProps) {
       }
 
       // Display the images and subtitles
-      let gaibImage = await gptGeneratedImageUrl('', false);
+      let gaibImage = await generateImageUrl('', false);
       setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
 
@@ -446,7 +474,7 @@ function Home({ user }: HomeProps) {
         if (lastMessageDisplayed != lastMessageIndex) {
           // get the image for the sentence
           if (sentence !== '' && sentence.length > 16) {
-            gaibImage = await gptGeneratedImageUrl(sentence, true);
+            gaibImage = await generateImageUrl(sentence, true);
             setPexelImageUrls(gaibImage);
             setSubtitle(''); // Clear the subtitle
           }
@@ -589,7 +617,7 @@ function Home({ user }: HomeProps) {
       stopSpeaking();
       setIsSpeaking(false);
       setSubtitle('');
-      gaibImage = await gptGeneratedImageUrl('', false);
+      gaibImage = await generateImageUrl('', false);
       setPexelImageUrls(gaibImage);
     }
 

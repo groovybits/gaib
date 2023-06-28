@@ -17,9 +17,10 @@
 [X] Next episode, auto generation mode
 [X] Feed input listening for generation of content from a feed, create sentiment and stories off any text or media feeds
 * More prompt per personality customization on waiting messages and general better "waiting" spinner object
-* Generate Images with AI
+[X] Generate Images with AI
 * Generate Video with AI
 * Filter / Censor / Morph input sources with AI filtering / firewall style rules for currated experiences
 * Ability to avoid any triggers / issue content by AI analysis of images
 * Ability to upvote images and fingerprint them to know what an image is and how popular it is over time
+* Improve AI Image generation with deepai and use model images for consistency, prompt context.
 * ... Much more
