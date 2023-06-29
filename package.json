@@ -38,6 +38,7 @@
     "firebase-functions": "^4.3.1",
     "fs": "0.0.1-security",
     "fs-extra": "^11.1.1",
+    "fuse.js": "^6.6.2",
     "gpt3-tokenizer": "^1.1.5",
     "gtts.js": "^1.0.1",
     "howler": "^2.2.3",
@@ -60,6 +61,8 @@
     "stripe": "^12.2.0",
     "tailwind-merge": "^1.10.0",
     "tls": "^0.0.1",
+    "uuid": "^9.0.0",
+    "uuidv4": "^6.2.13",
     "winston": "^3.8.2"
   },
   "devDependencies": {

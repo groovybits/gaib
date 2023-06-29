@@ -76,7 +76,7 @@ The tech stack used includes LangChain, Pinecone, TypeScript, OpenAI, and Next.j
 To set up the GAIB project, follow these steps:
 
 1. **Clone the repository**: Use the command `git clone https://github.com/groovybits/gaib.git` to clone the repository to your local machine.
-2. **Install the dependencies**: Navigate to the project directory and run `pnpm install` to install all the necessary dependencies.
+2. **Install the dependencies**: Navigate to the project directory and run `yarn install` to install all the necessary dependencies.
 3. **Set up your `.env` file**:
    - Copy `.env.example` into `.env`. Your `.env` file should look like this: [Example](https://github.com/groovybits/gaib/blob/main/.env.example)
    - Visit [OpenAI](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key) to retrieve API keys and insert them into your `.env` file as `OPENAI_API_KEY`.
@@ -89,7 +89,7 @@ To set up the GAIB project, follow these steps:
    - Visit [Firebase](https://firebase.google.com/) to set up a project and retrieve your API key, Auth domain, App ID, Storage bucket, Messaging sender ID, and Project ID. Insert these into your `.env` file as `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_APP_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, and `NEXT_PUBLIC_FIREBASE_PROJECT_ID`.
    - Visit [Stripe](https://stripe.com/) to retrieve your public key, secret key, and price ID. Insert these into your `.env` file as `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID`.
 
-4. **Set up the `PINECONE_NAME_SPACE` in `.env`**: This should be a default `namespace` where you'd like to store your embeddings on Pinecone. When you run `pnpm run ingest <namespace> <document>` you can use different namespaces. This namespace will later be used for queries and retrieval. The different personalities check if the namespace exists for their names too, so they can focus on a set of data.
+4. **Set up the `PINECONE_NAME_SPACE` in `.env`**: This should be a default `namespace` where you'd like to store your embeddings on Pinecone. When you run `yarn run ingest <namespace> <document>` you can use different namespaces. This namespace will later be used for queries and retrieval. The different personalities check if the namespace exists for their names too, so they can focus on a set of data.
 5. **Configure the OpenAI SDK**: In `utils/makechain.ts`, you'll find the main
 OpenAI SDK code. Change `modelName` in `new OpenAIChat` to `gpt-3.5-turbo` if you don't have access to `gpt-4`. Please verify outside this repo that you have access to `gpt-4`, otherwise the application will not work with it. There are personalities setup in [personalityPrompts.ts](https://github.com/groovybits/gaib/blob/main/config/personalityPrompts.ts)
 6. **Set up Google Cloud Storage**: If you plan to enable image saving, you'll need to set up a Google Cloud Storage bucket and provide its name as `GCS_BUCKET_NAME` in your `.env` file.
@@ -111,7 +111,7 @@ The GAIB project uses several environment variables for configuration. These are
 - `PINECONE_API_KEY`: This is your Pinecone API key. It's used to authenticate with the Pinecone API.
 - `PINECONE_ENVIRONMENT`: This is the Pinecone environment name. It should match the one on your Pinecone dashboard.
 - `PINECONE_INDEX_NAME`: This is the Pinecone index name. It should match the one on your Pinecone dashboard.
-- `PINECONE_NAME_SPACE`: This is the namespace where you'd like to store your embeddings on Pinecone when you run `pnpm run ingest`.
+- `PINECONE_NAME_SPACE`: This is the namespace where you'd like to store your embeddings on Pinecone when you run `yarn run ingest`.
 - `OTHER_PINECONE_NAMESPACES`: These are other namespaces where you'd like to store your embeddings on Pinecone.
 - `MEDIASTACK_API_KEY`: This is your Mediastack API key. It's used to fetch newsfeed input for generation of the output.
 - `GOOGLE_APPLICATION_CREDENTIALS`: This is the path to your Google Cloud Platform JSON key file. It's used to authenticate with Google Cloud Speech-to-Text API.
@@ -154,7 +154,7 @@ This repo can load multiple PDF files:
 
 ## Run the app
 
-Once you've verified that the embeddings and content have been successfully added to your Pinecone, you can run the app `pnpm run dev` to launch the local dev environment, and then type a question in the chat interface at https://localhost:3000. For production you would use `pnpm start` run GAIB. There is a Dockerfile which can help avoid running on your local system.
+Once you've verified that the embeddings and content have been successfully added to your Pinecone, you can run the app `yarn run dev` to launch the local dev environment, and then type a question in the chat interface at https://localhost:3000. For production you would use `yarn start` run GAIB. There is a Dockerfile which can help avoid running on your local system.
 
 ## Docker and Cloud Build
 

@@ -353,7 +353,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             references = references + `[Reference: ${path.basename(reference.metadata.source)}]\n`;
           }
         }
-        sendData(JSON.stringify({ data: `\n\n${references}\n` }));
+        sendData(JSON.stringify({ data: `\n\nReferences: ${references}\n` }));
       } else {
         consoleLog('info', `ChatAPI: No reference documents.`);
       }

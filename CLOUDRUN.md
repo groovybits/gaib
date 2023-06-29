@@ -60,10 +60,7 @@ steps:
   ...
 ```
 
-The `<encrypted-value>` is the base64-encoded encrypted value of the secret, which you can obtain using the `gcloud` command-line tool.
-
-Remember to replace all placeholder values with your actual values. After you've set up your
-
+You will need to setup all the environment variables in cloudrun and cloudbuild, using _ prefixes in cloudbuild. This is a large list, you will need to add them all to both.
 Dockerfile, cloudbuild.yaml file, and secrets, you're ready to deploy GAIB on Google Cloud Run!
 
 ## Deploying to Google Cloud Run

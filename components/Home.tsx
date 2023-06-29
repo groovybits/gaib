@@ -20,6 +20,7 @@ import ReactMarkdown from 'react-markdown';
 import DocumentDropdown from '@/components/DocumentDropdown';
 import EpisodeDropdown from '@/components/EpisodeDropdown';
 import Modal from 'react-modal';
+import { v4 as uuidv4 } from 'uuid';
 
 const debug = process.env.NEXT_PUBLIC_DEBUG || false;
 
@@ -261,7 +262,7 @@ function Home({ user }: HomeProps) {
     }
 
     // Choose Pexles, DeepAI or local images
-    async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = ''): Promise<ImageData | string> {
+    async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = '', episodeId = '', count = 0): Promise<ImageData | string> {
       const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai'
       const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
       // Check if it has been 5 seconds since we last generated an image
@@ -298,11 +299,19 @@ function Home({ user }: HomeProps) {
               body: JSON.stringify({ keywords }),
             });
           } else if (imageSource === 'deepai') {
-            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || "Anime episode screenshot of animated hand drawn art.";
+            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+            let exampleImage = '' as ImageData | string;
+            if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+              if (lastImage !== '') {
+                exampleImage = lastImage;
+              } else {
+                exampleImage = await getGaib();
+              }
+            }
             response = await fetch('/api/deepai', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: lastImage }),
+              body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
             });
           }
 
@@ -326,7 +335,7 @@ function Home({ user }: HomeProps) {
               await fetch('/api/storeImage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl, imageName: imageUrl.split('/').pop(), prompt: sentence }),
+                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${episodeId}_${count}` }),
               });
             }
             return imageUrl;
@@ -406,7 +415,8 @@ function Home({ user }: HomeProps) {
       }
 
       // Display the images and subtitles
-      let gaibImage = await generateImageUrl('', false);
+      const episodeId = uuidv4();
+      let gaibImage = await generateImageUrl('', false, '', episodeId);
       let lastImage = gaibImage;
       setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
@@ -529,6 +539,7 @@ function Home({ user }: HomeProps) {
         }
       }*/
 
+      let count = 0;
       for (let sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
@@ -556,7 +567,8 @@ function Home({ user }: HomeProps) {
                 imageDescription = sceneTexts[sceneIndex];
                 sceneIndex++;  // Move to the next scene
               }
-              gaibImage = await generateImageUrl(imageDescription, true, lastImage);
+              count += 1;
+              gaibImage = await generateImageUrl(imageDescription, true, lastImage, episodeId, count);
               if (gaibImage != '') {
                 lastImage = gaibImage;
               }
@@ -706,7 +718,7 @@ function Home({ user }: HomeProps) {
       stopSpeaking();
       setIsSpeaking(false);
       setSubtitle('');
-      gaibImage = await generateImageUrl('', false);
+      gaibImage = await generateImageUrl('', false, '', episodeId);
       setPexelImageUrls(gaibImage);
     }
 
