@@ -136,6 +136,8 @@ function Auth({ }: Props): ReactElement {
           " photoUrl:", userCredentials.user.photoURL,
           " displayName:", userCredentials.user.displayName || "unknown",
           " email:", userCredentials.user.email);
+        
+        firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
       }
     } catch (error) {
       console.log(error);
