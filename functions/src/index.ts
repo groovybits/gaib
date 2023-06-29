@@ -12,7 +12,7 @@ const stripe = new Stripe(functions.config().stripe.secret, {
 exports.setInitialTokenBalance =
     functions.auth.user().onCreate(async (user) => {
       const initialTokenBalance =
-    parseInt(functions.config().stripe.trial_token_balance || "50000");
+    parseInt(functions.config().stripe.trial_token_balance || "2000");
 
       await
       admin.firestore().collection("users").doc(user.uid).set({
@@ -24,6 +24,7 @@ exports.setInitialTokenBalance =
         tokenBalance: initialTokenBalance,
         isPremium: false,
         isAdmin: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     });
 
@@ -38,7 +39,7 @@ exports.allocateTokensOnSuccessfulPayment = functions.firestore
       const userRef = db.collection("users").doc(userId);
       // convert environment variable to a number
       const premiumTokens =
-        parseInt(functions.config().stripe.premium_token_balance || "5000000");
+        parseInt(functions.config().stripe.premium_token_balance || "100000");
 
       // Allocate tokens to the user and set isPremium to true
       await userRef.update({
@@ -79,7 +80,7 @@ exports.handleStripeWebhook =
         const userRef = db.collection("users").doc(userId);
         // convert environment variable to a number
         const premiumTokens =
-      parseInt(functions.config().stripe.premium_token_balance || "5000000");
+      parseInt(functions.config().stripe.premium_token_balance || "100000");
 
         // Allocate tokens to the user and set isPremium to true
         await userRef.update({
