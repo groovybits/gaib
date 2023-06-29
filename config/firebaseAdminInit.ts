@@ -14,4 +14,4 @@ if (!admin.apps.length) {
 
 const firestoreAdmin = admin.firestore();
 
-export default firestoreAdmin;
+export { admin, firestoreAdmin };

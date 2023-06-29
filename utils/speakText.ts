@@ -12,6 +12,7 @@ export const useSpeakText = () => {
 
   const speakText = async (
     text: string,
+    idToken: string,
     rate: number = 1,
     ssmlGender: string = 'FEMALE',
     languageCode: string = 'en-US',
@@ -41,14 +42,14 @@ export const useSpeakText = () => {
           //console.log(`Synthesizing speech ${ssmlGender} ${languageCode} for text: ${text}`);
           response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`, },
             body: JSON.stringify({ text, rate, ssmlGender, languageCode }),
           });
         } else {
           //console.log(`Synthesizing speech ${ssmlGender} ${name} ${languageCode} for text: ${text}`);
           response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`, },
             body: JSON.stringify({ text, rate, ssmlGender, languageCode, name }),
           });
         }

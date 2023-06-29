@@ -17,7 +17,7 @@ import {
   NEWS_STORY_FOOTER,
   NEWS_QUESTION_FOOTER,
 } from '@/config/personalityPrompts';
-import firestoreAdmin from '@/config/firebaseAdminInit';
+import { firestoreAdmin } from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
 import { BaseLanguageModel } from 'langchain/dist/base_language';
 import GPT3Tokenizer from 'gpt3-tokenizer';

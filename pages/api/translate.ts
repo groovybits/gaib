@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
 const fetchTranslation = async (text: string, targetLanguage: string): Promise<string> => {
   const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
@@ -20,7 +21,8 @@ const fetchTranslation = async (text: string, targetLanguage: string): Promise<s
   return data.data.translations[0].translatedText;
 };
 
-const translateHandler = async (req: NextApiRequest, res: NextApiResponse) => {
+const translateHandler = async (req: NextApiRequestWithUser, res: NextApiResponse) => {
+  await authCheck(req, res, async () => {
   if (req.method === 'POST') {
     const { text, targetLanguage } = req.body;
 
@@ -35,5 +37,6 @@ const translateHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.setHeader('Allow', ['POST']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
+  });
 };
 export default translateHandler;

@@ -34,7 +34,6 @@ function Auth({ }: Props): ReactElement {
   // Add this line after creating the userDocRef
   const [userData, userDataLoading] = useDocumentData(userDocRef);
 
-
   useEffect(() => {
     if (user) {
       // Fetch the user's token balance from Firestore
@@ -46,17 +45,21 @@ function Auth({ }: Props): ReactElement {
       });
 
       // Fetch the price details from Stripe
-      fetch("/api/getPriceDetails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ priceId: stripePriceId }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setPriceDetails(data);
+      const fetchPriceDetails = async () => {
+        const idToken = await user.getIdToken();
+        const response = await fetch("/api/getPriceDetails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": idToken,
+          },
+          body: JSON.stringify({ priceId: stripePriceId }),
         });
+        const data = await response.json();
+        setPriceDetails(data);
+      };
+
+      fetchPriceDetails();
     }
   }, [user]);
 

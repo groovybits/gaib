@@ -142,7 +142,12 @@ function Home({ user }: HomeProps) {
 
   // fetch news from mediastack service and set the news state
   const fetchNews = async () => {
-    const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`); // offset, sort
+    const idToken = await user.getIdToken();
+    const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    }); // offset, sort
     if (!res.ok) {
       console.log('Error fetching news: ', res.statusText);
       return [];
@@ -290,15 +295,17 @@ function Home({ user }: HomeProps) {
         try {
           let response;
           if (imageSource === 'pexels') {
+            const idToken = await user.getIdToken();
             let extracted_keywords = extractKeywords(sentence, 32).join(' ');
             console.log('Extracted keywords: [', extracted_keywords, ']');
             keywords = encodeURIComponent(extracted_keywords);
             response = await fetch('/api/pexels', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
               body: JSON.stringify({ keywords }),
             });
           } else if (imageSource === 'deepai') {
+            const idToken = await user.getIdToken();
             let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
             let exampleImage = '' as ImageData | string;
             if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
@@ -310,7 +317,7 @@ function Home({ user }: HomeProps) {
             }
             response = await fetch('/api/deepai', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
               body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
             });
           }
@@ -331,10 +338,11 @@ function Home({ user }: HomeProps) {
           } else if (imageSource === 'deepai' && data.output_url) {
             const imageUrl = data.output_url;
             if (saveImages === 'true') {
+              const idToken = await user.getIdToken();
               // Store the image and index it
               await fetch('/api/storeImage', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
                 body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${episodeId}_${count}` }),
               });
             }
@@ -373,9 +381,10 @@ function Home({ user }: HomeProps) {
     }
 
     async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
+      const idToken = await user.getIdToken();
       const response = await fetch('/api/translate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({ text, targetLanguage }),
       });
 
@@ -388,6 +397,7 @@ function Home({ user }: HomeProps) {
     }
 
     async function displayImagesAndSubtitles() {
+      const idToken = await user.getIdToken();
       let sentences: string[];
       if (isPaused) {
         stopSpeaking();
@@ -664,7 +674,7 @@ function Home({ user }: HomeProps) {
               }
               const cleanText = removeMarkdownAndSpecialSymbols(sentence);
               if (cleanText !== '') {
-                await speakText(cleanText, 1, detectedGender, audioLanguage, model);
+                await speakText(cleanText, idToken, 1, detectedGender, audioLanguage, model);
               } else {
                 // Wait anyways even if speaking fails so that the subtitles are displayed
                 const sentenceLength = sentence.length;
@@ -687,7 +697,7 @@ function Home({ user }: HomeProps) {
               try {
                 const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
                 if (cleanText !== '') {
-                  await speakText(translationEntry, 1, detectedGender, audioLanguage, model);
+                  await speakText(translationEntry, idToken, 1, detectedGender, audioLanguage, model);
                 } else {
                   // Wait anyways even if speaking fails so that the subtitles are displayed
                   const sentenceLength = sentence.length;
@@ -802,10 +812,12 @@ function Home({ user }: HomeProps) {
     // Send the question to the server
     const ctrl = new AbortController();
     try {
+      const idToken = await user.getIdToken();
       fetchEventSource('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
           'Retry-After': '5',
         },
         body: JSON.stringify({
