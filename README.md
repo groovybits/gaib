@@ -124,7 +124,7 @@ The GAIB project uses several environment variables for configuration. These are
 - `NEXT_PUBLIC_ENABLE_IMAGE_SAVING`: This is a boolean value that determines whether to save generated images.
 - `GCS_BUCKET_NAME`: This is the name of your Google Cloud Storage bucket where images are saved.
 - `NEXT_PUBLIC_IMAGE_GENERATION_PROMPT`: This is the prompt to use for image generation.
-- `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_APP_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_REGION`: These are your Firebase project settings. They're used to authenticate with Firebase.
+- `FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_APP_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_REGION`: These are your Firebase project settings. They're used to authenticate with Firebase.
 - `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`, `STRIPE_SECRET_KEY`: These are your Stripe API keys. They're used to authenticate with Stripe for payments.
 - `NEXT_PUBLIC_STRIPE_PRICE_ID`: This is the ID of the Stripe price object for the subscription plan you want to use.
 - `NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE`: This is the number of tokens allocated to premium users.
