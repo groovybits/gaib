@@ -21,6 +21,8 @@ import DocumentDropdown from '@/components/DocumentDropdown';
 import EpisodeDropdown from '@/components/EpisodeDropdown';
 import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 const debug = process.env.NEXT_PUBLIC_DEBUG || false;
 
@@ -104,7 +106,52 @@ function Home({ user }: HomeProps) {
   const [feedKeywords, setFeedKeywords] = useState<string>('');
   const [feedSort, setFeedSort] = useState<string>('popularity');
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
+  const router = useRouter();
+
   const isSubmittingRef = useRef(false);
+  interface StoryPart {
+    sentence: string;
+    imageUrl: string;
+  }
+
+  const shareStory = async () => {
+    try {
+      console.log(`Current story: ${JSON.stringify(currentStory)}`);
+
+      if (currentStory.length === 0) {
+        console.log(`shareStory: No stories to share`);
+        alert('Please generate a story first!');
+        return;
+      }
+      const storyText = currentStory.map((item) => item.sentence).join('|');
+      const imageUrls = currentStory.map((item) => item.imageUrl);
+
+      console.log('Data being written:', {
+        userId: user.uid,
+        text: storyText,
+        imageUrls: imageUrls,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log('ID of the current user:', user.uid);
+
+      // Save the story to Firestore
+      await firebase.firestore().collection('stories').add({
+        userId: user.uid,
+        text: storyText,
+        imageUrls: imageUrls,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Clear the current story
+      setCurrentStory([]);
+
+      // Redirect the user to the global page
+      router.push('/global');
+    } catch (error) {
+      console.error('An error occurred in the shareStory function:', error); // Check for any errors
+    }
+  };
 
   const categoryOptions = [
     { value: '', label: 'All Categories' },
@@ -211,14 +258,14 @@ function Home({ user }: HomeProps) {
       }
     };
     processNewsArticle();
-  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending]);  // Remove isProcessing from the dependencies
+  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending, query]);  // Remove isProcessing from the dependencies
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
   };
 
   useEffect(() => {
-    const lastMessageIndex: any = messages.length - 1;
+    const lastMessageIndex: number = messages.length - 1;
 
     function extractKeywords(sentence: string, numberOfKeywords = 2) {
       const doc = nlp(sentence);
@@ -589,6 +636,15 @@ function Home({ user }: HomeProps) {
               //continue // GPT won't obey us and seems to not just make it a scene change, but part of the plot
             }
           }
+          if (messages.length > 1 && lastMessageIndex >= 2) {
+            let image: ImageData | string = lastImage;
+            if (typeof image === 'string') {
+              image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+            } else {
+              image = { url: image.url, photographer: image.photographer, photographer_url: image.photographer_url, pexels_url: image.pexels_url };
+            }
+            setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
+          }
 
           // Set the subtitle to the translated text if the text is not in English
           let translatedText = '';
@@ -747,7 +803,7 @@ function Home({ user }: HomeProps) {
         setIsSpeaking(false);
       }
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -1340,7 +1396,20 @@ function Home({ user }: HomeProps) {
                           </svg>
                           }
                         </button>
-                        <button onClick={handleFetchButtonClick}>
+                        <button
+                          title="Save N Share"
+                          onClick={shareStory}
+                          type="button"
+                          disabled={loading || isSpeaking}
+                          className={styles.footer}
+                        >Save N Share</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                        <button
+                          title="Save N Share"
+                          onClick={handleFetchButtonClick}
+                          className={styles.footer}
+                          disabled={isSpeaking || loading}
+                          type="button"
+                        >
                           {isFetching ? 'Stop fetching news' : 'Start fetching news'}
                         </button>
 
@@ -1383,6 +1452,7 @@ function Home({ user }: HomeProps) {
                             <button onClick={() => setModalIsOpen(false)}>Cancel</button>
                           </div>
                         </Modal>
+
                         {/*<select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
                           {categoryOptions.map(option => (
                             <option key={option.value} value={option.value}>
@@ -1544,6 +1614,11 @@ function Home({ user }: HomeProps) {
                           </div>
                         </div>
                       )}
+                    </div>
+                    <div className={styles.labelContainer}>
+                      <Link href="/global" className={styles.header}>
+                        <a>GAIB Shared Story Archive</a>
+                      </Link>
                     </div>
                   </div>
                 </form>

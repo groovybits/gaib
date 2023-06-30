@@ -89,7 +89,9 @@ Question: {question}
 Answer in Markdown format:
 `;
 
-export const ROLE_ENFORCER = `Do not mention your an AI Language model or that you can't access current information, stick to the role. 
+export const ROLE_ENFORCER = `Do not mention your an AI Language model or that you can't access current information, stick to the role.`;
+
+export const SCENE_MARKER = `
 Add narrator style lines every new character or change of topic that start with the string "[SCENE:...]" that filles in the ... with
 a full detailed description of the plot and current scene with context to use for prompting ai for image generation for giving a visual representation of the story.`;
 
@@ -100,7 +102,7 @@ Do not include spaces between first and last names, give a list of names with ge
 
 export const PERSONALITY_PROMPTS = {
   Anime: `Create a screenplay for an Anime Episode using the story title to create a screenplay using the context as inspiration.
-  ${GENDER_MARKER} ${ROLE_ENFORCER}
+  ${GENDER_MARKER} ${ROLE_ENFORCER} ${SCENE_MARKER}
   Format the story as a screenplay script for a Anime TV show from Japan in markdown format with the story title and script body.
   Make up music and sound effects for the story and display them along with the story in subtitle style.  
   Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone.
@@ -110,7 +112,7 @@ export const PERSONALITY_PROMPTS = {
   Format the story as a screenplay script for a TV show in markdown format with the story title and script body.
   Make up music and sound effects for the story and display them along with the story in subtitle style.  
   they change.  Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone.
-  ${GENDER_MARKER} ${ROLE_ENFORCER}
+  ${GENDER_MARKER} ${ROLE_ENFORCER} ${SCENE_MARKER}
   `,
 
   NewsReporter: `
