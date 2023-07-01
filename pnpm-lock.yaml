@@ -85,9 +85,6 @@ dependencies:
   next-firebase-auth:
     specifier: ^0.15.0
     version: 0.15.0(firebase-admin@11.7.0)(firebase@8.10.1)(next@13.2.3)(react-dom@18.2.0)(react@18.2.0)
-  next-seo:
-    specifier: ^6.1.0
-    version: 6.1.0(next@13.2.3)(react-dom@18.2.0)(react@18.2.0)
   node-fetch:
     specifier: ^3.3.1
     version: 3.3.1
@@ -4966,18 +4963,6 @@ packages:
       firebase: 8.10.1
       firebase-admin: 11.7.0
       hoist-non-react-statics: 3.3.2
-      next: 13.2.3(react-dom@18.2.0)(react@18.2.0)
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
-    dev: false
-
-  /next-seo@6.1.0(next@13.2.3)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-iMBpFoJsR5zWhguHJvsoBDxDSmdYTHtnVPB1ij+CD0NReQCP78ZxxbdL9qkKIf4oEuZEqZkrjAQLB0bkII7RYA==}
-    peerDependencies:
-      next: ^8.1.1-canary.54 || >=9.0.0
-      react: '>=16.0.0'
-      react-dom: '>=16.0.0'
-    dependencies:
       next: 13.2.3(react-dom@18.2.0)(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
