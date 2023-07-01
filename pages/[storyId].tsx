@@ -229,24 +229,4 @@ const Global = () => {
   );
 };
 
-export async function getServerSideProps(context: { query: { storyId: any; }; }) {
-  const { storyId } = context.query;
-
-  let initialStory = null;
-
-  if (storyId) {
-    const doc = await firebase.firestore().collection('stories').doc(storyId as string).get();
-    if (doc.exists) {
-      initialStory = { id: doc.id, ...doc.data() };
-    }
-  }
-
-  return {
-    props: {
-      initialStory,
-    },
-  };
-}
-
-
 export default Global;
