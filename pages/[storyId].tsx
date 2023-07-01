@@ -4,6 +4,7 @@ import firebase from '@/config/firebaseClientInit';
 import styles from '@/styles/Global.module.css';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
+import { NextSeo } from 'next-seo';
 
 const Global = () => {
   const router = useRouter();
@@ -123,27 +124,46 @@ const Global = () => {
     });
 
     return (
-      <div className={styles.story}>
-        <div className={styles.labelContainer}>
-          <button onClick={() => {
-            setSelectedStory(null);
-            router.push('/global');
-          }} className={styles.header}>Back to Stories</button>
-        </div>
-        <div className={styles.header}>
-        <h1>{storyParts[0]}</h1>
-        </div>
+      <>
+        <NextSeo
+          title={selectedStory.text.split('|')[0]} // Use the story's title as the page title
+          description={selectedStory.text} // Use the story's text as the page description
+          openGraph={{
+            url: `${baseUrl}/${storyId}`,
+            title: selectedStory.text.split('|')[0],
+            description: selectedStory.text,
+            images: selectedStory.imageUrls.map((imageUrl: string) => {
+              if (isJsonString(imageUrl)) {
+                const image = JSON.parse(imageUrl);
+                return { url: image.url, alt: 'Story Image' };
+              } else {
+                return { url: imageUrl, alt: 'Story Image' };
+              }
+            }),
+          }}
+        />
         <div className={styles.story}>
-        {storyParts.slice(1).map((part: string, index: number) => (
-          <div key={index} className={styles.storyContent}>
-            <p className={styles.header}>{part}</p>
-            <div className={styles.storyImage}>
-              {images[index]}
-            </div>
+          <div className={styles.labelContainer}>
+            <button onClick={() => {
+              setSelectedStory(null);
+              router.push('/global');
+            }} className={styles.header}>Back to Stories</button>
           </div>
-        ))}
+          <div className={styles.header}>
+            <h1>{storyParts[0]}</h1>
+          </div>
+          <div className={styles.story}>
+            {storyParts.slice(1).map((part: string, index: number) => (
+              <div key={index} className={styles.storyContent}>
+                <p className={styles.header}>{part}</p>
+                <div className={styles.storyImage}>
+                  {images[index]}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
