@@ -65,4 +65,4 @@ steps:
   - '--build-arg'
   - 'NEXT_PUBLIC_GCS_BUCKET_NAME=${_NEXT_PUBLIC_GCS_BUCKET_NAME}'
   - '.'
-images: ['gcr.io/$PROJECT_ID/github.com/groovybits/gaib:latest']
+images: ['gcr.io/$PROJECT_ID/github.com/groovybits/gaib:$COMMIT_SHA']
