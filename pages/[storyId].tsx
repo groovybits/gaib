@@ -5,8 +5,6 @@ import styles from '@/styles/Global.module.css';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-
 const Global = () => {
   const router = useRouter();
   const { storyId } = router.query;
@@ -16,8 +14,15 @@ const Global = () => {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [selectedStory, setSelectedStory] = useState<any>(null);
+  const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
 
   const pageSize = 10; // Number of stories to fetch at a time
+
+  useEffect(() => {
+    if (!baseUrl) {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchStories = async () => {
@@ -70,7 +75,7 @@ const Global = () => {
   }, [storyId]); // Add storyId as a dependency to the effect
 
   const handleShareClick = (storyId: string) => {
-    copy(`${window.location.origin}/${storyId}`);
+    copy(`${baseUrl}/${storyId}`);
   };
 
   const handleFacebookShareClick = (storyId: string) => {
@@ -151,14 +156,18 @@ const Global = () => {
       <div className={styles.labelContainer}>
       {stories.map(story => {
         const isExpanded = story.id === expandedStoryId;
-        const storyUrl = `${window.location.origin}/${story.id}`;
+        const storyUrl = `${baseUrl}/${story.id}`;
 
         return (
           <div key={story.id} className={styles.story}>
-            <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>{story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <button onClick={() => handleShareClick(story.id)}>Copy Sharable Link</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
-            <a href={storyUrl} >Open Story</a>
+            <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>{story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}</a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <button onClick={() => handleFacebookShareClick(story.id)}>Facebook Post</button>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href={storyUrl} >Expand</a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
             {isExpanded && (
               <div className={styles.storyContent}>
                 <p>{story.text}</p>

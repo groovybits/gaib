@@ -11,7 +11,7 @@
   overflow: hidden;
   transition: box-shadow 0.3s ease;
   width: auto;
-  word-wrap: break-word;
+  word-wrap: overflow-wrap;
 }
 
 .story:hover {
