@@ -375,6 +375,7 @@ function Home({ user }: HomeProps) {
           }
 
           const data = await response.json();
+          let imageId = uuidv4();
           if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
             return {
               url: data.photos[0].src.large2x,
@@ -390,10 +391,11 @@ function Home({ user }: HomeProps) {
               await fetch('/api/storeImage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${episodeId}_${count}` }),
+                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${episodeId}_${count}`, imageId }),
               });
             }
-            return imageUrl;
+            const bucketName = process.env.NEXT_PUBLIC_IMAGE_BUCKET_NAME || '';
+            return `https://storage.googleapis.com/${bucketName}/deepAIimage${episodeId}_${imageId}.png`;
           } else {
             console.error('No image found for the given keywords: [', keywords, ']');
           }
