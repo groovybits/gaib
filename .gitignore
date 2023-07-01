@@ -44,3 +44,19 @@ docs/*.pdf
 #Gaib images
 /public/gaib/
 
+.firebase/
+.firebaserc
+.github/
+firebase-debug.log
+functions/.runtimeconfig.json
+functions/gcloud-speech-to-text.json
+functions/lib/
+functions/package-lock.json
+functions/pnpm-lock.yaml
+gcloud-speech-to-text.json
+scripts/processedFiles.json
+utils/processedFiles.json
+
+tools/
+
+yarn.lock
