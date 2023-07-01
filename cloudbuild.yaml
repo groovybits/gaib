@@ -59,6 +59,8 @@ steps:
   - '--build-arg'
   - 'NEXT_PUBLIC_GAIB_DEFAULT_IMAGE=${_NEXT_PUBLIC_GAIB_DEFAULT_IMAGE}'
   - '--build-arg'
+  - 'NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL}'
+  - '--build-arg'
   - 'GPT_MAX_TOKENS=${_GPT_MAX_TOKENS}'
   - '.'
 images: ['gcr.io/$PROJECT_ID/github.com/groovybits/gaib:$COMMIT_SHA']
