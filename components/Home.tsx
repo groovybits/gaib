@@ -391,11 +391,16 @@ function Home({ user }: HomeProps) {
               await fetch('/api/storeImage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${episodeId}_${count}`, imageId }),
+                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${episodeId}_${count}`, imageUUID: imageId }),
               });
             }
-            const bucketName = process.env.NEXT_PUBLIC_IMAGE_BUCKET_NAME || '';
-            return `https://storage.googleapis.com/${bucketName}/deepAIimage${episodeId}_${imageId}.png`;
+            const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
+            if (bucketName !== '') {
+              return `https://storage.googleapis.com/${bucketName}/deepAIimage/${episodeId}_${count}_${imageId}.jpg`;
+            } else {
+              // don't store images in GCS
+              return imageUrl;
+            }
           } else {
             console.error('No image found for the given keywords: [', keywords, ']');
           }

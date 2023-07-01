@@ -62,5 +62,7 @@ steps:
   - 'NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL}'
   - '--build-arg'
   - 'GPT_MAX_TOKENS=${_GPT_MAX_TOKENS}'
+  - '--build-arg'
+  - 'NEXT_PUBLIC_GCS_BUCKET_NAME=${_NEXT_PUBLIC_GCS_BUCKET_NAME}'
   - '.'
 images: ['gcr.io/$PROJECT_ID/github.com/groovybits/gaib:$COMMIT_SHA']

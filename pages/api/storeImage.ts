@@ -24,7 +24,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       // Use the compromise library to extract the most important words from the prompt
       let doc = nlp(prompt);
       let keywords = doc.out('array');
-      let imageId = imageUUID;
 
       // Limit the keywords array to the first 30 elements
       keywords = keywords.slice(0, 30);
@@ -49,9 +48,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       const bucket = storage.bucket(bucketName);
       const file = bucket.file(`deepAIimage/${episodeId}_${imageUUID}.jpg`);
 
-      if (imageUUID === undefined || imageUUID === null || imageUUID === '') {
-        imageId = uuidv4();
-      }
+      console.log(`storeImage: Uploading image ${episodeId}_${imageUUID}.jpg to ${bucketName}.`);
 
       // Pipe the image data to the file
       const writeStream = file.createWriteStream({
@@ -69,12 +66,14 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         writeStream.on('error', reject);
       });
 
+      console.log(`StoreImage: Image ${episodeId}_${imageUUID}.jpg uploaded to ${bucketName}.`);
+
       // Add the image to the Firestore index
-      const docRef = db.collection('images').doc(`${episodeId}_${imageId}.jpg`);
+      const docRef = db.collection('images').doc(`${episodeId}_${imageUUID}.jpg`);
       await docRef.set({
         episodeId: episodeId.split('_')[0],
         count: episodeId.split('_')[1],
-        url: `https://storage.googleapis.com/${bucketName}/deepAIimage/${episodeId}_${imageId}.jpg`,
+        url: `https://storage.googleapis.com/${bucketName}/deepAIimage/${episodeId}_${imageUUID}.jpg`,
         keywords: keywords,
         created: admin.firestore.FieldValue.serverTimestamp(),
       });
