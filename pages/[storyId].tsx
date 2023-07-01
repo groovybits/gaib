@@ -4,16 +4,29 @@ import firebase from '@/config/firebaseClientInit';
 import styles from '@/styles/Global.module.css';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
+import { NextPage, NextPageContext } from 'next';
 
-const Global = () => {
+interface Story {
+  id: string;
+  text: string;
+  imageUrls: string[];
+  timestamp: firebase.firestore.Timestamp;
+  // Add other properties of the story object here
+}
+
+interface InitialProps {
+  initialStory: Story | null;
+}
+
+const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const router = useRouter();
   const { storyId } = router.query;
+  const [selectedStory, setSelectedStory] = useState(initialStory);
 
   const [stories, setStories] = useState<any[]>([]);
   const [expandedStoryId, setExpandedStoryId] = useState<string | null>(null);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedStory, setSelectedStory] = useState<any>(null);
   const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
 
   const pageSize = 10; // Number of stories to fetch at a time
@@ -64,7 +77,7 @@ const Global = () => {
       const fetchStory = async () => {
         const doc = await firebase.firestore().collection('stories').doc(storyId as string).get();
         if (doc.exists) {
-          setSelectedStory({ id: doc.id, ...doc.data() });
+          setSelectedStory({ id: doc.id, ...(doc.data() as any) }); // Cast to any to avoid TypeScript error
         }
       };
 
@@ -207,6 +220,20 @@ const Global = () => {
       </div>
     </div>
   );
+};
+
+Global.getInitialProps = async ({ query }: NextPageContext) => {
+  const { storyId } = query as { storyId?: string };
+  let initialStory = null;
+
+  if (storyId) {
+    const doc = await firebase.firestore().collection('stories').doc(storyId).get();
+    if (doc.exists) {
+      initialStory = { id: doc.id, ...(doc.data() as any) }; // Cast to any to avoid TypeScript error
+    }
+  }
+
+  return { initialStory };
 };
 
 export default Global;
