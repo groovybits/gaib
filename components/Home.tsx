@@ -146,8 +146,7 @@ function Home({ user }: HomeProps) {
       // Clear the current story
       setCurrentStory([]);
 
-      // Redirect the user to the global page
-      router.push('/global');
+      alert('Story shared successfully!');
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
     }
@@ -603,6 +602,11 @@ function Home({ user }: HomeProps) {
         }
       }*/
 
+      // clear current story for save story
+      if (!isFetching) {
+        setCurrentStory([]);
+      }
+
       let count = 0;
       for (let sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
@@ -653,138 +657,143 @@ function Home({ user }: HomeProps) {
             setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
           }
 
-          // Set the subtitle to the translated text if the text is not in English
-          let translatedText = '';
-          if (subtitleLanguage !== 'en-US') {
-            translatedText = await fetchTranslation(sentence, subtitleLanguage);
-            setSubtitle(splitSentence(translatedText));
-          } else {
-            setSubtitle(splitSentence(sentence));
-          }
+          let sentences_by_character : string[] = nlp(sentence).sentences().out('array');
 
-          let speakerChanged = false;
-          // Check if sentence contains a name from genderMarkedNames
-          for (const { name, marker } of genderMarkedNames) {
-            const lcSentence = sentence.toLowerCase();
-            let nameFound = false;
-
-            const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
-            const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
-            for (const prefix of prefixes) {
-              if (lcSentence.startsWith(name + prefix)) {
-                nameFound = true;
-                break;
-              }
-            }
-            for (const prefix of regprefixes) {
-              if (nameFound) {
-                break;
-              }
-              if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
-                nameFound = true;
-                break;
-              }
-            }
-
-            if (nameFound) {
-              console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
-              if (currentSpeaker !== name) {
-                lastSpeaker = currentSpeaker;
-                speakerChanged = true;
-                currentSpeaker = name;
-                isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
-              }
-              switch (marker) {
-                case 'f':
-                  detectedGender = 'FEMALE';
-                  break;
-                case 'm':
-                  detectedGender = 'MALE';
-                  break;
-                case 'n':
-                  detectedGender = 'FEMALE';
-                  break;
-              }
-              // Use the voice model for the character if it exists, otherwise use the default voice model
-              model = voiceModels[name] || defaultModel;
-              break;  // Exit the loop as soon as a name is found
-            }
-          }
-
-          console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
-
-          // If the speaker has changed or if it's a scene change, switch back to the default voice
-          if (!speakerChanged && (sentence.startsWith('*') || sentence.startsWith('-'))) {
-            detectedGender = gender;
-            currentSpeaker = 'GAIB';
-            model = defaultModel;
-            console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
-            isSceneChange = true;  // Reset the scene change flag
-          }
-
-          // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
-          if (sentence.startsWith('(') || (!sentence.startsWith('*') && !speakerChanged && !isSceneChange)) {
-            isContinuingToSpeak = true;
-          }
-
-          // Speak the sentence if speech output is enabled
-          if (speechOutputEnabled) {
-            // Speak the sentence
-            if (audioLanguage === 'en-US') {
-              // Speak the original text
-              if (debug) {
-                console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence);
-              }
-              const cleanText = removeMarkdownAndSpecialSymbols(sentence);
-              if (cleanText !== '') {
-                await speakText(cleanText, idToken, 1, detectedGender, audioLanguage, model);
-              } else {
-                // Wait anyways even if speaking fails so that the subtitles are displayed
-                const sentenceLength = sentence.length;
-                const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                await new Promise(resolve => setTimeout(resolve, waitTime));
-              }
+          // go through by sentence so we can preserve the speaker
+          for (const sentence_by_character of sentences_by_character) {
+            // Set the subtitle to the translated text if the text is not in English
+            let translatedText = '';
+            if (subtitleLanguage !== 'en-US') {
+              translatedText = await fetchTranslation(sentence_by_character, subtitleLanguage);
+              setSubtitle(splitSentence(translatedText));
             } else {
-              // Speak the translated text
-              let translationEntry: string = '';
-              if (translatedText !== '' && audioLanguage == subtitleLanguage) {
-                // Use the previously translated text
-                translationEntry = translatedText;
-              } else {
-                // Translate the text
-                translationEntry = await fetchTranslation(sentence, audioLanguage);
+              setSubtitle(splitSentence(sentence_by_character));
+            }
+
+            let speakerChanged = false;
+            // Check if sentence contains a name from genderMarkedNames
+            for (const { name, marker } of genderMarkedNames) {
+              const lcSentence = sentence_by_character.toLowerCase();
+              let nameFound = false;
+
+              const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
+              const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
+              for (const prefix of prefixes) {
+                if (lcSentence.startsWith(name + prefix)) {
+                  nameFound = true;
+                  break;
+                }
               }
-              if (debug) {
-                console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", translationEntry);
+              for (const prefix of regprefixes) {
+                if (nameFound) {
+                  break;
+                }
+                if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
+                  nameFound = true;
+                  break;
+                }
               }
-              try {
-                const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
+
+              if (nameFound) {
+                console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
+                if (currentSpeaker !== name) {
+                  lastSpeaker = currentSpeaker;
+                  speakerChanged = true;
+                  currentSpeaker = name;
+                  isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
+                }
+                switch (marker) {
+                  case 'f':
+                    detectedGender = 'FEMALE';
+                    break;
+                  case 'm':
+                    detectedGender = 'MALE';
+                    break;
+                  case 'n':
+                    detectedGender = 'FEMALE';
+                    break;
+                }
+                // Use the voice model for the character if it exists, otherwise use the default voice model
+                model = voiceModels[name] || defaultModel;
+                break;  // Exit the loop as soon as a name is found
+              }
+            }
+
+            console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+
+            // If the speaker has changed or if it's a scene change, switch back to the default voice
+            if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
+              detectedGender = gender;
+              currentSpeaker = 'GAIB';
+              model = defaultModel;
+              console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
+              isSceneChange = true;  // Reset the scene change flag
+            }
+
+            // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
+            if (sentence_by_character.startsWith('(') || (!sentence_by_character.startsWith('*') && !speakerChanged && !isSceneChange)) {
+              isContinuingToSpeak = true;
+            }
+
+            // Speak the sentence if speech output is enabled
+            if (speechOutputEnabled) {
+              // Speak the sentence
+              if (audioLanguage === 'en-US') {
+                // Speak the original text
+                if (debug) {
+                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
+                }
+                const cleanText = removeMarkdownAndSpecialSymbols(sentence_by_character);
                 if (cleanText !== '') {
-                  await speakText(translationEntry, idToken, 1, detectedGender, audioLanguage, model);
+                  await speakText(cleanText, idToken, 1, detectedGender, audioLanguage, model);
                 } else {
                   // Wait anyways even if speaking fails so that the subtitles are displayed
-                  const sentenceLength = sentence.length;
+                  const sentenceLength = sentence_by_character.length;
                   const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
                   await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
-              } catch (e) {
-                console.log('Error speaking text: ', e);
-                // Wait anyways even if speaking fails so that the subtitles are displayed
-                const sentenceLength = sentence.length;
-                const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                await new Promise(resolve => setTimeout(resolve, waitTime));
+              } else {
+                // Speak the translated text
+                let translationEntry: string = '';
+                if (translatedText !== '' && audioLanguage == subtitleLanguage) {
+                  // Use the previously translated text
+                  translationEntry = translatedText;
+                } else {
+                  // Translate the text
+                  translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
+                }
+                if (debug) {
+                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", translationEntry);
+                }
+                try {
+                  const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
+                  if (cleanText !== '') {
+                    await speakText(translationEntry, idToken, 1, detectedGender, audioLanguage, model);
+                  } else {
+                    // Wait anyways even if speaking fails so that the subtitles are displayed
+                    const sentenceLength = sentence_by_character.length;
+                    const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                  }
+                } catch (e) {
+                  console.log('Error speaking text: ', e);
+                  // Wait anyways even if speaking fails so that the subtitles are displayed
+                  const sentenceLength = sentence_by_character.length;
+                  const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
               }
+            } else {
+              // Wait for the sentence to be spoken, measure sentence length to know how long to wait for
+              const sentenceLength = sentence_by_character.length;
+              const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
             }
-          } else {
-            // Wait for the sentence to be spoken, measure sentence length to know how long to wait for
-            const sentenceLength = sentence.length;
-            const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
+            // Set the last message displayed
+            setLastMessageDisplayed(lastMessageIndex);
+            // Update the last speaker
+            lastSpeaker = currentSpeaker;
           }
-          // Set the last message displayed
-          setLastMessageDisplayed(lastMessageIndex);
-          // Update the last speaker
-          lastSpeaker = currentSpeaker;
         }
       }
       // Reset the subtitle after all sentences have been spoken
