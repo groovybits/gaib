@@ -1423,7 +1423,6 @@ function Home({ user }: HomeProps) {
                           title="Save N Share"
                           onClick={handleFetchButtonClick}
                           className={styles.footer}
-                          disabled={isSpeaking || loading}
                           type="button"
                         >
                           {isFetching ? 'Stop fetching news' : 'Start fetching news'}
