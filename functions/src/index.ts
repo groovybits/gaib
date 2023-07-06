@@ -28,6 +28,33 @@ exports.setInitialTokenBalance =
       });
     });
 
+// Update lastLogin field on user sign-in
+exports.updateLastLogin = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "User must be logged in to update last login."
+    );
+  }
+
+  const uid = context.auth.uid;
+
+  try {
+    await db.collection("users").doc(uid).update({
+      lastLogin: admin.firestore.FieldValue.serverTimestamp(),
+      loginCount: admin.firestore.FieldValue.increment(1),
+    });
+    console.log(`Updated lastLogin for user: ${uid}`);
+    return {success: true};
+  } catch (err) {
+    console.error(`Failed to update lastLogin for user: ${uid}`, err);
+    throw new functions.https.HttpsError(
+      "internal",
+      "Failed to update the last login."
+    );
+  }
+});
+
 // Listen for successful Stripe payment events
 exports.allocateTokensOnSuccessfulPayment = functions.firestore
   .document("users/{userId}/subscriptions/{subscriptionId}")
