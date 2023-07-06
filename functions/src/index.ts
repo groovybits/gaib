@@ -14,18 +14,24 @@ exports.setInitialTokenBalance =
       const initialTokenBalance =
     parseInt(functions.config().stripe.trial_token_balance || "2000");
 
-      await
-      admin.firestore().collection("users").doc(user.uid).set({
-        uid: user.uid,
-        email: user.email,
-        name: user.displayName,
-        provider: user.providerData[0]?.providerId,
-        photoUrl: user.photoURL,
-        tokenBalance: initialTokenBalance,
-        isPremium: false,
-        isAdmin: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      console.log(`Setting initial token balance for user: ${user.uid}`);
+
+      try {
+        await
+        admin.firestore().collection("users").doc(user.uid).set({
+          uid: user.uid,
+          email: user.email,
+          name: user.displayName,
+          provider: user.providerData[0]?.providerId,
+          photoUrl: user.photoURL,
+          tokenBalance: initialTokenBalance,
+          isPremium: false,
+          isAdmin: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (err) {
+        console.error("Failed to set initial token balance for user", err);
+      }
     });
 
 // Update lastLogin field on user sign-in
