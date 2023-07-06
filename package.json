@@ -17,6 +17,7 @@
     "lint": "eslint --ignore-path .gitignore \"**/*.+(ts|js|tsx)\"",
     "format": "prettier --ignore-path .gitignore \"**/*.+(ts|js|tsx)\" --write",
     "ingest": "tsx -r dotenv/config scripts/ingest-data.ts",
+    "backfill": "tsx -r dotenv/config scripts/backfillUsers.ts",
     "docker-build": "docker build . -t gaib"
   },
   "dependencies": {

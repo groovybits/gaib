@@ -139,9 +139,9 @@ function Auth({ }: Props): ReactElement {
           " email:", userCredentials.user.email);
 
         // Wait for the ID token to be set
-        await userCredentials.user.getIdToken(true);
+        //await userCredentials.user.getIdToken(true);
 
-        firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
+        //firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
       }
     } catch (error) {
       console.log(error);
