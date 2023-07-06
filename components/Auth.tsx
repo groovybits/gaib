@@ -125,6 +125,7 @@ function Auth({ }: Props): ReactElement {
     }
   };
   
+
   async function signInWithGoogle() {
     try {
       const userCredentials = await firebase
@@ -137,10 +138,7 @@ function Auth({ }: Props): ReactElement {
           " photoUrl:", userCredentials.user.photoURL,
           " displayName:", userCredentials.user.displayName || "unknown",
           " email:", userCredentials.user.email);
-
-        // Wait for the ID token to be set
-        await userCredentials.user.getIdToken(true);
-
+        
         firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
       }
     } catch (error) {
