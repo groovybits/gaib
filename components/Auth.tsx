@@ -108,6 +108,7 @@ function Auth({ }: Props): ReactElement {
       const user = await loginUser(email, password);
       console.log("User logged in:", user);
       setMessage('Logged in successfully!');
+      firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
     } catch (error : any) {
       console.error("Error signing in:", error);
       setMessage('Error signing in: ' + error.message);
@@ -139,7 +140,7 @@ function Auth({ }: Props): ReactElement {
           " displayName:", userCredentials.user.displayName || "unknown",
           " email:", userCredentials.user.email);
         
-        //firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
+        firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
       }
     } catch (error) {
       console.log(error);
