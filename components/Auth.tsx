@@ -110,7 +110,9 @@ function Auth({ }: Props): ReactElement {
       const user = await loginUser(email, password);
       console.log("User logged in:", user);
       setMessage('Logged in successfully!');
-      //firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
+      if (user) {
+        firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
+      }
     } catch (error : any) {
       console.error("Error signing in:", error);
       setMessage('Error signing in: ' + error.message);
@@ -134,16 +136,22 @@ function Auth({ }: Props): ReactElement {
       const userCredentials = await firebase
         .auth()
         .signInWithPopup(new firebase.auth.GoogleAuthProvider());
-
+      
       if (userCredentials && userCredentials.user) {
+        const user = userCredentials.user;
+
         console.log("userId:", userCredentials.user.uid,
           " provider:", userCredentials.user.providerData[0]?.providerId,
           " photoUrl:", userCredentials.user.photoURL,
           " displayName:", userCredentials.user.displayName || "unknown",
           " email:", userCredentials.user.email);
         
-        //firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
-        console.log("Google User logged in:", user);
+        if (user) {
+          firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
+          console.log("Google User logged in:", user);
+        } else {
+          console.log(`Google User not set: ${userCredentials.user}`);
+        }
       } else {
         console.log("Google User not logged in:", user);
       }
