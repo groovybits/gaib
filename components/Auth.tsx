@@ -9,6 +9,7 @@ import ServiceInfo from './ServiceInfo';
 import 'firebase/functions';
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import Modal from "react-modal";
+import Link from 'next/link';
 
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
@@ -264,6 +265,11 @@ function Auth({ }: Props): ReactElement {
         ) : (
           <div></div>
         )}
+        <div className={styles.labelContainer}>
+          <Link href="/stories" className={styles.header}>
+            <a>GAIBs Groovy Story Archive</a>
+          </Link>
+        </div>
         <div className={styles.footer}>
           {message && <div className={styles.message}>{message}</div>}
           <ServiceInfo /> {/* Add the ServiceInfo component */}

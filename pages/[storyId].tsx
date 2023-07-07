@@ -136,79 +136,85 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     });
 
     return (
-      <div className={styles.story}>
+      <div className={styles.feed} >
         <div className={styles.labelContainer}>
           <button onClick={() => {
             setSelectedStory(null);
-            router.push('/global');
+            router.push('/stories');
           }} className={styles.header}>Back to Stories</button>
         </div>
-        <div className={styles.header}>
-        <h1>{storyParts[0]}</h1>
-        </div>
         <div className={styles.story}>
-        {storyParts.slice(1).map((part: string, index: number) => (
+          <div className={styles.header}>
+            <h1>{storyParts[0]}</h1>
+          </div>
+          <div className={styles.story}>
+          {storyParts.slice(1).map((part: string, index: number) => (
           <div key={index} className={styles.storyContent}>
             <p className={styles.header}>{part}</p>
             <div className={styles.storyImage}>
               {images[index]}
             </div>
           </div>
-        ))}
+          ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.feed}>
-      <div className={styles.labelContainer}>
-        <h1 className={styles.header}>Stories</h1>
-      </div>
+    <div>
+      <div className={styles.feed}>
+        <div className={styles.header}>
+          <Link href="/" className={styles.header}>
+            <a>GAIBs Groovy Story Archive</a>
+          </Link>
+        </div>
 
-      <div className={styles.labelContainer}>
-      {stories.map(story => {
-        const isExpanded = story.id === expandedStoryId;
-        const storyUrl = `${baseUrl}/${story.id}`;
+        <div className={styles.labelContainer}>
+        {stories.map(story => {
+          const isExpanded = story.id === expandedStoryId;
+          const storyUrl = `${baseUrl}/${story.id}`;
 
-        return (
-          <div key={story.id} className={styles.story}>
-            <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>{story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}</a>
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            <button onClick={() => handleFacebookShareClick(story.id)}>Facebook Post</button>
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href={storyUrl} >Expand</a>
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            {isExpanded && (
-              <div className={styles.storyContent}>
-                <p>{story.text}</p>
-                {story.imageUrls.map((imageUrl: string, index: number) => {
-                  let imageSrc = imageUrl;
-                  let photographer = '';
-                  let photographerUrl = '';
-                  let pexelsUrl = '';
-                  if (isJsonString(imageUrl)) {
-                    const image = JSON.parse(imageUrl);
-                    imageSrc = image.url;
-                    photographer = image.photographer;
-                    photographerUrl = image.photographer_url;
-                    pexelsUrl = image.pexels_url;
-                  }
-                  return (
-                    <div key={index} className={styles.storyImage}>
-                      <img src={imageSrc} alt="Story image" />
-                      {photographer && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
-                      {pexelsUrl && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
+          return (
+            <div key={story.id} className={styles.story}>
+              <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>{story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}</a>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <button onClick={() => handleFacebookShareClick(story.id)}>Facebook Post</button>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href={storyUrl} >Expand</a>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              {isExpanded && (
+                <div className={styles.storyContent}>
+                  <p>{story.text}</p>
+                  {story.imageUrls.map((imageUrl: string, index: number) => {
+                    let imageSrc = imageUrl;
+                    let photographer = '';
+                    let photographerUrl = '';
+                    let pexelsUrl = '';
+                    if (isJsonString(imageUrl)) {
+                      const image = JSON.parse(imageUrl);
+                      imageSrc = image.url;
+                      photographer = image.photographer;
+                      photographerUrl = image.photographer_url;
+                      pexelsUrl = image.pexels_url;
+                    }
+                    return (
+                      <div key={index} className={styles.storyImage}>
+                        <img src={imageSrc} alt="Story image" />
+                        {photographer && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
+                        {pexelsUrl && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        </div>
       </div>
       <div className={styles.labelContainer}>
         {hasMore && <button onClick={() => setLastVisible(lastVisible)} className={styles.header}>Load more</button>}
