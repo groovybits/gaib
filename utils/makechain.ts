@@ -84,19 +84,19 @@ export const makeChain = async (
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt: string = '';
   if (personality == 'Anime') {
-    prompt = `You are an Anime Otaku expert. ${storyMode ? PERSONALITY_PROMPTS['Anime'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+    prompt = `You are an Anime Otaku expert who can answer questions about Anime. ${storyMode ? PERSONALITY_PROMPTS['Anime'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Stories') {
     prompt = `You are a professional screenplay writer for TV Espisodes. ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Poet') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
   } else if (personality == 'SongWriter') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
   } else if (personality == 'Analyst') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
   } else if (personality == 'Interviewer') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
   } else if (personality == 'NewsReporter' || personality == 'CondensedNews' || personality == 'HappyFunNews') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
     CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_NEWS_STORY : CONDENSE_PROMPT_NEWS_QUESTION;
   } else {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
@@ -160,22 +160,8 @@ export const makeChain = async (
     try {
       model = new OpenAI(params);
     } catch (error: any) {
-      if (error.response && error.response.data && error.response.data.error && error.response.data.error.code === 'context_length_exceeded') {
-        console.warn("makeChain: Too much context. Retrying with a smaller context...");
-        // Retry with a smaller context
-        if (params.maxTokens) {
-          params.maxTokens = params.maxTokens / 1.5; // Use a smaller context
-        }
-        try {
-          model = new OpenAI(params);
-        } catch (error: any) {
-          console.error(error);
-          throw error;
-        }
-      } else {
-        console.error(error);
-        throw error;
-      }
+      console.error(error);
+      throw error;
     }
 
     return model;
@@ -263,16 +249,8 @@ export const makeChain = async (
       },
     );
   } catch (error: any) {
-    if (error.response && error.response.data && error.response.data.error && error.response.data.error.code === 'context_length_exceeded') {
-      // The context length was exceeded. Retry with a smaller context...
-      console.warn("makeChain: Context length exceeded. Retrying with a smaller context...");
-      const smallerPrompt = prompt.slice(-1000); // Retry #1 with a smaller context
-      chain = await retryWithSmallerContext(model, vectorstore, 1, smallerPrompt, CONDENSE_PROMPT_STRING);
-    } else {
-      // Some other error occurred. Handle it as appropriate for your application...
-      console.error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: ", error);
-      throw new Error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: " + error);
-    }
+    console.error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: ", error);
+    throw new Error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: " + error);
   }
 
   return chain;
