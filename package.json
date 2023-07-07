@@ -43,7 +43,7 @@
     "gpt3-tokenizer": "^1.1.5",
     "gtts.js": "^1.0.1",
     "howler": "^2.2.3",
-    "langchain": "0.0.82",
+    "langchain": "0.0.104",
     "lucide-react": "^0.125.0",
     "net": "^1.0.2",
     "next": "13.2.3",

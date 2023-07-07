@@ -11,6 +11,7 @@ import {
 } from '@/config/pinecone';
 import GPT3Tokenizer from 'gpt3-tokenizer';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
+import { BaseMessage, HumanMessage, AIMessage } from 'langchain/schema';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 
@@ -315,10 +316,21 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         consoleLog('info', `ChatAPI: Condensed history from ${chatHistory.length} to ${condensedHistory.length} items condensed to ${countTokens(condensedHistory)} tokens.`);
       }
 
+      let histories: BaseMessage[] = [];
+      condensedHistory.forEach((hist: { [x: string]: string; }) => {
+        if (hist['type'] === 'human') {
+          let req: BaseMessage = new HumanMessage(question);
+          histories.push(req);
+        } else if (hist['type'] === 'ai') {
+          let respond: BaseMessage = new AIMessage(question);
+          histories.push(respond);
+        }
+      });
+
       try {
         let response = await chain?.call({
           question: title,
-          chat_history: condensedHistory ? [condensedHistory] : [],
+          chat_history: histories,
         });
         if (!response || !response.text || response.text.length === 0 || response.text.startsWith('Error: ')) {
           consoleLog("error", 'ChatAPI: GPT API Error, Not enough tokens available to generate a response!!!');
