@@ -104,6 +104,7 @@ function Home({ user }: HomeProps) {
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [feedCategory, setFeedCategory] = useState<string>('');
   const [feedKeywords, setFeedKeywords] = useState<string>('');
+  const [feedPrompt, setFeedPrompt] = useState<string>('');
   const [feedSort, setFeedSort] = useState<string>('popularity');
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
@@ -246,7 +247,7 @@ function Home({ user }: HomeProps) {
           const mockEvent = {
             preventDefault: () => { },
             target: {
-              value: currentQuery,
+              value: feedPrompt + "\n\n"+ currentQuery,
             },
           };
           isSubmittingRef.current = true;
@@ -257,7 +258,7 @@ function Home({ user }: HomeProps) {
       }
     };
     processNewsArticle();
-  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending, query]);  // Remove isProcessing from the dependencies
+  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending, query, feedPrompt]);  // Remove isProcessing from the dependencies
 
   const togglePopup = () => {
     setShowPopup(!showPopup);
@@ -1434,6 +1435,10 @@ function Home({ user }: HomeProps) {
                         >
                           <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <label>
+                              Add to Prompt:
+                              <input type="text" value={feedPrompt} onChange={e => setFeedPrompt(e.target.value)} />
+                            </label>
                             <label>
                               Keywords (separated by spaces):
                               <input type="text" value={feedKeywords} onChange={e => setFeedKeywords(e.target.value)} />
