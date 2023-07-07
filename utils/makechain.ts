@@ -234,10 +234,8 @@ export const makeChain = async (
               console.log('makeChain:', personality, "Stories Title: [\n", accumulatedTitleTokens.trim(), "\n] Title Accumulated: ", accumulatedTitleTokenCount, " tokens.");
               if (!storyMode) {
                 onTokenStream("Question: " + accumulatedTitleTokens.trim() + ".\n");
-                onTokenStream("\n\n## Answer Begins:\n\n");
               } else {
-                onTokenStream(accumulatedTitleTokens.trim() + ".\n");
-                onTokenStream("\n\n## Story Begins:\n\n");
+                onTokenStream("Episode Title: " + accumulatedTitleTokens.trim() + ".\n");
               }
             } else {
               console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
