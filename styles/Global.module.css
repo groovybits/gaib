@@ -5,11 +5,10 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 10px;
   background-color: #ffffff;
   color: #000000;
-  border-radius: 1px;
-  border: 2px double #000000;
+  border: none;
 }
 
 .feedSection {
@@ -24,7 +23,7 @@
 .story {
   background-color: #000000;
   color: #f1ebeb;
-  border: 2px double #000000;
+  border: 4px double #008000;
   border-radius: 8px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
@@ -40,23 +39,28 @@
 .storyTitle {
   display: block;
   background: #FFC601;
-  padding: 1px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #000000;
-  text-decoration: none;
-  border: 2px double #0C4B8E;
-  border-radius: 8px;
+  padding: 2px;
+  font-size: 24px;
+  border: 4px double #0C4B8E;
+  border-radius: 6px;
+
+  text-align: left;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 500;
+  font-family:'Trebuchet MS';
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
 .storyContent {
   word-wrap: break-word;
-  padding: 1rem;
+  padding: 2px;
   align-items: center;
 }
 
 .storyImage {
-  margin-top: 1rem;
+  margin-top: 2px;
   align-items: center;
 }
 
@@ -65,11 +69,29 @@
   align-items: center;
 }
 
+.storyImageThumbnail {
+  width: 100px; /* Adjust as needed */
+  height: auto;
+  border-radius: 10%; /* This makes the images rounded */
+  overflow: hidden; /* This ensures the images stay within their rounded borders */
+  object-fit: cover; /* This ensures the images cover the entire area of the div */
+  padding: 2px;
+}
+
+.imageRow {
+  display: flex; /* This makes the images align horizontally */
+  overflow-x: auto; /* This allows horizontal scrolling if there are too many images */
+  gap: 10px; /* This adds some space between the images */
+  padding: 2px;
+  margin: 2px;
+}
+
+
 .header {
   width: auto;
   text-align: center;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 500;
   font-family:'Trebuchet MS';
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,

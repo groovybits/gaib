@@ -1,10 +1,11 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, Key } from 'react';
 import firebase from '@/config/firebaseClientInit';
 import styles from '@/styles/Global.module.css';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
 import { NextPage, NextPageContext } from 'next';
+import Head from 'next/head';
 
 interface Story {
   id: string;
@@ -30,8 +31,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
   const [loadMoreTrigger, setLoadMoreTrigger] = useState(0);
   const [initialLoad, setInitialLoad] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [storyIds, setStoryIds] = useState(new Set());
 
-  const pageSize = process.env.NEXT_PUBLIC_FEED_PAGE_SIZE ? parseInt(process.env.NEXT_PUBLIC_FEED_PAGE_SIZE) : 10;
+
+  const pageSize = process.env.NEXT_PUBLIC_FEED_PAGE_SIZE ? parseInt(process.env.NEXT_PUBLIC_FEED_PAGE_SIZE) : 8;
   // Number of stories to fetch at a time
 
   useEffect(() => {
@@ -43,18 +47,26 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const fetchStories = async () => {
     let query = firebase.firestore().collection('stories').orderBy('timestamp', 'desc');
 
-    if (initialLoad) {
-      query = query.limit(pageSize);
-    } else if (lastVisible) {
-      query = query.startAfter(lastVisible).limit(pageSize);
+    if (process.env.NEXT_PUBLIC_CONTINUOUS_SCROLLING === 'true') {
+      // If continuous scrolling is enabled, paginate the query
+      if (initialLoad) {
+        query = query.limit(pageSize);
+      } else if (lastVisible) {
+        query = query.startAfter(lastVisible).limit(pageSize);
+      }
     }
 
     const snapshot = await query.get();
 
     if (snapshot.docs.length > 0) {
-      setStories(prevStories => [...prevStories, ...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))]);
+      const newStories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(story => !storyIds.has(story.id));
+
+      setStories(prevStories => [...prevStories, ...newStories]);
+      setStoryIds(prevStoryIds => new Set([...prevStoryIds, ...newStories.map(story => story.id)]));
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-    } else {
+    }
+
+    if (snapshot.docs.length < pageSize) {
       setHasMore(false);
     }
 
@@ -82,6 +94,28 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     }
   }, [storyId]); // Add storyId as a dependency to the effect
 
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        if (hasMore) {
+          setLoadMoreTrigger(loadMoreTrigger + 1);
+        } else {
+          observer.unobserve(loadMoreRef.current!);
+        }
+      }
+    });
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [loadMoreTrigger, hasMore]);
+
   const handleShareClick = (storyId: string) => {
     copy(`${baseUrl}/${storyId}`);
   };
@@ -99,16 +133,19 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   };
 
   const isJsonString = (str: string) => {
+    if (typeof str !== 'string') {
+      return false;
+    }
     try {
-      JSON.parse(str);
+      const result = JSON.parse(str);
+      return (typeof result === 'object' && result !== null);
     } catch (e) {
       return false;
     }
-    return true;
   };
 
   if (storyId && selectedStory) {
-    const storyParts = selectedStory.text.replace(/\[SCENE: \d+\]/g, '').split('|');
+    const storyParts = selectedStory.text.split(/\[SCENE: \d+\]/g).map(part => part.trim());
     const images = selectedStory.imageUrls.map((imageUrl: string, index: number) => {
       let imageSrc = imageUrl;
       let photographer = '';
@@ -159,6 +196,14 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
 
   return (
     <div>
+      <Head>
+        <title>GAIBs Groovy Story Board</title>
+        <meta name="description" content="Explore a collection of groovy stories created with GAIB." />
+        <meta property="og:title" content="GAIB's Groovy Story Board" />
+        <meta property="og:description" content="Explore a collection of groovy stories created with GAIB." />
+        <meta property="og:image" content={process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE ? process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE : 'favicon.ico'} />
+        <meta property="og:url" content="https://gaib.groovy.org/board" />
+      </Head>
       <div className={styles.feed}>
         <div className={styles.header}>
           <Link href="/" className={styles.header}>
@@ -167,54 +212,86 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
         </div>
 
         <div className={styles.labelContainer}>
-        {stories.map(story => {
-          const isExpanded = story.id === expandedStoryId;
-          const storyUrl = `${baseUrl}/${story.id}`;
+          {stories.map(story => {
+            const isExpanded = story.id === expandedStoryId;
+            const storyUrl = `${baseUrl}/${story.id}`;
 
-          return (
-            <div key={story.id} className={styles.story}>
-              <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>{story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}</a>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              <button onClick={() => handleFacebookShareClick(story.id)}>Facebook Post</button>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href={storyUrl} >Expand</a>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              {isExpanded && (
-                <div className={styles.storyContent}>
-                  <p>{story.text}</p>
-                  {story.imageUrls.map((imageUrl: string, index: number) => {
-                    let imageSrc = imageUrl;
-                    let photographer = '';
-                    let photographerUrl = '';
-                    let pexelsUrl = '';
-                    if (isJsonString(imageUrl)) {
-                      const image = JSON.parse(imageUrl);
-                      imageSrc = image.url;
-                      photographer = image.photographer;
-                      photographerUrl = image.photographer_url;
-                      pexelsUrl = image.pexels_url;
-                    }
+            // Sample 8 images from the story's imageUrls
+            const sampledImages = story.imageUrls.length > 8 ?
+              story.imageUrls.filter((_: string, index: number) => index % Math.floor(story.imageUrls.length / 8) === 0) :
+              story.imageUrls;
+            
+            {sampledImages.map((imageUrl: string, index: number) => {
+                let imageSrc = imageUrl;
+                if (isJsonString(imageUrl)) {
+                  const image = JSON.parse(imageUrl);
+                  imageSrc = image.url;
+                }
+                return (
+                  <img key={index} src={imageSrc} alt={`Story Image #${index}`} className={styles.storyImageThumbnail} />
+                );
+              })
+            }
+
+            return (
+              <div key={story.id} className={styles.story}>
+                <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>{story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}</a>
+                {/* Add the image previews here */}
+                <div className={styles.imageRow}>
+                  {sampledImages.map((imageUrl: string, index: number) => {
+                    const image = JSON.parse(imageUrl);
+                    const imageSrc = image.url;
                     return (
-                      <div key={index} className={styles.storyImage}>
-                        <img src={imageSrc} alt="Story image" />
-                        {photographer && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
-                        {pexelsUrl && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
-                      </div>
+                      <img key={index} src={imageSrc} alt={`Story Image #${index}`} className={styles.storyImageThumbnail} />
                     );
                   })}
                 </div>
-              )}
-            </div>
-          );
-        })}
+                <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
+                &nbsp;&nbsp;|&nbsp;&nbsp;
+                <button onClick={() => handleFacebookShareClick(story.id)}>Facebook Post</button>
+                &nbsp;&nbsp;|&nbsp;&nbsp;
+                <a href={storyUrl} >Expand</a>
+                {isExpanded && (
+                  <div className={styles.storyContent}>
+                    {story.text.split(/\[SCENE: \d+\]/g).map((part: string, index: Key | null | undefined) => (
+                      <p key={index}>
+                        {part.trim()}
+                        <br />
+                        <br />
+                      </p>
+                    ))}
+                    {story.imageUrls.map((imageUrl: string, index: number) => {
+                      let imageSrc = JSON.parse(imageUrl).url;
+                      let photographer = '';
+                      let photographerUrl = '';
+                      let pexelsUrl = '';
+                      if (isJsonString(imageUrl)) {
+                        const image = JSON.parse(imageUrl);
+                        imageSrc = image.url;
+                        photographer = image.photographer;
+                        photographerUrl = image.photographer_url;
+                        pexelsUrl = image.pexels_url;
+                      }
+                      return (
+                        <div key={index} className={styles.storyImage}>
+                          <img src={imageSrc} alt="Story image" />
+                          {photographer && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
+                          {pexelsUrl && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
+      {/*<div ref={loadMoreRef} />*/}
       <div className={styles.feedSection}>
-        <div className={styles.labelContainer}>
-          {hasMore && <button onClick={() => setLoadMoreTrigger(loadMoreTrigger + 1)} className={styles.header}>Load more Stories</button>}
-        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <div className={styles.feed}>
+          {/*{hasMore && <button onClick={() => setLoadMoreTrigger(loadMoreTrigger + 1)} className={styles.header}>Continue Loading Stories</button>}
+          &nbsp;&nbsp;|&nbsp;&nbsp;*/}
           <Link href="/" className={styles.header}>
             <a>Create a Story with GAIB</a>
           </Link>
