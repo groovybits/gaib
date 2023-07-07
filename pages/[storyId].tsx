@@ -28,8 +28,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
+  const [loadMoreTrigger, setLoadMoreTrigger] = useState(0);
+  const [initialLoad, setInitialLoad] = useState(true);
 
-  const pageSize = 10; // Number of stories to fetch at a time
+  const pageSize = process.env.NEXT_PUBLIC_FEED_PAGE_SIZE ? parseInt(process.env.NEXT_PUBLIC_FEED_PAGE_SIZE) : 10;
+  // Number of stories to fetch at a time
 
   useEffect(() => {
     if (!baseUrl) {
@@ -37,40 +40,32 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     }
   }, []);
 
-  useEffect(() => {
-    const fetchStories = async () => {
-      let query = firebase.firestore().collection('stories').orderBy('timestamp', 'desc').limit(pageSize);
+  const fetchStories = async () => {
+    let query = firebase.firestore().collection('stories').orderBy('timestamp', 'desc');
 
-      if (lastVisible) {
-        query = query.startAfter(lastVisible);
-      }
-
-      const snapshot = await query.get();
-
-      if (snapshot.docs.length > 0) {
-        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-
-        setStories(prevStories => [...prevStories, ...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))]);
-      } else {
-        setHasMore(false);
-      }
-    };
-
-    if (hasMore) {
-      fetchStories();
+    if (initialLoad) {
+      query = query.limit(pageSize);
+    } else if (lastVisible) {
+      query = query.startAfter(lastVisible).limit(pageSize);
     }
-  }, [lastVisible, hasMore]);
+
+    const snapshot = await query.get();
+
+    if (snapshot.docs.length > 0) {
+      setStories(prevStories => [...prevStories, ...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))]);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+    } else {
+      setHasMore(false);
+    }
+
+    if (initialLoad) {
+      setInitialLoad(false);
+    }
+  };
 
   useEffect(() => {
-    const unsubscribe = firebase.firestore().collection('stories').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
-      setStories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    // Clean up function
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+    fetchStories();
+  }, [loadMoreTrigger]);
 
   useEffect(() => {
     if (storyId) {
@@ -217,7 +212,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
         </div>
       </div>
       <div className={styles.labelContainer}>
-        {hasMore && <button onClick={() => setLastVisible(lastVisible)} className={styles.header}>Load more</button>}
+        {hasMore && <button onClick={() => setLoadMoreTrigger(loadMoreTrigger + 1)} className={styles.header}>Load more</button>}
       </div>
       <div className={styles.labelContainer}>
         <Link href="/" className={styles.header}>
