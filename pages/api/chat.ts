@@ -213,8 +213,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
     if (!namespaceResult) {
       consoleLog('error', 'Pinecone chat: No valid namespace found.');
-      res.setHeader('Retry-After', '5'); // The value is in seconds
-      res.status(503).end();
+      res.status(404).end();
       return
     }
 
@@ -294,11 +293,15 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Track the total token count
     let total_token_count = 0;
 
+    console.log(`======== ChatAPI: Starting ${episodeCount} episodes of ${requestedTokens} tokens each for a total of ${totalTokens} tokens.`);
+
     // Now, run each chain sequentially per episode
     for (let i = 0; i < chains.length; i++) {
       const chain = chains[i];
       const title = titles[i];
       const episodeNumber = i + 1;
+
+      console.log(`==================== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
 
       // Generate a title for the next episode
       if (i > 0) {
@@ -390,7 +393,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       // check if we have used the max tokens requested
       if (total_token_count >= totalTokens && episodeCount > 1) {
-        consoleLog('info', `ChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.`);
+        consoleLog('info', `ChatAPI: ERROR!!! Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.`);
         sendData(JSON.stringify({ data: `\n\nChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.` }));
         break;
       }

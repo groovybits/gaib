@@ -20,54 +20,19 @@ import {
 import { firestoreAdmin } from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
 import { BaseLanguageModel } from 'langchain/dist/base_language';
-import GPT3Tokenizer from 'gpt3-tokenizer';
-import { on } from 'events';
-const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
+import { BufferMemory } from "langchain/memory";
 
-const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === 'false' ? false : true;
+const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === undefined ? true : Boolean(process.env.RETURN_SOURCE_DOCUMENTS);
 const modelName = process.env.MODEL_NAME || 'gpt-3.5-turbo-16k';  //change this to gpt-4 if you have access
+const fasterModelName = process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k';  // faster model for title/question generation
 const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process.env.PRESENCE_PENALTY) : 0.2;
 const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.3;
 const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.7;
 const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.1;
 
-function countTokens(textArray: string[]): number {
-  let totalTokens = 0;
-  for (const text of textArray) {
-    if (typeof text !== 'string') {
-      // text is an array of strings
-      totalTokens += countTokens(text);
-      continue;
-    }
-    const encoded = tokenizer.encode(text);
-    totalTokens += encoded.bpe.length;
-  }
-  return totalTokens;
-}
-
-// Function to clean a document
-function cleanDocument(document: string): string {
-  // Add your cleaning logic here
-  return document.replace(/[^a-zA-Z0-9\s]/g, "");
-}
-
-// Function to retry with a smaller context
-async function retryWithSmallerContext(model: BaseLanguageModel, vectorstore: PineconeStore, documentsReturned: number, smallerPrompt: string, CONDENSE_PROMPT_STRING: string) {
-  try {
-    return ConversationalRetrievalQAChain.fromLLM(
-      model,
-      vectorstore.asRetriever(documentsReturned),
-      {
-        qaTemplate: smallerPrompt,
-        questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
-        returnSourceDocuments: true,
-      },
-    );
-  } catch (error: any) {
-    console.log("Retry Error in ConversationalRetrievalQAChain.fromLLM: ", error);
-    throw error;
-  }
-}
+const fasterModel = new OpenAI({
+  modelName: fasterModelName,
+});
 
 export const makeChain = async (
   vectorstore: PineconeStore,
@@ -104,23 +69,13 @@ export const makeChain = async (
 
   console.log("makeChain: Prompt: ", prompt);
 
-  // take the 
-  let title_finished = false;
-  let accumulatedBodyTokens = '';
-  let accumulatedTitleTokens = '';
-  let accumulatedTitleTokenCount = 0;
-  let accumulatedBodyTokenCount = 0;
-  let documentsReturned = documentCount;
 
+  let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
   let logInterval = 100; // Adjust this value to log less or more frequently
-  let tokenCount = 0;
   let isPremium = await isUserPremium();
   const isAdmin = await isUserAdmin(userId!);
   const maxTokens = tokensCount;
-
-  // Clean the documents returned from the document store
-  //vectorstore = vectorstore.map(cleanDocument);
 
   async function getUserDetails(userId: string) {
     const userDoc = await firestoreAdmin.collection("users").doc(userId).get();
@@ -167,6 +122,10 @@ export const makeChain = async (
     return model;
   }
 
+  let tokenCount = 0;
+  let accumulatedBodyTokens = '';
+  let accumulatedBodyTokenCount = 0;
+
   // Create the model
   let model: BaseLanguageModel;
   try {
@@ -182,59 +141,54 @@ export const makeChain = async (
           async handleLLMNewToken(token) {
             tokenCount += 1;
 
-            if (title_finished == true) {
-              accumulatedBodyTokenCount += 1;
-              accumulatedBodyTokens += token;
-              onTokenStream(token);
+            accumulatedBodyTokenCount += 1;
+            accumulatedBodyTokens += token;
+            onTokenStream(token);
 
-              if (accumulatedBodyTokenCount % logInterval === 0) {
-                console.log(
-                  `makeChain: ${personality} Body Accumulated: ${accumulatedBodyTokenCount} tokens and ${accumulatedBodyTokens.length} characters.`
-                );
-              }
-              // Deduct tokens based on the tokenCount
-              if (!isAdmin) {
-                const newTokenBalance = userTokenBalance - tokenCount;
-                if (newTokenBalance >= 0) {
-                  await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });
-                } else {
-                  console.log(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
-                  // Send signal that user does not have enough tokens to run this model
-                  throw new Error(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
-                }
-              }
-            } else {
-              accumulatedTitleTokens += token;
-              accumulatedTitleTokenCount += 1;
-
-              if (accumulatedTitleTokenCount % logInterval === 0) {
-                console.log(
-                  `makeChain: ${personality} Title Accumulated: ${accumulatedTitleTokenCount} tokens.`
-                );
+            if (accumulatedBodyTokenCount % logInterval === 0) {
+              console.log(
+                `makeChain: ${personality} Body Accumulated: ${accumulatedBodyTokenCount} tokens and ${accumulatedBodyTokens.length} characters.`
+              );
+            }
+            // Deduct tokens based on the tokenCount
+            if (!isAdmin) {
+              const newTokenBalance = userTokenBalance - tokenCount;
+              if (newTokenBalance >= 0) {
+                await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });
+              } else {
+                console.log(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
+                // Send signal that user does not have enough tokens to run this model
+                throw new Error(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
               }
             }
+          },
+          async handleLLMStart(llm, prompts, runId, parentRunId, extraParams) {
+            console.log(`makeChain: ${personality} Starting using ${JSON.stringify(prompts)} with runId ${runId} and parentRunId ${parentRunId} with extraParams ${JSON.stringify(extraParams)}...`);
           },
           async handleLLMEnd() {
-            if (title_finished === false) {
-              title_finished = true;
-              console.log('makeChain:', personality, "Stories Title: [\n", accumulatedTitleTokens.trim(), "\n] Title Accumulated: ", accumulatedTitleTokenCount, " tokens.");
-              if (!storyMode) {
-                onTokenStream("Question: " + accumulatedTitleTokens.trim() + ".\n");
-              } else {
-                onTokenStream("Episode Title: " + accumulatedTitleTokens.trim() + ".\n");
-              }
-            } else {
-              console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
-              console.log('makeChain:', personality, "Stories Body: [\n", accumulatedBodyTokens.trim(), "\n]");
-              console.log(`makeChain: Deducting ${tokenCount} tokens from ${userId}...`);
-            }
+            console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
+            console.log('makeChain:', personality, "Stories Body: [\n", accumulatedBodyTokens.trim(), "\n]");
+            console.log(`makeChain: Deducting ${tokenCount} tokens from ${userId}...`);
+            console.log(`makeChain: ${userId} has ${userTokenBalance} tokens left.`);
+            onTokenStream('[DONE]');
           },
+          async handleLLMError(error) {
+            console.error("makeChain: Error in createModel: ", error);
+            onTokenStream('[DONE]');
+            throw new Error("makeChain: Error in createModel: " + error);
+          }
         })
         : undefined,
     }, userId, userTokenBalance, isAdmin);
   } catch (error: any) {
     console.error("makeChain: Error in createModel: ", error);
     throw new Error("makeChain: Error in createModel: " + error);
+  }
+
+  const options = {
+    questionGeneratorChainOptions: {
+      llm: fasterModel,
+    },
   }
 
   let chain;
@@ -246,6 +200,7 @@ export const makeChain = async (
         qaTemplate: prompt,
         questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
         returnSourceDocuments: RETURN_SOURCE_DOCUMENTS,
+        ...options,
       },
     );
   } catch (error: any) {
