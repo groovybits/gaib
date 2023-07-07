@@ -619,6 +619,7 @@ function Home({ user }: HomeProps) {
           if (!sentence.startsWith('References: ')
             && sentence !== ''
             && (imageSource == 'pexels'
+              || count == 0 // first sentence
               || (sentence.includes('SCENE:')
                 || sentence.includes('Episode Title:')
                 || sentence.includes('Question: ')
@@ -628,9 +629,9 @@ function Home({ user }: HomeProps) {
                 /*|| (sentence.startsWith('*') && sentence.length > 60)*/))) {
             let imageDescription = sentence;
             if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE:')) {
-              sentence = sentence.replace('[', '');
-              sentence = sentence.replace(']', '');
               if (sentence.includes('SCENE:')) {
+                sentence = sentence.replace('[', '');
+                sentence = sentence.replace(']', '');
                 sentence = sentence.replace('SCENE:', '');
                 imageDescription = sceneTexts[sceneIndex];
                 sceneIndex++;  // Move to the next scene
@@ -641,10 +642,6 @@ function Home({ user }: HomeProps) {
                 lastImage = gaibImage;
               }
               setPexelImageUrls(gaibImage);
-              setSubtitle(''); // Clear the subtitle
-            }
-            if (sentence.includes('SCENE:')) {
-              //continue // GPT won't obey us and seems to not just make it a scene change, but part of the plot
             }
           }
           if (messages.length > 1 && lastMessageIndex >= 2) {

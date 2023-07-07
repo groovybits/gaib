@@ -20,7 +20,6 @@ import {
 import { firestoreAdmin } from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
 import { BaseLanguageModel } from 'langchain/dist/base_language';
-import { BufferMemory } from "langchain/memory";
 
 const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === undefined ? true : Boolean(process.env.RETURN_SOURCE_DOCUMENTS);
 const modelName = process.env.MODEL_NAME || 'gpt-3.5-turbo-16k';  //change this to gpt-4 if you have access
@@ -163,18 +162,16 @@ export const makeChain = async (
             }
           },
           async handleLLMStart(llm, prompts, runId, parentRunId, extraParams) {
-            console.log(`makeChain: ${personality} Starting using ${JSON.stringify(prompts)} with runId ${runId} and parentRunId ${parentRunId} with extraParams ${JSON.stringify(extraParams)}...`);
+            console.log(`makeChain: llm=${llm} ${personality} Starting using ${JSON.stringify(prompts)} with runId ${runId} and parentRunId ${parentRunId} with extraParams ${JSON.stringify(extraParams)}...`);
           },
           async handleLLMEnd() {
             console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
             console.log('makeChain:', personality, "Stories Body: [\n", accumulatedBodyTokens.trim(), "\n]");
             console.log(`makeChain: Deducting ${tokenCount} tokens from ${userId}...`);
             console.log(`makeChain: ${userId} has ${userTokenBalance} tokens left.`);
-            onTokenStream('[DONE]');
           },
           async handleLLMError(error) {
             console.error("makeChain: Error in createModel: ", error);
-            onTokenStream('[DONE]');
             throw new Error("makeChain: Error in createModel: " + error);
           }
         })
