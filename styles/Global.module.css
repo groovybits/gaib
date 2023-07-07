@@ -7,19 +7,30 @@
   align-items: center;
   padding: 20px;
   background-color: #ffffff;
-  border-radius: 10px;
-  border: 2px double #FFC601;
+  color: #000000;
+  border-radius: 1px;
+  border: 2px double #000000;
+}
+
+.feedSection {
+  align-items: center;
+  padding: 20px;
+  background-color: #ffffff;
+  color: #000000;
+  border-radius: 1px;
+  border: 2px double #000000;
 }
 
 .story {
   background-color: #000000;
-  color: #ffffff;
-  border: 2px double #FFC601;
-  border-radius: 10px;
+  color: #f1ebeb;
+  border: 2px double #000000;
+  border-radius: 8px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
   word-wrap: overflow-wrap;
   padding: 10px;
+  margin: 10px;
 }
 
 .story:hover {
@@ -29,13 +40,13 @@
 .storyTitle {
   display: block;
   background: #FFC601;
-  padding: 2px;
+  padding: 1px;
   font-size: 1.2rem;
   font-weight: bold;
-  color: #333;
+  color: #000000;
   text-decoration: none;
-  border: 2px double #000000;
-  border-radius: 10px;
+  border: 2px double #0C4B8E;
+  border-radius: 8px;
 }
 
 .storyContent {
@@ -50,7 +61,7 @@
 }
 
 .storyImage img {
-  max-height: 800px;
+  max-height: 400px;
   align-items: center;
 }
 
@@ -74,6 +85,31 @@
   opacity: 0.8;
 }
 
+.footer {
+  color: #ffffff;
+  font-size: 12px;
+  margin: 1rem;
+  text-align: center;
+  font-weight: 500;
+  font-family:'Trebuchet MS', monospace;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.footer a {
+  font-weight: 500;
+  color: #ffffff;
+  font-size: 12px;
+  font-family:'Trebuchet MS', monospace;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.footer a:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
 .message {
   margin-top: 1rem;
   color: red;
@@ -83,7 +119,7 @@
 .storyImage {
   margin-top: 0.5rem;
   font-size: 0.9rem;
-  max-height: 800px;
+  max-height: 400px;
   align-items: center;
 }
 

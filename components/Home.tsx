@@ -1631,8 +1631,8 @@ function Home({ user }: HomeProps) {
                       )}
                     </div>
                     <div className={styles.labelContainer}>
-                      <Link href="/stories" className={styles.header}>
-                        <a>GAIBs Groovy Story Archive</a>
+                      <Link href="/board" className={styles.header}>
+                        <a>GAIBs Groovy Story Board</a>
                       </Link>
                     </div>
                   </div>

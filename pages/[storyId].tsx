@@ -135,7 +135,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
         <div className={styles.labelContainer}>
           <button onClick={() => {
             setSelectedStory(null);
-            router.push('/stories');
+            router.push('/board');
           }} className={styles.header}>Back to Stories</button>
         </div>
         <div className={styles.story}>
@@ -162,7 +162,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
       <div className={styles.feed}>
         <div className={styles.header}>
           <Link href="/" className={styles.header}>
-            <a>GAIBs Groovy Story Archive</a>
+            <a>GAIBs Groovy Story Board</a>
           </Link>
         </div>
 
@@ -211,13 +211,20 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
         })}
         </div>
       </div>
-      <div className={styles.labelContainer}>
-        {hasMore && <button onClick={() => setLoadMoreTrigger(loadMoreTrigger + 1)} className={styles.header}>Load more</button>}
-      </div>
-      <div className={styles.labelContainer}>
-        <Link href="/" className={styles.header}>
-          <a>Back to GAIB</a>
-        </Link>
+      <div className={styles.feedSection}>
+        <div className={styles.labelContainer}>
+          {hasMore && <button onClick={() => setLoadMoreTrigger(loadMoreTrigger + 1)} className={styles.header}>Load more Stories</button>}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+          <Link href="/" className={styles.header}>
+            <a>Create a Story with GAIB</a>
+          </Link>
+          </div>
+          <div className={styles.footer}>
+          <div className={styles.footerContainer}>
+            <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>
+          </div>
+        </div>
       </div>
     </div>
   );
