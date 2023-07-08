@@ -1287,7 +1287,7 @@ function Home({ user }: HomeProps) {
                       maxLength={1000}
                       rows={2}
                       placeholder={
-                        loading
+                        (loading || isSpeaking)
                           ? (customPrompt != '') ? `Personality: (custom) ${customPrompt}` : `Personality: (preset) ${PERSONALITY_PROMPTS[selectedPersonality]}`
                           : (customPrompt != '') ? `Personality: ${customPrompt}` : `Personality: (optional) Enter custom personality prompting in this text box. This text is added to the personality, choose NoPrompt as the personality to have this text override the personality.\n===\n${PERSONALITY_PROMPTS[selectedPersonality]}`
                       }
