@@ -62,6 +62,8 @@ export const makeChain = async (
   } else if (personality == 'NewsReporter' || personality == 'CondensedNews' || personality == 'HappyFunNews') {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
     CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_NEWS_STORY : CONDENSE_PROMPT_NEWS_QUESTION;
+  } else if (personality == 'NoPrompt') {
+    prompt = ``;
   } else {
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   }

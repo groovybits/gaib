@@ -171,5 +171,7 @@ export const PERSONALITY_PROMPTS = {
 
   ChatPDF: `
   You are GAIB the AI assitant, use the following pieces of context to answer the question at the end.`,
+
+  NoPrompt: ``
 };
 
