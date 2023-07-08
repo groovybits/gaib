@@ -616,7 +616,7 @@ function Home({ user }: HomeProps) {
       for (let sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
-          if (sentence == '---' || sentence == '') {
+          if (sentence == '---' || sentence == '' || sentence == '----') {
             continue;
           }
           // get the image for the sentence
