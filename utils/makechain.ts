@@ -191,15 +191,28 @@ export const makeChain = async (
   let chain;
   try {
     console.log(`makeChain: Retrieving ${documentsReturned} documents from the document store using [${CONDENSE_PROMPT_STRING}].`)
-    chain = ConversationalRetrievalQAChain.fromLLM(model,
-      vectorstore.asRetriever(documentsReturned), // get more source documents, override default of 4
-      {
-        qaTemplate: prompt,
-        questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
-        returnSourceDocuments: RETURN_SOURCE_DOCUMENTS,
-        ...options,
-      },
-    );
+
+    if (documentsReturned > 0) {
+      chain = ConversationalRetrievalQAChain.fromLLM(model,
+        vectorstore.asRetriever(documentsReturned), // get more source documents, override default of 4
+        {
+          qaTemplate: prompt,
+          questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
+          returnSourceDocuments: RETURN_SOURCE_DOCUMENTS,
+          ...options,
+        },
+      );
+    } else {
+      chain = ConversationalRetrievalQAChain.fromLLM(model,
+        vectorstore.asRetriever(1),
+        {
+          qaTemplate: prompt,
+          questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
+          returnSourceDocuments: false,
+          ...options,
+        },
+      );
+    }
   } catch (error: any) {
     console.error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: ", error);
     throw new Error("makeChain: Error in ConversationalRetrievalQAChain.fromLLM: " + error);
