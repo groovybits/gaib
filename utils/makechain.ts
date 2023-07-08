@@ -24,10 +24,10 @@ import { BaseLanguageModel } from 'langchain/dist/base_language';
 const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === undefined ? true : Boolean(process.env.RETURN_SOURCE_DOCUMENTS);
 const modelName = process.env.MODEL_NAME || 'gpt-3.5-turbo-16k';  //change this to gpt-4 if you have access
 const fasterModelName = process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k';  // faster model for title/question generation
-const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process.env.PRESENCE_PENALTY) : 0.2;
-const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.3;
+const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process.env.PRESENCE_PENALTY) : 0.0;
+const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.0;
 const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.7;
-const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.1;
+const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.0;
 
 const fasterModel = new OpenAI({
   modelName: fasterModelName,
@@ -185,6 +185,17 @@ export const makeChain = async (
   const options = {
     questionGeneratorChainOptions: {
       llm: fasterModel,
+      maxTokens: (maxTokens > 0) ? maxTokens : null,
+      temperature: temperature,
+      presencePenalty: presence,
+      frequencyPenalty: frequency,
+      topP: 1.0,
+      bestOf: 1,
+      returnFullOutput: true,
+      returnMetadata: false,
+      returnPrompt: false,
+      returnQuestion: true,
+      returnAnswer: false,
     },
   }
 
