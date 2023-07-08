@@ -376,6 +376,7 @@ function Home({ user }: HomeProps) {
 
           const data = await response.json();
           let imageId = uuidv4();
+          let duplicateImage = false;
           if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
             return {
               url: data.photos[0].src.large2x,
@@ -385,7 +386,10 @@ function Home({ user }: HomeProps) {
             };
           } else if (imageSource === 'deepai' && data.output_url) {
             const imageUrl = data.output_url;
-            if (saveImages === 'true') {
+            if (data?.duplicate === true) {
+              duplicateImage = true;
+            }
+            if (saveImages === 'true' && !duplicateImage) {
               const idToken = await user.getIdToken();
               // Store the image and index it
               await fetch('/api/storeImage', {
@@ -395,10 +399,10 @@ function Home({ user }: HomeProps) {
               });
             }
             const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
-            if (bucketName !== '') {
+            if (bucketName !== '' && !duplicateImage) {
               return `https://storage.googleapis.com/${bucketName}/deepAIimage/${episodeId}_${count}_${imageId}.jpg`;
             } else {
-              // don't store images in GCS
+              // don't store images in GCS or it is a duplicate image
               return imageUrl;
             }
           } else {

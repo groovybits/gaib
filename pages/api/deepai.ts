@@ -60,7 +60,7 @@ const deepaiHandler = async (req: NextApiRequestWithUser, res: NextApiResponse) 
       if (results.length > 0) {
         const data = results[0].item;
         console.log('storeImage: Image found in database:', data);
-        res.status(200).json({ ouput_url: data.url });
+        res.status(200).json({ ouput_url: data.url, duplicate: true });
         return;
       }
 
