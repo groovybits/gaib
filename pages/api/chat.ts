@@ -230,16 +230,16 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Function to create a single chain
     async function createChain(i: number, namespaceResult: any, selectedPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
       let token_count = 0;
-      consoleLog('info', `createChain: Episode #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
+      consoleLog('info', `createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
       return await makeChain(namespaceResult.vectorStore, selectedPersonality, requestedTokens, documentCount, userId, isStory, (token: string) => {
         token_count++;
         if (token_count % 100 === 0) {
-          consoleLog('info', `ChatAPI: createChain Episode #${i + 1} Chat Token count: ${token_count}`);
+          consoleLog('info', `ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);
         }
         if (typeof token === 'string') {
           sendData(JSON.stringify({ data: token }));
         } else {
-          consoleLog('warning', `ChatAPI: createChain Episode #${i + 1} Invalid token:`, token ? token : 'null');
+          consoleLog('warning', `ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Invalid token:`, token ? token : 'null');
         }
       });
     }
@@ -272,15 +272,15 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       if (i > 0) { // not the first episode
         if (isStory) {
           if (episodeCount === (i + 1)) {
-            title = `keeping context of the original story "${sanitizedQuestion}", end the story arc with a final episode title.`;
+            title = `the final episode...`;
           } else {
-            title = `keeping context of the original topic "${sanitizedQuestion}", continue the story arc with a follow up episode title that is taken from the episode history.`;
+            title = `next episode...`;
           }
         } else {
           if (episodeCount === (i + 1)) {
-            title = `keeping context of the initial question "${sanitizedQuestion}", end the conversation with a final answer.`;
+            title = `in context of the previous questions and answers, end the conversation with a final answer.`;
           } else {
-            title = `keeping context of the initial question "${sanitizedQuestion}", continue the conversation with a follow up question to the previous answer.`;
+            title = `keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer.`;
           }
         }
       }
@@ -346,10 +346,11 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         total_token_count = total_token_count + countTokens([response.text]);
         consoleLog('info', `ChatAPI: Finished Episode #${episodeNumber} of ${episodeCount} episodes.`);
         consoleLog('info', `ChatAPI: Question: ${title}`);
+        let historyIdx = 0;
         if (chatHistory.length > 0) {
           for (const [question, answer] of chatHistory) {
-            let msgNum = chatHistory.indexOf([question, answer]) + 1;
-            consoleLog('info', `ChatAPI: History #${msgNum}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
+            historyIdx = historyIdx + 1;
+            consoleLog('info', `ChatAPI: History #${historyIdx}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
           }
         } else {
           consoleLog('info', `ChatAPI: Chat History is empty [].`);
