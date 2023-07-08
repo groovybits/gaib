@@ -108,8 +108,8 @@ function Home({ user }: HomeProps) {
   const [feedSort, setFeedSort] = useState<string>('popularity');
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
-  const router = useRouter();
-
+  const [customPrompt, setCustomPrompt] = useState<string>('');
+  
   const isSubmittingRef = useRef(false);
   interface StoryPart {
     sentence: string;
@@ -900,6 +900,7 @@ function Home({ user }: HomeProps) {
           selectedPersonality,
           selectedNamespace,
           isStory,
+          customPrompt,
           tokensCount,
           documentCount,
           episodeCount,
@@ -963,19 +964,12 @@ function Home({ user }: HomeProps) {
   }
 
   // Handle the submit event on Enter
-  const handleEnter = useCallback(
-    (e: any) => {
-      if (e.key === 'Enter' && !e.shiftKey && query) {
-        if (autoFullScreen && !isFullScreen) {
-          toggleFullScreen();
-        }
-        handleSubmit(e);
-      } else if (e.key == 'Enter') {
-        e.preventDefault();
-      }
-    },
-    [query, autoFullScreen, isFullScreen],
-  );
+  const handleEnter = (e: any) => {
+    if (e.key === 'Enter' && !e.shiftKey && query) {
+      e.preventDefault(); // prevent new line
+      handleSubmit(e);
+    }
+  };
 
   // Handle the submit event on click
   const chatMessages = useMemo(() => {
@@ -1287,6 +1281,27 @@ function Home({ user }: HomeProps) {
                   <div className={styles.cloudform}>
                     <textarea
                       disabled={loading || isSpeaking}
+                      ref={textAreaRef}
+                      id="customPrompt"
+                      name="customPrompt"
+                      maxLength={1000}
+                      rows={2}
+                      placeholder={
+                        loading
+                          ? (customPrompt != '') ? `Personality: (custom) ${customPrompt}` : `Personality: (preset) ${PERSONALITY_PROMPTS[selectedPersonality]}`
+                          : (customPrompt != '') ? `Personality: ${customPrompt}` : `Personality: (optional) Enter custom personality prompting in this text box. This text is added to the personality, choose NoPrompt as the personality to have this text override the personality.\n===\n${PERSONALITY_PROMPTS[selectedPersonality]}`
+                      }
+                      value={customPrompt}
+                      onChange={(e) => {
+                        setCustomPrompt(e.target.value);
+                        autoResize();
+                      }}
+                      className={styles.textarea}
+                    />
+                  </div>
+                  <div className={styles.cloudform}>
+                    <textarea
+                      disabled={loading || isSpeaking}
                       onKeyDown={handleEnter}
                       ref={textAreaRef}
                       autoFocus={true}
@@ -1296,12 +1311,12 @@ function Home({ user }: HomeProps) {
                       name="userInput"
                       placeholder={
                         loading
-                          ? selectedPersonality === 'Anime'
-                            ? 'GAIB is generating your Anime...'
-                            : 'Thinking upon your question...'
-                          : selectedPersonality === 'Anime'
-                            ? 'Give me an Anime plotline to generate? Please end all spoken commands with "GAIB".'
-                            : 'Give me a question to answer? Please end all spoken commands with "GAIB".'
+                          ? isStory
+                            ? `GAIB[${selectedPersonality}/${selectedNamespace}]: I am generating your story...`
+                            : `GAIB[${selectedPersonality}/${selectedNamespace}]: I am thinking upon your question...`
+                          : isStory
+                            ? `Plotline: GAIB[${selectedPersonality}/${selectedNamespace}]: Tell GAIB a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
+                            : `Question: GAIB[${selectedPersonality}/${selectedNamespace}]: Ask GAIB a question, speak or type it here. Change the various options below to customize your experience.`
                       }
                       value={query}
                       onChange={(e) => {
@@ -1310,7 +1325,7 @@ function Home({ user }: HomeProps) {
                       }}
                       className={styles.textarea}
                     />
-                  </div>
+                    </div>
                   <div className={styles.buttoncontainer}>
                     <div className={styles.buttoncontainer}>
                       <div className={styles.buttoncontainer}>

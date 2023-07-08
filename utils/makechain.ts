@@ -40,6 +40,7 @@ export const makeChain = async (
   documentCount: number,
   userId: string,
   storyMode: boolean,
+  customPrompt: string,
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
@@ -48,27 +49,27 @@ export const makeChain = async (
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt: string = '';
   if (personality == 'Anime') {
-    prompt = `You are an Anime Otaku expert who can answer questions about Anime. ${storyMode ? PERSONALITY_PROMPTS['Anime'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+    prompt = `You are an Anime Otaku expert who can answer questions about Anime. ${customPrompt}  ${storyMode ? PERSONALITY_PROMPTS['Anime'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Stories') {
-    prompt = `You are a professional screenplay writer for TV Espisodes. ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+    prompt = `You are a professional screenplay writer for TV Espisodes. ${customPrompt} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Poet') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
   } else if (personality == 'SongWriter') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
   } else if (personality == 'Analyst') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
   } else if (personality == 'Interviewer') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
   } else if (personality == 'NewsReporter' || personality == 'CondensedNews' || personality == 'HappyFunNews') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
     CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_NEWS_STORY : CONDENSE_PROMPT_NEWS_QUESTION;
   } else if (personality == 'NoPrompt') {
-    prompt = ``;
+    prompt = customPrompt;
   } else {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   }
 
-  console.log("makeChain: Prompt: ", prompt);
+  console.log("makeChain: Prompt: ", prompt, " CustomPrompt: ", customPrompt);
 
 
   let documentsReturned = documentCount;
