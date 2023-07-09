@@ -137,7 +137,9 @@ function Home({ user }: HomeProps) {
 
   const shareStory = async () => {
     try {
-      console.log(`Current story: ${JSON.stringify(currentStory)}`);
+      if (debug) {
+        console.log(`Current story: ${JSON.stringify(currentStory)}`);
+      }
 
       if (currentStory.length === 0) {
         console.log(`shareStory: No stories to share`);
@@ -147,13 +149,15 @@ function Home({ user }: HomeProps) {
       const storyText = currentStory.map((item) => item.sentence).join('|');
       const imageUrls = currentStory.map((item) => item.imageUrl);
 
-      console.log('Data being written:', {
-        userId: user.uid,
-        text: storyText,
-        imageUrls: imageUrls,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      });
-      console.log('ID of the current user:', user.uid);
+      if (debug) {
+        console.log('Data being written:', {
+          userId: user.uid,
+          text: storyText,
+          imageUrls: imageUrls,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log('ID of the current user:', user.uid);
+      }
 
       // Save the story to Firestore
       await firebase.firestore().collection('stories').add({
@@ -587,9 +591,10 @@ function Home({ user }: HomeProps) {
         }
       }
 
-      console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
-      console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
-
+      if (debug) {
+        console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
+        console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
+      }
       let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
       let model = defaultModel;
 
@@ -1623,8 +1628,8 @@ function Home({ user }: HomeProps) {
                       className={styles.textareaConfig}
                     />
                   </div>
+                  {/* Drop down menu configuration row 1 and 2 */}
                   <div className={styles.buttoncontainer}>
-                    
                     <div className={styles.dropdowncontainer}>
                       <div className={styles.dropdowncontainer}>
                         <div className={styles.labelContainer}>

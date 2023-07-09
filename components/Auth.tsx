@@ -17,6 +17,7 @@ const stripePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
 const loginAuth = process.env.NEXT_PUBLIC_LOGIN_AUTH_ENABLE ?
   (process.env.NEXT_PUBLIC_LOGIN_AUTH_ENABLE == 'true') ?
     true : false : false;
+const debug = process.env.DEBUG ? (process.env.DEBUG == 'true') ? true : false : false; 
 
 interface Props { }
 
@@ -76,7 +77,9 @@ function Auth({ }: Props): ReactElement {
 
     try {
       const result = await cancelPremiumSubscription();
-      console.log('Subscription cancelled successfully:', result.data);
+      if (debug) {
+        console.log('Subscription cancelled successfully:', result.data);
+      }
     } catch (error) {
       console.error('Error cancelling subscription:', error);
     }
@@ -109,7 +112,9 @@ function Auth({ }: Props): ReactElement {
   const handleSignIn = async () => {
     try {
       const user = await loginUser(email, password);
-      console.log("User logged in:", user);
+      if (debug) {
+          console.log("User logged in:", user);
+      }
       setMessage('Logged in successfully!');
       if (user) {
         firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
@@ -123,7 +128,9 @@ function Auth({ }: Props): ReactElement {
   const handleRegister = async () => {
     try {
       const user = await registerUser(email, password);
-      console.log("User registered:", user);
+      if (debug) {
+        console.log("User registered:", user);
+      }
       setMessage('User registered successfully!');
     } catch (error : any) {
       console.error("Error registering user:", error);
@@ -141,15 +148,19 @@ function Auth({ }: Props): ReactElement {
       if (userCredentials && userCredentials.user) {
         const user = userCredentials.user;
 
-        console.log("userId:", userCredentials.user.uid,
-          " provider:", userCredentials.user.providerData[0]?.providerId,
-          " photoUrl:", userCredentials.user.photoURL,
-          " displayName:", userCredentials.user.displayName || "unknown",
-          " email:", userCredentials.user.email);
-        
+        if (debug) {
+          console.log("userId:", userCredentials.user.uid,
+            " provider:", userCredentials.user.providerData[0]?.providerId,
+            " photoUrl:", userCredentials.user.photoURL,
+            " displayName:", userCredentials.user.displayName || "unknown",
+            " email:", userCredentials.user.email);
+        }
+
         if (user) {
           firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
-          console.log("Google User logged in:", user);
+          if (debug) {
+            console.log("Google User logged in:", user);
+          }
         } else {
           console.log(`Google User not set: ${userCredentials.user}`);
         }
