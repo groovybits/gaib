@@ -21,7 +21,10 @@ const DocumentDropdown: React.FC<DocumentDropdownProps> = ({ onChange }) => {
         className={styles.dropdown}
         value={documentCount}
         onChange={handleChange}
-      >
+    >
+      <option value="" disabled>
+        Number of Documents for Context
+      </option>
         {[...Array(13)].map((_, index) => {
           const value = index * 1;
           return (

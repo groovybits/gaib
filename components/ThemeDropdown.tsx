@@ -7,7 +7,7 @@ interface ThemeDropdownProps {
 }
 
 const ThemeDropdown: React.FC<ThemeDropdownProps> = ({ onChange }) => {
-  const [mode, setMode] = useState<string>('Anime');
+  const [mode, setMode] = useState<string>('MultiModal');
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
@@ -17,8 +17,11 @@ const ThemeDropdown: React.FC<ThemeDropdownProps> = ({ onChange }) => {
 
   return (
     <select id="mode" value={mode} onChange={handleChange} className={styles.dropdown}>
-        <option value='Anime'>Anime Theme</option>
-        <option value='Terminal'>Terminal Theme</option>
+      <option value="" disabled>
+        Themes
+      </option>
+        <option value='MultiModal'>MultiModal</option>
+        <option value='Terminal'>Terminal</option>
       </select>
   );
 };

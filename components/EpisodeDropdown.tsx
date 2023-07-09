@@ -21,7 +21,10 @@ const EpisodeDropdown: React.FC<EpisodeDropdownProps> = ({ onChange }) => {
         className={styles.dropdown}
         value={episodeCount}
         onChange={handleChange}
-      >
+    >
+      <option value="" disabled>
+        Number of Episodes / QAs
+      </option>
         {[...Array(10)].map((_, index) => {
           const value = index + 1;
           return (

@@ -17,9 +17,12 @@ const ModeDropdown: React.FC<ModeDropdownProps> = ({ onChange }) => {
 
   return (
     <select id="mode" value={mode} onChange={handleChange} className={styles.dropdown}>
-        <option value='story'>Story Mode</option>
-        <option value='question'>Question Mode</option>
-      </select>
+      <option value="" disabled>
+        Mode
+      </option>
+        <option value='story'>Story</option>
+        <option value='question'>Question</option>
+    </select>
   );
 };
 

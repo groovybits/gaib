@@ -36,6 +36,8 @@ import EpisodeDropdown from '@/components/EpisodeDropdown';
 import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
+import copy from 'copy-to-clipboard';
+import { last } from 'pdf-lib';
 
 const debug = process.env.NEXT_PUBLIC_DEBUG || false;
 
@@ -94,7 +96,7 @@ function Home({ user }: HomeProps) {
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('Anime');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
@@ -107,9 +109,8 @@ function Home({ user }: HomeProps) {
   const [photographerUrl, setPhotographerUrl] = useState<string>('');
   const [pexelsUrl, setPexelsUrl] = useState<string>('');
   const [tokensCount, setTokensCount] = useState<number>(0);
-  const [isStory, setIsStory] = useState<boolean>(true);
-  const [selectedTheme, setSelectedTheme] = useState<string>('Anime');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isStory, setIsStory] = useState<boolean>(false);
+  const [selectedTheme, setSelectedTheme] = useState<string>('MultiModal');
   const [documentCount, setDocumentCount] = useState<number>(1);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
   const [news, setNews] = useState<Array<any>>([]);
@@ -131,6 +132,11 @@ function Home({ user }: HomeProps) {
     sentence: string;
     imageUrl: string;
   }
+
+  const copyStory = async () => {
+    copy(latestMessage.message);
+    alert('Story copied to clipboard!');
+  };
 
   const shareStory = async () => {
     try {
@@ -349,7 +355,7 @@ function Home({ user }: HomeProps) {
       setStartTime(endTime);
 
       if (sentence === '') {
-        sentence = 'Anime AI Robot, quantum computing, and the meaning of life.';
+        sentence = 'GAIB The AI Robot, quantum computing, and the meaning of life.';
       }
 
       let keywords = '';
@@ -611,22 +617,6 @@ function Home({ user }: HomeProps) {
 
       let sceneIndex = 0;
 
-      // Merge sentences that are part of the same paragraph
-      /*let mergedSentences: string[] = [];
-      for (const sentence of sentences) {
-        if (sentence.startsWith('*') || sentence.startsWith('-') || sentence.startsWith('SCENE:') || sentence.startsWith('Episode Title:') || sentence.startsWith('Question: ') || sentence.startsWith('Answer: ') || sentence.startsWith('Story Begins: ') || sentence.startsWith('Plotline: ') || sentence.startsWith('References: ') || sentence === '') {
-          if (sentence !== '') {
-            mergedSentences.push(sentence);
-          }
-        } else {
-          if (mergedSentences.length > 0) {
-            mergedSentences[mergedSentences.length - 1] += ' ' + sentence;
-          } else {
-            mergedSentences.push(sentence);
-          }
-        }
-      }*/
-
       // clear current story for save story
       if (!isFetching) {
         setCurrentStory([]);
@@ -832,11 +822,11 @@ function Home({ user }: HomeProps) {
       if (autoFullScreen && !isFullScreen) {
         setIsFullScreen(true);
       }
-      // Anime theme
-      if (selectedTheme === 'Anime') {
+      // Multi Modal theme
+      if (selectedTheme === 'MultiModal') {
         displayImagesAndSubtitles();
         setLastSpokenMessageIndex(lastMessageIndex);
-      } else {
+      } else /*if (selectedTheme === 'Terminal')*/ {
         setLastSpokenMessageIndex(lastMessageIndex);
         setIsSpeaking(false);
       }
@@ -904,6 +894,14 @@ function Home({ user }: HomeProps) {
     setQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
 
+    if (!isFetching) {
+      setCurrentStory([]);
+    } else {
+      if (latestMessage.message !== '') {
+        // TODO: collect each episode in fetching mode separately and save each episode separately
+      }
+    }
+
     // Send the question to the server
     const ctrl = new AbortController();
     try {
@@ -946,6 +944,7 @@ function Home({ user }: HomeProps) {
             }));
             setLoading(false);
             setSubtitle('');
+            messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             ctrl.abort();
           } else if (event.data === '[OUT_OF_TOKENS]') {
             setMessageState((state) => ({
@@ -962,6 +961,7 @@ function Home({ user }: HomeProps) {
             }));
             setLoading(false);
             setSubtitle('System Error... Please try again.');
+            messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             ctrl.abort();
           } else {
             const data = JSON.parse(event.data);
@@ -977,13 +977,16 @@ function Home({ user }: HomeProps) {
               }));
             }
             setSubtitle(`Loading... [${data.data}]`);
+            messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
       });
+      messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
     } catch (error : any) {
       setLoading(false);
       setSubtitle(`System Error: ${error.message}}`);
       setError('An error occurred while fetching the data. Please try again.');
+      messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
       console.log(error);
     }
     isSubmittingRef.current = false;
@@ -1023,12 +1026,6 @@ function Home({ user }: HomeProps) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   }, [chatMessages]);
-
-  useEffect(() => {
-    if (messagesEndRef.current && messagesEndRef.current.scrollIntoView) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [latestMessage]);
 
   // Update the autoFullScreen state
   useEffect(() => {
@@ -1302,7 +1299,7 @@ function Home({ user }: HomeProps) {
                 >
                   {isFullScreen ? "Exit Full Screen" : "Full Screen"}
                 </button>
-                {selectedTheme === 'Anime' ? (
+                {selectedTheme === 'MultiModal' ? (
                   <div className={styles.generatedImage}>
                     {(imageUrl === '') ? "" : (
                       <div className={styles.generatedImage}>
@@ -1323,12 +1320,11 @@ function Home({ user }: HomeProps) {
                     )}
                   </div>
                 ) : (
-                  <div className={styles.generatedImage}>
+                  <div ref={messageListRef} className={styles.generatedImage}>
                     <div className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
                       <ReactMarkdown linkTarget="_blank">
                         {latestMessage.message}
                       </ReactMarkdown>
-                      <div ref={messagesEndRef} /> {/* This div will be scrolled into view */}
                     </div>
                   </div>
                 )}
@@ -1521,14 +1517,21 @@ function Home({ user }: HomeProps) {
                           }
                         </button>
                         <button
-                          title="Save N Share"
+                          title="Copy Story"
+                          onClick={copyStory}
+                          type="button"
+                          disabled={loading || isSpeaking}
+                          className={styles.footer}
+                        >Copy Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                        <button
+                          title="Share Story"
                           onClick={shareStory}
                           type="button"
                           disabled={loading || isSpeaking}
                           className={styles.footer}
-                        >Save N Share</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                        >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
                         <button
-                          title="Save N Share"
+                          title="Fetch News"
                           onClick={handleFetchButtonClick}
                           className={styles.footer}
                           type="button"
@@ -1652,7 +1655,7 @@ function Home({ user }: HomeProps) {
                         <div className={styles.labelContainer}>
                           <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
                         </div>
-                        {selectedTheme === 'Anime' ? (
+                        {selectedTheme === 'MultiModal' ? (
                           <><div className={styles.labelContainer}>
                             <select
                               id="gender-select"
@@ -1708,39 +1711,6 @@ function Home({ user }: HomeProps) {
                       <ThemeDropdown onChange={handleThemeChange} />
                       <DocumentDropdown onChange={handleDocumentsChange} />
                       <EpisodeDropdown onChange={handleEpisodesChange} />
-                    </div>
-                    <div className={styles.labelContainer}>
-                      <button title="View Transcript"
-                        type="button"
-                        onClick={togglePopup}
-                        className={`${styles.copyButton} ${styles.shrinkedButton}`}
-                      >
-                        <svg
-                          className={`${styles.documentIcon} ${styles.centeredSvg}`}
-                          width="24"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M19 3H9C7.89543 3 7 3.89543 7 5V19C7 20.1046 7.89543 21 9 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM17 19H11V17H17V19ZM17 15H11V13H17V15ZM17 11H11V9H17V11ZM17 7H11V5H17V7Z"
-                            fill="currentColor"
-                          />
-                        </svg>
-                      </button>
-                      {showPopup && (
-                        <div className="popup" onClick={togglePopup}>
-                          <div
-                            className="popupContent"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                          >
-                            <pre className={styles.preWrap}>{latestMessage.message}</pre>
-                          </div>
-                        </div>
-                      )}
                     </div>
                     <div className={styles.labelContainer}>
                       <Link href="/board" className={styles.header}>

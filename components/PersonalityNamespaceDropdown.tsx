@@ -3,8 +3,8 @@ import React, { ChangeEvent } from 'react';
 import styles from '@/styles/Home.module.css';
 
 const NAMESPACE_VALUES = {
-  groovypdf: "Magic Mix",
-  videoengineer: "Video Engineer"
+  groovypdf: "Mystical Wisdom",
+  videoengineer: "Video Science",
 };
 
 interface PersonalityNamespaceDropdownProps {
@@ -30,6 +30,9 @@ const PersonalityNamespaceDropdown: React.FC<PersonalityNamespaceDropdownProps> 
       value={selectedNamespace}
       onChange={handleChange}
     >
+      <option value="" disabled>
+        Choose Namespace
+      </option>
       {Object.entries(NAMESPACE_VALUES).map(([key, label]) => (
         <option key={key} value={key}>
           {label}
