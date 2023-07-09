@@ -41,35 +41,38 @@ export const makeChain = async (
   userId: string,
   storyMode: boolean,
   customPrompt: string,
+  condensePrompt: string,
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
-  let CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_STORY : CONDENSE_PROMPT_QUESTION;
+  let CONDENSE_PROMPT_STRING = (condensePrompt != '') ? condensePrompt : storyMode ? CONDENSE_PROMPT_STORY : CONDENSE_PROMPT_QUESTION;
 
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt: string = '';
-  if (personality == 'Anime') {
-    prompt = `You are an Anime Otaku expert who can answer questions about Anime. ${customPrompt}  ${storyMode ? PERSONALITY_PROMPTS['Anime'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+  if (customPrompt != '') {
+    prompt = `${customPrompt}`;
+  } else if (personality == 'Anime') {
+    prompt = `${storyMode ? PERSONALITY_PROMPTS['Anime'] : 'You are an anime expert otaku who knows everything about every anime serie and episode.'} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Stories') {
-    prompt = `You are a professional screenplay writer for TV Espisodes. ${customPrompt} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+    prompt = `${storyMode ? PERSONALITY_PROMPTS['Stories'] : 'You are a story teller and screenplay writer who can answer questions about writing stories and creating scripts for tv show episodes.'} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Poet') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
   } else if (personality == 'SongWriter') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
   } else if (personality == 'Analyst') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
   } else if (personality == 'Interviewer') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
   } else if (personality == 'NewsReporter' || personality == 'CondensedNews' || personality == 'HappyFunNews') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
-    CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_NEWS_STORY : CONDENSE_PROMPT_NEWS_QUESTION;
-  } else if (personality == 'NoPrompt') {
-    prompt = customPrompt;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
+    if (condensePrompt != '') {
+      CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_NEWS_STORY : CONDENSE_PROMPT_NEWS_QUESTION;
+    }
   } else {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${customPrompt} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   }
 
-  console.log("makeChain: Prompt: ", prompt, " CustomPrompt: ", customPrompt);
+  console.log("makeChain: Prompt: ", prompt);
 
 
   let documentsReturned = documentCount;

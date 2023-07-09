@@ -143,7 +143,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    const { question, userId, selectedPersonality, selectedNamespace, isStory, customPrompt, tokensCount, documentCount, episodeCount, history } = req.body;
+    const { question, userId, selectedPersonality, selectedNamespace, isStory, customPrompt, condensePrompt, tokensCount, documentCount, episodeCount, history } = req.body;
 
 
     //only accept post requests
@@ -163,7 +163,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     };
 
     // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
-    if (question.startsWith('REPLAY:')) {
+    if (question.startsWith('REPLAY:') || selectedPersonality === 'Passthrough') {
       consoleLog('info', `ChatAPI: REPLAY: ${question}`);
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -231,7 +231,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     async function createChain(i: number, namespaceResult: any, selectedPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
       let token_count = 0;
       consoleLog('info', `createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
-      return await makeChain(namespaceResult.vectorStore, selectedPersonality, requestedTokens, documentCount, userId, isStory, customPrompt, (token: string) => {
+      return await makeChain(namespaceResult.vectorStore, selectedPersonality, requestedTokens, documentCount, userId, isStory, customPrompt, condensePrompt, (token: string) => {
         token_count++;
         if (token_count % 100 === 0) {
           consoleLog('info', `ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);

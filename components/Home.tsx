@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
@@ -6,7 +6,21 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
-import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
+import {
+  PERSONALITY_PROMPTS,
+  CONDENSE_PROMPT_STORY,
+  CONDENSE_PROMPT_QUESTION,
+  CONDENSE_PROMPT_NEWS_STORY,
+  CONDENSE_PROMPT_NEWS_QUESTION,
+  STORY_FOOTER,
+  QUESTION_FOOTER,
+  ANSWER_FOOTER,
+  ANALYZE_FOOTER,
+  POET_FOOTER,
+  SONG_FOOTER,
+  NEWS_STORY_FOOTER,
+  NEWS_QUESTION_FOOTER,
+} from '@/config/personalityPrompts';
 import { audioLanguages, subtitleLanguages, Language } from "@/config/textLanguages";
 import nlp from 'compromise';
 import { ImageData } from '@/types/imageData'; // Update the path if required
@@ -21,7 +35,6 @@ import DocumentDropdown from '@/components/DocumentDropdown';
 import EpisodeDropdown from '@/components/EpisodeDropdown';
 import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
 
 const debug = process.env.NEXT_PUBLIC_DEBUG || false;
@@ -53,7 +66,7 @@ function Home({ user }: HomeProps) {
         type: 'systemMessage',
       },
       {
-        message: 'Welcome, I am The Groovy AI Bot GAIB!',
+        message: 'Welcome, I am The Groovy AI Bot GAIB! Set my personality, and choose question answer or story generation mode. Then type your prompt and press enter to get started.',
         type: 'apiMessage',
       },
     ],
@@ -95,7 +108,7 @@ function Home({ user }: HomeProps) {
   const [isStory, setIsStory] = useState<boolean>(true);
   const [selectedTheme, setSelectedTheme] = useState<string>('Anime');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [documentCount, setDocumentCount] = useState<number>(3);
+  const [documentCount, setDocumentCount] = useState<number>(1);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
   const [news, setNews] = useState<Array<any>>([]);
   const [isFetching, setIsFetching] = useState<boolean>(false);
@@ -104,11 +117,12 @@ function Home({ user }: HomeProps) {
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [feedCategory, setFeedCategory] = useState<string>('');
   const [feedKeywords, setFeedKeywords] = useState<string>('');
-  const [feedPrompt, setFeedPrompt] = useState<string>('');
+  const [feedPrompt, setFeedPrompt] = useState<string>('Report on the following news story...');
   const [feedSort, setFeedSort] = useState<string>('popularity');
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
   const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [condensePrompt, setCondensePrompt] = useState<string>('');
   
   const isSubmittingRef = useRef(false);
   interface StoryPart {
@@ -234,8 +248,12 @@ function Home({ user }: HomeProps) {
         }
         if (currentNews[index]) {  // Check that currentNews[index] is defined
           const headline = currentNews[index].title;
-          const body = currentNews[index].description.substring(0, 1000);
-          const currentQuery = `${headline}\n\n${body}`;
+          const body = currentNews[index].description.substring(0, 300);
+          let currentQuery = `${headline}\n\n${body}`;
+
+          if (feedPrompt != '') {
+            currentQuery = `${feedPrompt}\n\n${currentQuery}`;
+          }
 
           if (currentQuery === query) {
             console.log(`Skipping duplicate news headline #${index}: ${headline}`);
@@ -247,7 +265,7 @@ function Home({ user }: HomeProps) {
           const mockEvent = {
             preventDefault: () => { },
             target: {
-              value: feedPrompt + "\n\n"+ currentQuery,
+              value: currentQuery,
             },
           };
           isSubmittingRef.current = true;
@@ -879,6 +897,7 @@ function Home({ user }: HomeProps) {
     setError(null);
     setIsPaused(false);
     setLoading(true);
+    setSubtitle(`Loading...`);
     setIsSpeaking(true);
     setQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
@@ -901,6 +920,7 @@ function Home({ user }: HomeProps) {
           selectedNamespace,
           isStory,
           customPrompt,
+          condensePrompt,
           tokensCount,
           documentCount,
           episodeCount,
@@ -923,6 +943,7 @@ function Home({ user }: HomeProps) {
               pendingSourceDocs: undefined,
             }));
             setLoading(false);
+            setSubtitle('');
             ctrl.abort();
           } else if (event.data === '[OUT_OF_TOKENS]') {
             setMessageState((state) => ({
@@ -938,6 +959,7 @@ function Home({ user }: HomeProps) {
               pendingSourceDocs: undefined,
             }));
             setLoading(false);
+            setSubtitle('System Error... Please try again.');
             ctrl.abort();
           } else {
             const data = JSON.parse(event.data);
@@ -952,11 +974,13 @@ function Home({ user }: HomeProps) {
                 pending: (state.pending ?? '') + data.data,
               }));
             }
+            setSubtitle(`Loading... [${data.data}]`);
           }
         },
       });
-    } catch (error) {
+    } catch (error : any) {
       setLoading(false);
+      setSubtitle(`System Error: ${error.message}}`);
       setError('An error occurred while fetching the data. Please try again.');
       console.log(error);
     }
@@ -988,7 +1012,8 @@ function Home({ user }: HomeProps) {
   }, [messages, pending, pendingSourceDocs]);
 
   // Get the latest message
-  const latestMessage: Message | PendingMessage | undefined = chatMessages[chatMessages.length - 1];
+  const latestMessage: Message | PendingMessage = (chatMessages.length > 0) ? chatMessages[chatMessages.length - 1] : 
+    { type: 'apiMessage', message: '', sourceDocs: undefined };
 
   // scroll to bottom of chat
   useEffect(() => {
@@ -1257,7 +1282,7 @@ function Home({ user }: HomeProps) {
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>{subtitle}
                     </div>
-                    {(imageUrl === '') ? "" : (
+                    {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
                         <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
                       </div>
@@ -1280,20 +1305,51 @@ function Home({ user }: HomeProps) {
                 <form onSubmit={handleSubmit}>
                   <div className={styles.cloudform}>
                     <textarea
-                      disabled={loading || isSpeaking}
+                      readOnly={loading || (selectedPersonality == 'Passthrough')}
                       ref={textAreaRef}
                       id="customPrompt"
                       name="customPrompt"
                       maxLength={1000}
-                      rows={2}
+                      rows={3}
                       placeholder={
+                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
                         (loading || isSpeaking)
-                          ? (customPrompt != '') ? `Personality: (custom) ${customPrompt}` : `Personality: (preset) ${PERSONALITY_PROMPTS[selectedPersonality]}`
-                          : (customPrompt != '') ? `Personality: ${customPrompt}` : `Personality: (optional) Enter custom personality prompting in this text box. This text is added to the personality, choose NoPrompt as the personality to have this text override the personality.\n===\n${PERSONALITY_PROMPTS[selectedPersonality]}`
+                          ? isStory
+                            ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (preset) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
+                            : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (preset) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}}`
+                          : isStory
+                            ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (preset) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
+                            : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (preset) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}`
                       }
                       value={customPrompt}
                       onChange={(e) => {
                         setCustomPrompt(e.target.value);
+                        autoResize();
+                      }}
+                      className={styles.textarea}
+                    />
+                  </div>
+                  <div className={styles.cloudform}>
+                    <textarea
+                      readOnly={loading || (selectedPersonality == 'Passthrough')}
+                      ref={textAreaRef}
+                      id="condensePrompt"
+                      name="condensePrompt"
+                      maxLength={300}
+                      rows={3}
+                      placeholder={
+                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
+                        (loading || isSpeaking)
+                          ? isStory
+                            ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (preset) ${CONDENSE_PROMPT_STORY}`
+                            : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (preset) ${CONDENSE_PROMPT_QUESTION}`
+                          : isStory
+                            ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (preset) ${CONDENSE_PROMPT_STORY}`
+                            : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (preset) ${CONDENSE_PROMPT_QUESTION}`
+                      }
+                      value={condensePrompt}
+                      onChange={(e) => {
+                        setCondensePrompt(e.target.value);
                         autoResize();
                       }}
                       className={styles.textarea}
@@ -1310,13 +1366,14 @@ function Home({ user }: HomeProps) {
                       id="userInput"
                       name="userInput"
                       placeholder={
+                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, replaying your input...' :
                         loading
                           ? isStory
                             ? `GAIB[${selectedPersonality}/${selectedNamespace}]: I am generating your story...`
                             : `GAIB[${selectedPersonality}/${selectedNamespace}]: I am thinking upon your question...`
                           : isStory
-                            ? `Plotline: GAIB[${selectedPersonality}/${selectedNamespace}]: Tell GAIB a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
-                            : `Question: GAIB[${selectedPersonality}/${selectedNamespace}]: Ask GAIB a question, speak or type it here. Change the various options below to customize your experience.`
+                            ? `Plotline direction: GAIB[${selectedPersonality}/${selectedNamespace}]: Tell GAIB a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
+                            : `Question topic: GAIB[${selectedPersonality}/${selectedNamespace}]: Ask GAIB a question, speak or type it here. Change the various options below to customize your experience.`
                       }
                       value={query}
                       onChange={(e) => {
@@ -1455,12 +1512,12 @@ function Home({ user }: HomeProps) {
                           <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <label>
-                              Add to Prompt:
-                              <input type="text" value={feedPrompt} onChange={e => setFeedPrompt(e.target.value)} />
+                              Add to Prompt (optional):
+                              <input type="text" value={feedPrompt} style={{ width: "300px" }} onChange={e => setFeedPrompt(e.target.value)} />
                             </label>
                             <label>
                               Keywords (separated by spaces):
-                              <input type="text" value={feedKeywords} onChange={e => setFeedKeywords(e.target.value)} />
+                              <input type="text" value={feedKeywords} style={{ width: "300px" }} onChange={e => setFeedKeywords(e.target.value)} />
                             </label>
                             <label>
                               Category:
