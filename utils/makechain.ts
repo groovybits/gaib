@@ -51,8 +51,6 @@ export const makeChain = async (
   let prompt: string = '';
   if (customPrompt != '') {
     prompt = `${customPrompt}`;
-  } else if (personality == 'Anime') {
-    prompt = `${storyMode ? PERSONALITY_PROMPTS['Anime'] : 'You are an anime expert otaku who knows everything about every anime serie and episode.'} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Stories') {
     prompt = `${storyMode ? PERSONALITY_PROMPTS['Stories'] : 'You are a story teller and screenplay writer who can answer questions about writing stories and creating scripts for tv show episodes.'} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   } else if (personality == 'Poet') {

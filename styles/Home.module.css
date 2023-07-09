@@ -198,6 +198,35 @@
   color: #6b7280;
 }
 
+.textareaConfig {
+  position: relative;
+  resize: none;
+  font-size: 1.1rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+  width: 60vw;
+  max-width: 800px; /* limit width to 800px */
+  border-radius: 0.5rem;
+  border: 2px double #000000;
+  color: #000000; /* Changed font color to yellow-green */
+  background: #f5f105; /* Changed background color to a darker color */
+  outline: none;
+  font-family: 'Trebuchet MS', monospace; /* Added font family */
+}
+
+.textareaConfig:disabled {
+  opacity: 0.5;
+}
+
+.textareaConfig:focus {
+  outline: none;
+  border-color: #6b7280;
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.5);
+}
+
+.textareaConfig::placeholder {
+  color: #6b7280;
+}
+
 .labelButtons {
   display: flex;
   flex-wrap: wrap;
@@ -845,6 +874,12 @@
     width: 22rem;
     color: #000000; /* Changed font color to yellow-green */
     background: #ffffff; /* Changed background color to a darker color */
+    font-family: 'Trebuchet MS', monospace; /* Added font family */
+  }
+   .textareaConfig {
+    width: 22rem;
+    color: #000000; /* Changed font color to yellow-green */
+    background: #979797; /* Changed background color to a darker color */
     font-family: 'Trebuchet MS', monospace; /* Added font family */
   }
   .topnav {
