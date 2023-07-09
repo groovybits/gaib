@@ -7,7 +7,7 @@ interface ModeDropdownProps {
 }
 
 const ModeDropdown: React.FC<ModeDropdownProps> = ({ onChange }) => {
-  const [mode, setMode] = useState<string>('story');
+  const [mode, setMode] = useState<string>('question');
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
@@ -18,10 +18,10 @@ const ModeDropdown: React.FC<ModeDropdownProps> = ({ onChange }) => {
   return (
     <select id="mode" value={mode} onChange={handleChange} className={styles.dropdown}>
       <option value="" disabled>
-        Mode
+        QA or Story Mode
       </option>
-        <option value='story'>Story</option>
-        <option value='question'>Question</option>
+      <option value='question'>Ask Questions</option>
+      <option value='story'>Create Stories</option>
     </select>
   );
 };

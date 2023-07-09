@@ -536,6 +536,15 @@ function Home({ user }: HomeProps) {
         'en-GB': 'en-GB-Wavenet-A'
       };
 
+      if (gender == `MALE`) {
+        defaultModels = {
+          'en-US': 'en-US-Wavenet-A',
+          'ja-JP': 'ja-JP-Wavenet-C',
+          'es-US': 'es-US-Wavenet-B',
+          'en-GB': 'en-GB-Wavenet-B'
+        };
+      }
+
       let voiceModels: { [key: string]: string } = {};
       let genderMarkedNames = [];
       let detectedGender: string = gender;
@@ -966,7 +975,7 @@ function Home({ user }: HomeProps) {
                 pending: (state.pending ?? '') + data.data,
               }));
             }
-            setSubtitle(`Loading... [${data.data}]`);
+            setSubtitle(`Loading... [${data.data.slice(0, 80).replace(/\n/g, ' ')}...]`);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
@@ -1285,7 +1294,7 @@ function Home({ user }: HomeProps) {
                   {isFullScreen ? "Exit Full Screen" : "Full Screen"}
                 </button>
                 {selectedTheme === 'MultiModal' ? (
-                  <div className={styles.generatedImage}>
+                  <div ref={messageListRef} className={styles.generatedImage}>
                     {(imageUrl === '') ? "" : (
                       <div className={styles.generatedImage}>
                         <img
@@ -1294,7 +1303,7 @@ function Home({ user }: HomeProps) {
                         />
                       </div>
                     )}
-                    <div ref={messageListRef} className={
+                    <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>{subtitle}
                     </div>
@@ -1636,16 +1645,16 @@ function Home({ user }: HomeProps) {
                             <select
                               id="gender-select"
                               className={styles.dropdown}
-                              disabled={isSpeaking || loading}
+                              disabled={loading}
                               value={gender}
                               onChange={(e) => setGender(e.target.value)}
                             >
                               <option value="" disabled>
-                                Choose Voice Gender
+                                Choose Default Voice Gender
                               </option>
-                              <option value="FEMALE">Female</option>
-                              <option value="MALE">Male</option>
-                              <option value="NEUTRAL">Neutral</option>
+                              <option value="FEMALE">Female Voice</option>
+                              <option value="MALE">Male Voice</option>
+                              <option value="NEUTRAL">Neutral Voice</option>
                             </select>
                           </div><div className={styles.labelContainer}>
                               <select
@@ -1659,7 +1668,7 @@ function Home({ user }: HomeProps) {
                                   Choose Audio Language
                                 </option>
                                 {audioLanguages.map((lang: Language) => (
-                                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                  <option key={lang.code} value={lang.code}>{lang.name} Speaking</option>
                                 ))}
                               </select>
                             </div><div className={styles.labelContainer}>
@@ -1674,7 +1683,7 @@ function Home({ user }: HomeProps) {
                                   Choose Subtitle Language
                                 </option>
                                 {subtitleLanguages.map((lang: Language) => (
-                                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                  <option key={lang.code} value={lang.code}>{lang.name} Subtitles</option>
                                 ))}
                               </select>
                             </div></>

@@ -20,8 +20,8 @@ const ThemeDropdown: React.FC<ThemeDropdownProps> = ({ onChange }) => {
       <option value="" disabled>
         Themes
       </option>
-        <option value='MultiModal'>MultiModal</option>
-        <option value='Terminal'>Terminal</option>
+        <option value='MultiModal'>MultiModal Theme</option>
+        <option value='Terminal'>Terminal Theme</option>
       </select>
   );
 };
