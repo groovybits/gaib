@@ -37,8 +37,6 @@ import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
-import { last } from 'pdf-lib';
-
 const debug = process.env.NEXT_PUBLIC_DEBUG || false;
 
 type PendingMessage = {
@@ -91,7 +89,6 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
-  const [showPopup, setShowPopup] = useState(false);
   const [subtitle, setSubtitle] = useState<string>('');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
@@ -285,10 +282,6 @@ function Home({ user }: HomeProps) {
     };
     processNewsArticle();
   }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending, query, feedPrompt]);  // Remove isProcessing from the dependencies
-
-  const togglePopup = () => {
-    setShowPopup(!showPopup);
-  };
 
   useEffect(() => {
     const lastMessageIndex: number = messages.length - 1;
@@ -819,9 +812,6 @@ function Home({ user }: HomeProps) {
     if (lastMessageIndex > lastSpokenMessageIndex &&
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
-      if (autoFullScreen && !isFullScreen) {
-        setIsFullScreen(true);
-      }
       // Multi Modal theme
       if (selectedTheme === 'MultiModal') {
         displayImagesAndSubtitles();
@@ -831,7 +821,7 @@ function Home({ user }: HomeProps) {
         setIsSpeaking(false);
       }
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, autoFullScreen, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -1020,19 +1010,14 @@ function Home({ user }: HomeProps) {
   const latestMessage: Message | PendingMessage = (chatMessages.length > 0) ? chatMessages[chatMessages.length - 1] : 
     { type: 'apiMessage', message: '', sourceDocs: undefined };
 
-  // scroll to bottom of chat
   useEffect(() => {
     if (messageListRef.current) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+      // Scroll the container to the bottom
+      messageListRef.current.scrollTo(0, messageListRef.current.scrollHeight);
+      // Scroll to the message box
+      messageListRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [chatMessages]);
-
-  // Update the autoFullScreen state
-  useEffect(() => {
-    if (!isSpeaking && !loading && autoFullScreen && !isFullScreen) {
-      toggleFullScreen();
-    }
-  }, [isSpeaking, autoFullScreen, loading, isFullScreen]);
+  }, [chatMessages, latestMessage]);
 
   // Update the startSpeechRecognition function
   const startSpeechRecognition = () => {
@@ -1189,7 +1174,7 @@ function Home({ user }: HomeProps) {
     }
   };
 
-  // toggle the autoFullScreen state
+  // toggle the full screen state
   const toggleFullScreen = () => {
     const imageContainer = document.querySelector(`.${styles.imageContainer}`);
     const image = document.querySelector(`.${styles.generatedImage} img`);
@@ -1309,7 +1294,7 @@ function Home({ user }: HomeProps) {
                         />
                       </div>
                     )}
-                    <div className={
+                    <div ref={messageListRef} className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>{subtitle}
                     </div>
@@ -1320,8 +1305,8 @@ function Home({ user }: HomeProps) {
                     )}
                   </div>
                 ) : (
-                  <div ref={messageListRef} className={styles.generatedImage}>
-                    <div className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
+                  <div className={styles.generatedTerminal}>
+                      <div ref={messageListRef} className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
                       <ReactMarkdown linkTarget="_blank">
                         {latestMessage.message}
                       </ReactMarkdown>
@@ -1620,15 +1605,6 @@ function Home({ user }: HomeProps) {
                           />
                           &nbsp;&nbsp;Speak
                       </label>*/}
-                        {/*<label htmlFor="auto-full-screen">
-                          <input
-                            title="Auto full screen on play"
-                            type="checkbox"
-                            checked={autoFullScreen}
-                            onChange={(e) => setAutoFullScreen(e.target.checked)}
-                          />
-                           &nbsp;&nbsp; <b>Auto full screen on play</b>
-                          </label>*/}
                       </div>
                     </div>
                     <div className={styles.dropdowncontainer}>
