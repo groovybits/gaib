@@ -1343,7 +1343,7 @@ function Home({ user }: HomeProps) {
                       onKeyDown={handleEnter}
                       ref={textAreaRef}
                       autoFocus={true}
-                      rows={3}
+                      rows={2}
                       maxLength={1000000}
                       id="userInput"
                       name="userInput"
@@ -1372,7 +1372,7 @@ function Home({ user }: HomeProps) {
                       id="customPrompt"
                       name="customPrompt"
                       maxLength={500}
-                      rows={1}
+                      rows={2}
                       placeholder={
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
                         (loading || isSpeaking)
@@ -1398,7 +1398,7 @@ function Home({ user }: HomeProps) {
                       id="condensePrompt"
                       name="condensePrompt"
                       maxLength={300}
-                      rows={1}
+                      rows={2}
                       placeholder={
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
                         (loading || isSpeaking)
