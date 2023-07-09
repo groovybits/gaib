@@ -123,7 +123,7 @@ function Home({ user }: HomeProps) {
   const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
   const [customPrompt, setCustomPrompt] = useState<string>('');
   const [condensePrompt, setCondensePrompt] = useState<string>('');
-  
+
   const isSubmittingRef = useRef(false);
   interface StoryPart {
     sentence: string;
@@ -671,7 +671,7 @@ function Home({ user }: HomeProps) {
             setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
           }
 
-          let sentences_by_character : string[] = nlp(sentence).sentences().out('array');
+          let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
 
           // go through by sentence so we can preserve the speaker
           for (const sentence_by_character of sentences_by_character) {
@@ -981,7 +981,7 @@ function Home({ user }: HomeProps) {
         },
       });
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-    } catch (error : any) {
+    } catch (error: any) {
       setLoading(false);
       setSubtitle(`System Error: ${error.message}}`);
       setError('An error occurred while fetching the data. Please try again.');
@@ -1016,7 +1016,7 @@ function Home({ user }: HomeProps) {
   }, [messages, pending, pendingSourceDocs]);
 
   // Get the latest message
-  const latestMessage: Message | PendingMessage = (chatMessages.length > 0) ? chatMessages[chatMessages.length - 1] : 
+  const latestMessage: Message | PendingMessage = (chatMessages.length > 0) ? chatMessages[chatMessages.length - 1] :
     { type: 'apiMessage', message: '', sourceDocs: undefined };
 
   useEffect(() => {
@@ -1261,7 +1261,9 @@ function Home({ user }: HomeProps) {
 
   useEffect(() => {
     autoResize();
-  }, [query]); // re-run autoResize every time 'query' changes
+    autoResizeCondense();
+    autoResizePersonality();
+  }, [query, condensePrompt, customPrompt]); // re-run autoResizers every time prompts change
 
   // handle the form submission
   return (
@@ -1315,7 +1317,7 @@ function Home({ user }: HomeProps) {
                   </div>
                 ) : (
                   <div className={styles.generatedTerminal}>
-                      <div ref={messageListRef} className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
+                    <div ref={messageListRef} className={isFullScreen ? styles.fullScreenTerminal : styles.markdownanswer}>
                       <ReactMarkdown linkTarget="_blank">
                         {latestMessage.message}
                       </ReactMarkdown>
@@ -1327,87 +1329,8 @@ function Home({ user }: HomeProps) {
             <div className={styles.center}>
               <div className={styles.cloudform}>
                 <form onSubmit={handleSubmit}>
+                  {/* Button Row */}
                   <div className={styles.cloudform}>
-                    <textarea
-                      disabled={loading || isSpeaking}
-                      onKeyDown={handleEnter}
-                      ref={textAreaRef}
-                      autoFocus={true}
-                      rows={2}
-                      maxLength={1000000}
-                      id="userInput"
-                      name="userInput"
-                      placeholder={
-                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, replaying your input...' :
-                          loading
-                            ? isStory
-                              ? `GAIB[${selectedPersonality}/${selectedNamespace}]: I am generating your story...`
-                              : `GAIB[${selectedPersonality}/${selectedNamespace}]: I am thinking upon your question...`
-                            : isStory
-                              ? `Plotline direction: GAIB[${selectedPersonality}/${selectedNamespace}]: Tell GAIB a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
-                              : `Question topic: GAIB[${selectedPersonality}/${selectedNamespace}]: Ask GAIB a question, speak or type it here. Change the various options below to customize your experience.`
-                      }
-                      value={query}
-                      onChange={(e) => {
-                        setQuery(e.target.value);
-                        autoResize();
-                      }}
-                      className={styles.textarea}
-                    />
-                  </div>
-                  <div className={styles.cloudform}>
-                    <textarea
-                      readOnly={loading || (selectedPersonality == 'Passthrough')}
-                      ref={textAreaPersonalityRef}
-                      id="customPrompt"
-                      name="customPrompt"
-                      maxLength={500}
-                      rows={2}
-                      placeholder={
-                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
-                        (loading || isSpeaking)
-                          ? isStory
-                            ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
-                            : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}}`
-                          : isStory
-                            ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
-                            : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}`
-                      }
-                      value={customPrompt}
-                      onChange={(e) => {
-                        setCustomPrompt(e.target.value);
-                        autoResizePersonality();
-                      }}
-                      className={styles.textareaConfig}
-                    />
-                  </div>
-                  <div className={styles.cloudform}>
-                    <textarea
-                      readOnly={loading || (selectedPersonality == 'Passthrough')}
-                      ref={textAreaCondenseRef}
-                      id="condensePrompt"
-                      name="condensePrompt"
-                      maxLength={300}
-                      rows={2}
-                      placeholder={
-                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
-                        (loading || isSpeaking)
-                          ? isStory
-                            ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (optional) ${CONDENSE_PROMPT_STORY}`
-                            : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (optional) ${CONDENSE_PROMPT_QUESTION}`
-                          : isStory
-                            ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (optional) ${CONDENSE_PROMPT_STORY}`
-                            : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (optional) ${CONDENSE_PROMPT_QUESTION}`
-                      }
-                      value={condensePrompt}
-                      onChange={(e) => {
-                        setCondensePrompt(e.target.value);
-                        autoResizeCondense();
-                      }}
-                      className={styles.textareaConfig}
-                    />
-                  </div>
-                  <div className={styles.buttoncontainer}>
                     <div className={styles.buttoncontainer}>
                       <div className={styles.buttoncontainer}>
                         <button
@@ -1616,6 +1539,92 @@ function Home({ user }: HomeProps) {
                       </label>*/}
                       </div>
                     </div>
+                  </div>
+                  {/* Question/Topic text entry box */}
+                  <div className={styles.cloudform}>
+                    <textarea
+                      disabled={loading || isSpeaking}
+                      onKeyDown={handleEnter}
+                      ref={textAreaRef}
+                      autoFocus={true}
+                      rows={2}
+                      maxLength={1000000}
+                      id="userInput"
+                      name="userInput"
+                      placeholder={
+                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, replaying your input...' :
+                          loading
+                            ? isStory
+                              ? `GAIB[${selectedPersonality}/${selectedNamespace}]: I am generating your story...`
+                              : `GAIB[${selectedPersonality}/${selectedNamespace}]: I am thinking upon your question...`
+                            : isStory
+                              ? `Plotline direction: GAIB[${selectedPersonality}/${selectedNamespace}]: Tell GAIB a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
+                              : `Question topic: GAIB[${selectedPersonality}/${selectedNamespace}]: Ask GAIB a question, speak or type it here. Change the various options below to customize your experience.`
+                      }
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        autoResize();
+                      }}
+                      className={styles.textarea}
+                    />
+                  </div>
+                  {/* Personality prompt text entry box */}
+                  <div className={styles.cloudform}>
+                    <textarea
+                      readOnly={loading || (selectedPersonality == 'Passthrough')}
+                      ref={textAreaPersonalityRef}
+                      id="customPrompt"
+                      name="customPrompt"
+                      maxLength={500}
+                      rows={2}
+                      placeholder={
+                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
+                          (loading || isSpeaking)
+                            ? isStory
+                              ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
+                              : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}}`
+                            : isStory
+                              ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
+                              : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}`
+                      }
+                      value={customPrompt}
+                      onChange={(e) => {
+                        setCustomPrompt(e.target.value);
+                        autoResizePersonality();
+                      }}
+                      className={styles.textareaConfig}
+                    />
+                  </div>
+                  {/* Question generator input text box */}
+                  <div className={styles.cloudform}>
+                    <textarea
+                      readOnly={loading || (selectedPersonality == 'Passthrough')}
+                      ref={textAreaCondenseRef}
+                      id="condensePrompt"
+                      name="condensePrompt"
+                      maxLength={300}
+                      rows={2}
+                      placeholder={
+                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
+                          (loading || isSpeaking)
+                            ? isStory
+                              ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (optional) ${CONDENSE_PROMPT_STORY}`
+                              : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (optional) ${CONDENSE_PROMPT_QUESTION}`
+                            : isStory
+                              ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (optional) ${CONDENSE_PROMPT_STORY}`
+                              : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (optional) ${CONDENSE_PROMPT_QUESTION}`
+                      }
+                      value={condensePrompt}
+                      onChange={(e) => {
+                        setCondensePrompt(e.target.value);
+                        autoResizeCondense();
+                      }}
+                      className={styles.textareaConfig}
+                    />
+                  </div>
+                  <div className={styles.buttoncontainer}>
+                    
                     <div className={styles.dropdowncontainer}>
                       <div className={styles.dropdowncontainer}>
                         <div className={styles.labelContainer}>

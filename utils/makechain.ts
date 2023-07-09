@@ -28,6 +28,7 @@ const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process
 const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.0;
 const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.7;
 const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.0;
+const debug = process.env.DEBUG !== undefined ? Boolean(process.env.DEBUG) : false;
 
 const fasterModel = new OpenAI({
   modelName: fasterModelName,
@@ -70,8 +71,9 @@ export const makeChain = async (
     prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
   }
 
-  console.log("makeChain: Prompt: ", prompt);
-
+  if (debug) {
+    console.log("makeChain: Prompt: ", prompt);
+  }
 
   let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
@@ -148,7 +150,7 @@ export const makeChain = async (
             accumulatedBodyTokens += token;
             onTokenStream(token);
 
-            if (accumulatedBodyTokenCount % logInterval === 0) {
+            if (accumulatedBodyTokenCount % logInterval === 0 && debug) {
               console.log(
                 `makeChain: ${personality} Body Accumulated: ${accumulatedBodyTokenCount} tokens and ${accumulatedBodyTokens.length} characters.`
               );
@@ -166,7 +168,9 @@ export const makeChain = async (
             }
           },
           async handleLLMStart(llm, prompts, runId, parentRunId, extraParams) {
-            console.log(`makeChain: llm=${llm} ${personality} Starting using ${JSON.stringify(prompts)} with runId ${runId} and parentRunId ${parentRunId} with extraParams ${JSON.stringify(extraParams)}...`);
+            if (debug) {
+              console.log(`makeChain: llm=${llm} ${personality} Starting using ${JSON.stringify(prompts)} with runId ${runId} and parentRunId ${parentRunId} with extraParams ${JSON.stringify(extraParams)}...`);
+            }
           },
           async handleLLMEnd() {
             console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
@@ -205,7 +209,9 @@ export const makeChain = async (
 
   let chain;
   try {
-    console.log(`makeChain: Retrieving ${documentsReturned} documents from the document store using [${CONDENSE_PROMPT_STRING}].`)
+    if (debug) {
+      console.log(`makeChain: Retrieving ${documentsReturned} documents from the document store using [${CONDENSE_PROMPT_STRING}].`);
+    }
 
     if (documentsReturned > 0) {
       chain = ConversationalRetrievalQAChain.fromLLM(model,

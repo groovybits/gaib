@@ -14,6 +14,7 @@ import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 import { BaseMessage, HumanMessage, AIMessage } from 'langchain/schema';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
+const debug = process.env.DEBUG !== undefined ? Boolean(process.env.DEBUG) : false;
 
 const TOKEN_PER_DOCUMENT = 300;
 const TOKEN_PER_STORY = 2000;
@@ -133,7 +134,7 @@ async function getValidNamespace(namespaces: any) {
     consoleLog('error', 'Error fetching index statistics from Pinecone:', error);
   }
 
-  console.log('No valid namespace found from:', namespaces);
+  consoleLog('error', 'No valid namespace found from:', namespaces);
   return null;
 }
 
@@ -164,7 +165,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
     // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
     if (question.startsWith('REPLAY:') || selectedPersonality === 'Passthrough') {
-      consoleLog('info', `ChatAPI: REPLAY: ${question}`);
+      if (debug) {
+        consoleLog('info', `ChatAPI: REPLAY: ${question}`);
+      }
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache, no-transform',
@@ -217,7 +220,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       return
     }
 
-    consoleLog('info', 'ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
+    if (debug) {
+      consoleLog('info', 'ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
+    }
 
     // Set headers before starting the chain
     res.writeHead(200, {
@@ -230,11 +235,15 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Function to create a single chain
     async function createChain(i: number, namespaceResult: any, selectedPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
       let token_count = 0;
-      consoleLog('info', `createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
+      if (debug) {
+        consoleLog('info', `createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
+      }
       return await makeChain(namespaceResult.vectorStore, selectedPersonality, requestedTokens, documentCount, userId, isStory, customPrompt, condensePrompt, (token: string) => {
         token_count++;
         if (token_count % 100 === 0) {
-          consoleLog('info', `ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);
+          if (debug) {
+            consoleLog('info', `ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);
+          }
         }
         if (typeof token === 'string') {
           sendData(JSON.stringify({ data: token }));
@@ -293,7 +302,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Track the total token count
     let total_token_count = 0;
 
-    console.log(`======== ChatAPI: Starting ${episodeCount} episodes of ${requestedTokens} tokens each for a total of ${totalTokens} tokens.`);
+    if (debug) {
+      consoleLog('info', `======== ChatAPI: Starting ${episodeCount} episodes of ${requestedTokens} tokens each for a total of ${totalTokens} tokens.`);
+    }
 
     // Now, run each chain sequentially per episode
     for (let i = 0; i < chains.length; i++) {
@@ -301,7 +312,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       const title = titles[i];
       const episodeNumber = i + 1;
 
-      console.log(`==================== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
+      if (debug) {
+        consoleLog('info', `==================== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
+      }
 
       // Generate a title for the next episode
       if (i > 0) {
@@ -350,12 +363,14 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         if (chatHistory.length > 0) {
           for (const [question, answer] of chatHistory) {
             historyIdx = historyIdx + 1;
-            consoleLog('info', `ChatAPI: History #${historyIdx}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
+            if (debug) {
+              consoleLog('info', `ChatAPI: History #${historyIdx}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
+            }
           }
         } else {
           consoleLog('info', `ChatAPI: Chat History is empty [].`);
         }
-        consoleLog('info', `ChatAPI: Current Episode #${episodeNumber}: ${response.text.substring(0, 80)}...`);
+        consoleLog('info', `ChatAPI: Current Episode #${episodeNumber}: ${response.text.substring(0, 80).replace('\n', ' ').trim()}...`);
         if (response.sourceDocuments) {
           // Create a new array with only unique objects
           const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; }; }, index: any, self: { metadata: { source: any; }; }[]) =>
