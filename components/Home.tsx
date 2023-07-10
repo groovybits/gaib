@@ -1581,7 +1581,7 @@ function Home({ user }: HomeProps) {
                       ref={textAreaPersonalityRef}
                       id="customPrompt"
                       name="customPrompt"
-                      maxLength={500}
+                      maxLength={750}
                       rows={2}
                       placeholder={
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
@@ -1608,7 +1608,7 @@ function Home({ user }: HomeProps) {
                       ref={textAreaCondenseRef}
                       id="condensePrompt"
                       name="condensePrompt"
-                      maxLength={300}
+                      maxLength={600}
                       rows={2}
                       placeholder={
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
