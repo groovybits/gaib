@@ -62,10 +62,10 @@ GAIB can adopt various modes, including:
 - **VideoEngineer**: GAIB acts as an expert in video engineering in all aspects for media capture, transcoding, streaming CDNs, and any related concepts.
 
 
-![GAIB Frontend](https://storage.googleapis.com/gaib/gaib/gaib_frontend.png)
+![GAIB Frontend](https://storage.googleapis.com/gaib/gaib/gaib_multimodal_overview.png)
 
 
-![GAIB News](https://storage.googleapis.com/gaib/gaib/gaib_news.png)
+![GAIB News](https://storage.googleapis.com/gaib/gaib/gaib_news_fetch.png)
 
 ## Tech Stack
 
