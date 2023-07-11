@@ -793,8 +793,7 @@
 }
 
 .feed {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(800px, 1fr));
+  display: flex;
   gap: 1rem;
   flex-direction: column;
   justify-content: space-between;
