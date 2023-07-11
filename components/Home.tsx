@@ -1303,13 +1303,19 @@ function Home({ user }: HomeProps) {
                     >
                       {listening ? 'Stop listening' : 'Start listening'}
                     </button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button
-                      title="Stop Speaking"
-                      onClick={handleStop}
-                      type="button"
-                      disabled={loading || isSpeaking}
-                      className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
-                    >Stop Speaking</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    {isSpeaking ? (
+                      <>
+                        <button
+                          title="Stop Speaking"
+                          onClick={handleStop}
+                          type="button"
+                          disabled={loading || isSpeaking}
+                          className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
+                        >Stop Speaking</button> & nbsp;&nbsp;|&nbsp;&nbsp;
+                      </>
+                    ) : (
+                      <></>
+                    )}
                     <button
                       title="Clear Chat History"
                       onClick={handleClear}
@@ -1490,11 +1496,11 @@ function Home({ user }: HomeProps) {
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, replaying your input...' :
                           loading
                             ? isStory
-                              ? `${selectedPersonality}/${selectedNamespace}: I am generating your story...`
-                              : `${selectedPersonality}/${selectedNamespace}: I am thinking upon your question...`
+                              ? `Writing your story...`
+                              : `Answering your question...`
                             : isStory
-                              ? `Plotline: [${selectedPersonality}/${selectedNamespace}]\nTell me a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
-                              : `Question: [${selectedPersonality}/${selectedNamespace}]\nAsk me a question, speak or type it here. Change the various options below to customize your experience.`
+                              ? `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} episodes]\nTell me a Plotline of a story you would like to hear, speak or type it here then press the Enter key.`
+                              : `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} answers]\nAsk me a Question, speak or type it here then press the Enter key.`
                       }
                       value={query}
                       onChange={(e) => {
@@ -1535,7 +1541,7 @@ function Home({ user }: HomeProps) {
                       }}
                       className={styles.textareaConfig}
                     />
-                    </div>
+                  </div>
                   {/* Question generator input text box */}
                   <div className={styles.cloudform}>
                     <div className={styles.cloudform}>
@@ -1548,7 +1554,7 @@ function Home({ user }: HomeProps) {
                         rows={2}
                         placeholder={
                           (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
-                           (condensePrompt != '') ? condensePrompt : buildCondensePrompt(selectedPersonality, isStory)
+                            (condensePrompt != '') ? condensePrompt : buildCondensePrompt(selectedPersonality, isStory)
                         }
                         value={displayCondensePrompt}
                         onChange={(e) => {
