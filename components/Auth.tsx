@@ -223,16 +223,14 @@ function Auth({ }: Props): ReactElement {
           )}
         </div>
         <div className={styles.footer}>
-          <div className={styles.footerContainer}>
-            <a href="https://groovy.org">The Groovy Organization</a>
-            {(process.env.NEXT_PUBLIC_IMAGE_SERVICE == 'pexels') ?
-              <span>
-                &nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://www.pexels.com">Photos provided by Pexels</a>
-              </span> : <span></span>
-            }
-            & nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href="#" onClick={signOut}>Sign out</a>
-          </div>
+          <a href="https://groovy.org">The Groovy Organization</a>
+          {(process.env.NEXT_PUBLIC_IMAGE_SERVICE == 'pexels') ?
+            <span>
+              &nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://www.pexels.com">Photos provided by Pexels</a>
+            </span> : <span></span>
+          }
+          &nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+          <a href="#" onClick={signOut}>Sign out</a>
         </div>
       </>
     );

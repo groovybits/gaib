@@ -42,14 +42,14 @@
 }
 
 .generatedImage img {
-  max-height: 520px;
-  max-width: 100%;
-  height: auto;
-  width: auto;
+  height: 720px; /* Set the height to 720px */
+  width: auto; /* Set the width to auto to maintain aspect ratio */
+  object-fit: contain; /* Image will scale to maintain aspect ratio */
   border-radius: 8px;
 }
 
 .generatedImage {
+  position: relative; /* Add this to position the subtitle */
   overflow-y: scroll; /* Allows vertical scrolling */
   width: auto;
   height: 100%;
@@ -57,8 +57,7 @@
   object-fit: scale-up;
   border-radius: 8px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
-  max-height: 520px; /* Set maximum height */
-  /*object-fit: contain;*/ /* Image will scale to maintain aspect ratio */
+  max-height: 720px; /* Set maximum height */
 }
 
 .generatedTerminal {
@@ -96,19 +95,9 @@
   flex-direction: column;
   align-items: right;
   padding: 4px;
-  max-height: 600px; /* Set a maximum height */
+  max-height: 100%; /* Set a maximum height */
   max-width: 1000px; /* Set a maximum width equal to the maximum height */
   object-fit: scale-up;
-}
-
-/* If the width of the screen is less than 1000px, reduce the maximum height */
-@media screen and (max-width: 1000px) {
-  .imageContainer {
-    max-height: 520px; /* Adjust this value as needed */
-  }
-  .generatedImage {
-    max-height: 520px; /* Adjust this value as needed */
-  }
 }
 
 .fullScreenTerminal {
@@ -140,8 +129,8 @@
   white-space: pre-wrap !important;
   background: transparent;
   color: white;
-  padding: 0px;
-  bottom: 12%;
+  padding: 8px;
+  bottom: 8px;
   left: 2%;
   font-size: 48px;
   text-align: center;
@@ -150,7 +139,7 @@
   font-family: 'Trebuchet MS';
   /* Added font family */
   line-height: 1.2;
-  margin: 0px;
+  margin: 2px;
   justify-content: bottom;
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
@@ -161,8 +150,8 @@
   white-space: pre-wrap !important;
   background: transparent;
   color: white;
-  padding: 0px;
-  bottom: 12%;
+  padding: 8px;
+  bottom: 8px;
   left: 2%;
   font-size: 24px;
   text-align: center;
@@ -171,28 +160,7 @@
   font-family: 'Trebuchet MS';
   /* Added font family */
   line-height: 1.2;
-  margin: 0px;
-  justify-content: bottom;
-  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
-    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
-}
-
-.subtitleBack {
-  position: absolute;
-  white-space: pre-wrap !important;
-  background: rgb(0, 0, 0, 0.2);
-  color: #FEC601;
-  padding: 0px;
-  bottom: 12%;
-  left: 2%;
-  font-size: 48px;
-  text-align: center;
-  border-width: 0px;
-  font-weight: bolder;
-  font-family: 'Trebuchet MS';
-  /* Added font family */
-  line-height: 1.2;
-  margin: 0px;
+  margin: 2px;
   justify-content: bottom;
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
@@ -289,7 +257,7 @@
   padding: 2px 2px 2px 2px;
   width: 100%;
   max-width: 1000px; /* limit width */
-  border-radius: 10px;
+  border-radius: 8px;
   border: 2px double #000000;
   color: #000000; /* Changed font color to yellow-green */
   background: #ffffff; /* Changed background color to a darker color */
@@ -318,7 +286,7 @@
   padding: 2px 2px 2px 2px;
   width: 100%;
   max-width: 1000px; 
-  border-radius: 10px;
+  border-radius: 8px;
   border: 2px double #000000;
   color: #000000; /* Changed font color to yellow-green */
   background: #f5f105; /* Changed background color to a darker color */
@@ -619,6 +587,11 @@
   opacity: 0.25;
 }
 
+.listening {
+  background-color: #008000; /* Change to your desired color */
+  color: white; /* Change to your desired text color */
+}
+
 .footer {
   color: #ffffff;
   font-size: 12px;
@@ -640,13 +613,9 @@
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
-.listening {
-  background-color: #008000; /* Change to your desired color */
-  color: white; /* Change to your desired text color */
-}
-
 .footer a:hover {
   text-decoration: underline;
+  background: #008000;
   opacity: 0.8;
 }
 
@@ -716,7 +685,7 @@
   color: #000;
   appearance: none;
   padding: 2px;
-  border-radius: 2px;
+  border-radius: 4x;
   font-size: 8px;
 }
 
@@ -726,7 +695,7 @@
   padding: 4px 4px 4px 4px;
   padding: 4px;
   font-size: 8px;
-  border-radius: 3px;
+  border-radius: 4px;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;

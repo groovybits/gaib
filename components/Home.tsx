@@ -1239,14 +1239,14 @@ function Home({ user }: HomeProps) {
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
           <main className={styles.main}>
             <div className={styles.cloud}>
-              <div
+              <div ref={messageListRef}
                 className={styles.imageContainer}
                 style={{
                   position: isFullScreen ? "fixed" : "relative",
                   top: isFullScreen ? 0 : "auto",
                   left: isFullScreen ? 0 : "auto",
                   width: isFullScreen ? "auto" : "auto",
-                  height: isFullScreen ? "100vh" : "auto",
+                  height: isFullScreen ? "100vh" : "100%",
                   zIndex: isFullScreen ? 1000 : "auto",
                   backgroundColor: isFullScreen ? "black" : "transparent",
                 }}
@@ -1259,7 +1259,7 @@ function Home({ user }: HomeProps) {
                   {isFullScreen ? "Exit Full Screen" : "Full Screen"}
                 </button>
                 {selectedTheme === 'MultiModal' ? (
-                  <div ref={messageListRef} className={styles.generatedImage}>
+                  <div className={styles.generatedImage}>
                     {(imageUrl === '') ? "" : (
                       <>
                         <img
@@ -1490,11 +1490,11 @@ function Home({ user }: HomeProps) {
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, replaying your input...' :
                           loading
                             ? isStory
-                              ? `GAIB[${selectedPersonality}/${selectedNamespace}]: I am generating your story...`
-                              : `GAIB[${selectedPersonality}/${selectedNamespace}]: I am thinking upon your question...`
+                              ? `${selectedPersonality}/${selectedNamespace}: I am generating your story...`
+                              : `${selectedPersonality}/${selectedNamespace}: I am thinking upon your question...`
                             : isStory
-                              ? `Plotline direction: GAIB[${selectedPersonality}/${selectedNamespace}]: Tell GAIB a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
-                              : `Question topic: GAIB[${selectedPersonality}/${selectedNamespace}]: Ask GAIB a question, speak or type it here. Change the various options below to customize your experience.`
+                              ? `Plotline: [${selectedPersonality}/${selectedNamespace}]\nTell me a plotline of a story you would like to hear, speak or type it here. Change the various options below to customize your experience.`
+                              : `Question: [${selectedPersonality}/${selectedNamespace}]\nAsk me a question, speak or type it here. Change the various options below to customize your experience.`
                       }
                       value={query}
                       onChange={(e) => {
