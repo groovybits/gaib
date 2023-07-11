@@ -2,7 +2,7 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 20px;
   background-color: #FFC601;
   border-radius: 10px;
   border: 2px double #000;
@@ -183,6 +183,7 @@
 
 .cloudform {
   position: relative;
+  padding: 4px;
 }
 
 .textarea {

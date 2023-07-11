@@ -985,6 +985,8 @@ function Home({ user }: HomeProps) {
           }
         },
       });
+      // Scroll to the message box
+      messageListRef.current?.scrollIntoView({ behavior: 'smooth' });
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
     } catch (error: any) {
       setLoading(false);
@@ -1028,8 +1030,6 @@ function Home({ user }: HomeProps) {
     if (messageListRef.current) {
       // Scroll the container to the bottom
       messageListRef.current.scrollTo(0, messageListRef.current.scrollHeight);
-      // Scroll to the message box
-      messageListRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, latestMessage]);
 
@@ -1275,7 +1275,6 @@ function Home({ user }: HomeProps) {
     <>
       <div className={styles.header}>
         <title>GAIB The Groovy AI Bot</title>
-        <h1>GAIB The Groovy AI Bot</h1>
       </div>
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
@@ -1503,7 +1502,11 @@ function Home({ user }: HomeProps) {
                             <button onClick={handleModalClose}>Start Fetching News</button>
                             <button onClick={() => setModalIsOpen(false)}>Cancel</button>
                           </div>
-                        </Modal>
+                        </Modal>&nbsp;&nbsp;|&nbsp;&nbsp;
+
+                        <Link href="/board" passHref>
+                          <a target="_blank" rel="noopener noreferrer" className={styles.footer}>View Shared Story Board</a>
+                        </Link>
 
                         {/*<select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
                           {categoryOptions.map(option => (
@@ -1543,6 +1546,82 @@ function Home({ user }: HomeProps) {
                           &nbsp;&nbsp;Speak
                       </label>*/}
                       </div>
+                    </div>
+                  </div>
+                  {/* Drop down menu configuration row 1 and 2 */}
+                  <div className={styles.cloudform}>
+                    <div className={styles.cloudform}>
+                      <select
+                        className={styles.dropdown}
+                        disabled={loading}
+                        value={selectedPersonality}
+                        onChange={(e) => {
+                          setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
+                        }}
+                      >
+                        <option value="" disabled>
+                          Choose Personality
+                        </option>
+                        {Object.keys(PERSONALITY_PROMPTS).map((key) => (
+                          <option key={key} value={key}>
+                            {key}
+                          </option>
+                        ))}
+                      </select>
+                      <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
+                      {selectedTheme === 'MultiModal' ? (
+                        <>
+                          <select
+                            id="gender-select"
+                            className={styles.dropdown}
+                            disabled={loading}
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose Default Voice Gender
+                            </option>
+                            <option value="FEMALE">Female Voice</option>
+                            <option value="MALE">Male Voice</option>
+                            <option value="NEUTRAL">Neutral Voice</option>
+                          </select>
+                          <select
+                            id="audio-language-select"
+                            className={styles.dropdown}
+                            disabled={loading}
+                            value={audioLanguage}
+                            onChange={(e) => setAudioLanguage(e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose Audio Language
+                            </option>
+                            {audioLanguages.map((lang: Language) => (
+                              <option key={lang.code} value={lang.code}>{lang.name} Speaking</option>
+                            ))}
+                          </select>
+                          <select
+                            id="subtitle-language-select"
+                            className={styles.dropdown}
+                            disabled={loading}
+                            value={subtitleLanguage}
+                            onChange={(e) => setSubtitleLanguage(e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose Subtitle Language
+                            </option>
+                            {subtitleLanguages.map((lang: Language) => (
+                              <option key={lang.code} value={lang.code}>{lang.name} Subtitles</option>
+                            ))}
+                          </select>
+                        </>
+                      ) : null}
+                    </div>
+                    <div className={styles.cloudform}>
+                      <TokensDropdown onChange={handleTokensChange} />
+                      <ModeDropdown onChange={handleIsStoryChange} />
+                      <ThemeDropdown onChange={handleThemeChange} />
+                      <DocumentDropdown onChange={handleDocumentsChange} />
+                      <EpisodeDropdown onChange={handleEpisodesChange} />
                     </div>
                   </div>
                   {/* Question/Topic text entry box */}
@@ -1627,95 +1706,6 @@ function Home({ user }: HomeProps) {
                       }}
                       className={styles.textareaConfig}
                     />
-                  </div>
-                  {/* Drop down menu configuration row 1 and 2 */}
-                  <div className={styles.buttoncontainer}>
-                    <div className={styles.dropdowncontainer}>
-                      <div className={styles.dropdowncontainer}>
-                        <div className={styles.labelContainer}>
-                          <select
-                            className={styles.dropdown}
-                            disabled={loading}
-                            value={selectedPersonality}
-                            onChange={(e) => {
-                              setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
-                            }}
-                          >
-                            <option value="" disabled>
-                              Choose Personality
-                            </option>
-                            {Object.keys(PERSONALITY_PROMPTS).map((key) => (
-                              <option key={key} value={key}>
-                                {key}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className={styles.labelContainer}>
-                          <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
-                        </div>
-                        {selectedTheme === 'MultiModal' ? (
-                          <><div className={styles.labelContainer}>
-                            <select
-                              id="gender-select"
-                              className={styles.dropdown}
-                              disabled={loading}
-                              value={gender}
-                              onChange={(e) => setGender(e.target.value)}
-                            >
-                              <option value="" disabled>
-                                Choose Default Voice Gender
-                              </option>
-                              <option value="FEMALE">Female Voice</option>
-                              <option value="MALE">Male Voice</option>
-                              <option value="NEUTRAL">Neutral Voice</option>
-                            </select>
-                          </div><div className={styles.labelContainer}>
-                              <select
-                                id="audio-language-select"
-                                className={styles.dropdown}
-                                disabled={loading}
-                                value={audioLanguage}
-                                onChange={(e) => setAudioLanguage(e.target.value)}
-                              >
-                                <option value="" disabled>
-                                  Choose Audio Language
-                                </option>
-                                {audioLanguages.map((lang: Language) => (
-                                  <option key={lang.code} value={lang.code}>{lang.name} Speaking</option>
-                                ))}
-                              </select>
-                            </div><div className={styles.labelContainer}>
-                              <select
-                                id="subtitle-language-select"
-                                className={styles.dropdown}
-                                disabled={loading}
-                                value={subtitleLanguage}
-                                onChange={(e) => setSubtitleLanguage(e.target.value)}
-                              >
-                                <option value="" disabled>
-                                  Choose Subtitle Language
-                                </option>
-                                {subtitleLanguages.map((lang: Language) => (
-                                  <option key={lang.code} value={lang.code}>{lang.name} Subtitles</option>
-                                ))}
-                              </select>
-                            </div></>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className={styles.labelContainer}>
-                      <TokensDropdown onChange={handleTokensChange} />
-                      <ModeDropdown onChange={handleIsStoryChange} />
-                      <ThemeDropdown onChange={handleThemeChange} />
-                      <DocumentDropdown onChange={handleDocumentsChange} />
-                      <EpisodeDropdown onChange={handleEpisodesChange} />
-                    </div>
-                    <div className={styles.labelContainer}>
-                      <Link href="/board" className={styles.header}>
-                        <a>GAIBs Groovy Story Board</a>
-                      </Link>
-                    </div>
                   </div>
                 </form>
               </div>
