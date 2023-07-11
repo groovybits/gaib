@@ -980,7 +980,7 @@ function Home({ user }: HomeProps) {
                 pending: (state.pending ?? '') + data.data,
               }));
             }
-            setSubtitle(`Loading... [${data.data.slice(0, 80).replace(/\n/g, ' ')}...]`);
+            setSubtitle(`Loading... ${data.data.slice(0, 80).replace(/\n/g, ' ')}`);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
