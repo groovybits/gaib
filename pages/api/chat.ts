@@ -303,7 +303,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     let total_token_count = 0;
 
     if (debug) {
-      consoleLog('info', `======== ChatAPI: Starting ${episodeCount} episodes of ${requestedTokens} tokens each for a total of ${totalTokens} tokens.`);
+      consoleLog('info', `=== ChatAPI: Starting ${episodeCount} episodes of ${requestedTokens} tokens each for a total of ${totalTokens} tokens.`);
     }
 
     // Now, run each chain sequentially per episode
@@ -313,7 +313,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       const episodeNumber = i + 1;
 
       if (debug) {
-        consoleLog('info', `==================== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
+        consoleLog('info', `=== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
       }
 
       // Generate a title for the next episode

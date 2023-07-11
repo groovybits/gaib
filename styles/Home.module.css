@@ -6,17 +6,7 @@
   background-color: #FFC601;
   border-radius: 10px;
   border: 2px double #000;
-}
-
-.mainTransparent {
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0rem;
-  background-color: rgb(0, 0, 0, 0);
-  border-radius: 10px;
-  border: none;
-  width: auto;
+  max-width: 1000px; /* limit width */
 }
 
 .cancelcontainer {
@@ -38,6 +28,7 @@
   align-items: center;
   border-radius: 1rem;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
+  max-width: 1000px; /* limit width */
 }
 
 .fullScreenImage {
@@ -51,9 +42,10 @@
 }
 
 .generatedImage img {
+  max-height: 520px;
+  max-width: 100%;
+  height: auto;
   width: auto;
-  height: 100%;
-  object-fit: scale-up;
   border-radius: 8px;
 }
 
@@ -65,6 +57,8 @@
   object-fit: scale-up;
   border-radius: 8px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
+  max-height: 520px; /* Set maximum height */
+  /*object-fit: contain;*/ /* Image will scale to maintain aspect ratio */
 }
 
 .generatedTerminal {
@@ -74,8 +68,8 @@
   width: 100%;
   height: 100%;
   /*height: 100%;
-  min-height: 100%;
-  object-fit: scale-up;*/
+  min-height: 100%;*/
+  object-fit: scale-up;
   border-radius: 8px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
 }
@@ -100,8 +94,21 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 4px; /* Adjust the padding to reduce the black area around the image */
+  align-items: right;
+  padding: 4px;
+  max-height: 600px; /* Set a maximum height */
+  max-width: 1000px; /* Set a maximum width equal to the maximum height */
+  object-fit: scale-up;
+}
+
+/* If the width of the screen is less than 1000px, reduce the maximum height */
+@media screen and (max-width: 1000px) {
+  .imageContainer {
+    max-height: 520px; /* Adjust this value as needed */
+  }
+  .generatedImage {
+    max-height: 520px; /* Adjust this value as needed */
+  }
 }
 
 .fullScreenTerminal {
@@ -127,6 +134,70 @@
     /* top right */ -2px 2px 2px #006a0e, /* bottom left */ 3px 3px 3px #006a0e; /* bottom right */
 }
 
+
+.fullScreenSubtitle {
+  position: absolute;
+  white-space: pre-wrap !important;
+  background: transparent;
+  color: white;
+  padding: 0px;
+  bottom: 12%;
+  left: 2%;
+  font-size: 48px;
+  text-align: center;
+  border-width: 0px;
+  font-weight: bolder;
+  font-family: 'Trebuchet MS';
+  /* Added font family */
+  line-height: 1.2;
+  margin: 0px;
+  justify-content: bottom;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.subtitle {
+  position: absolute;
+  white-space: pre-wrap !important;
+  background: transparent;
+  color: white;
+  padding: 0px;
+  bottom: 12%;
+  left: 2%;
+  font-size: 24px;
+  text-align: center;
+  border-width: 0px;
+  font-weight: bolder;
+  font-family: 'Trebuchet MS';
+  /* Added font family */
+  line-height: 1.2;
+  margin: 0px;
+  justify-content: bottom;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.subtitleBack {
+  position: absolute;
+  white-space: pre-wrap !important;
+  background: rgb(0, 0, 0, 0.2);
+  color: #FEC601;
+  padding: 0px;
+  bottom: 12%;
+  left: 2%;
+  font-size: 48px;
+  text-align: center;
+  border-width: 0px;
+  font-weight: bolder;
+  font-family: 'Trebuchet MS';
+  /* Added font family */
+  line-height: 1.2;
+  margin: 0px;
+  justify-content: bottom;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
 .markdownanswer {
   overflow-y: scroll; /* Allows vertical scrolling */
   line-height: 1.2;
@@ -137,7 +208,7 @@
   font-family: 'Trebuchet MS', monospace; /* Added font family */
   font-size: 20px;
   font-weight: 300;
-  max-width: 800px;
+  max-width: 1000px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -181,19 +252,44 @@
   text-align: center;
 }
 
+.personalityTable {
+  line-height: 1.2;
+  white-space: pre-wrap !important;
+  color: #e5f810;
+  background: transparent;
+  animation: fadein 0.5s;
+  width: auto;
+  text-align: left;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  font-family:'Trebuchet MS';
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.personalityTable p {
+  text-align: left;
+}
+
+.personalityTable pre {
+  text-align: left;
+}
+
 .cloudform {
   position: relative;
-  padding: 4px;
+  padding: 2px;
+  max-width: 1000px; /* limit width */
 }
 
 .textarea {
   position: relative;
   resize: none;
   font-size: 1.1rem;
-  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
-  width: 60vw;
-  max-width: 800px; /* limit width to 800px */
-  border-radius: 0.5rem;
+  padding: 2px 2px 2px 2px;
+  width: 100%;
+  max-width: 1000px; /* limit width */
+  border-radius: 10px;
   border: 2px double #000000;
   color: #000000; /* Changed font color to yellow-green */
   background: #ffffff; /* Changed background color to a darker color */
@@ -219,10 +315,10 @@
   position: relative;
   resize: none;
   font-size: 1.1rem;
-  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
-  width: 60vw;
-  max-width: 800px; /* limit width to 800px */
-  border-radius: 0.5rem;
+  padding: 2px 2px 2px 2px;
+  width: 100%;
+  max-width: 1000px; 
+  border-radius: 10px;
   border: 2px double #000000;
   color: #000000; /* Changed font color to yellow-green */
   background: #f5f105; /* Changed background color to a darker color */
@@ -526,7 +622,8 @@
 .footer {
   color: #ffffff;
   font-size: 12px;
-  margin: 1rem;
+  margin: 2px;
+  padding: 2px;
   text-align: center;
   font-weight: 500;
   font-family:'Trebuchet MS', monospace;
@@ -558,75 +655,12 @@
   opacity: 0.8;
 }
 
-.fullScreenSubtitle {
-  position: absolute;
-  white-space: pre-wrap !important;
-  background: transparent;
-  color: white;
-  padding: 0px;
-  bottom: 12%;
-  left: 2%;
-  font-size: 48px;
-  text-align: center;
-  border-width: 0px;
-  font-weight: bolder;
-  font-family: 'Trebuchet MS';
-  /* Added font family */
-  line-height: 1.2;
-  margin: 0px;
-  justify-content: bottom;
-  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
-    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
-}
-
-.subtitle {
-  position: absolute;
-  white-space: pre-wrap !important;
-  background: transparent;
-  color: white;
-  padding: 0px;
-  bottom: 12%;
-  left: 2%;
-  font-size: 24px;
-  text-align: center;
-  border-width: 0px;
-  font-weight: bolder;
-  font-family: 'Trebuchet MS';
-  /* Added font family */
-  line-height: 1.2;
-  margin: 0px;
-  justify-content: bottom;
-  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
-    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
-}
-
-.subtitleBack {
-  position: absolute;
-  white-space: pre-wrap !important;
-  background: rgb(0, 0, 0, 0.2);
-  color: #FEC601;
-  padding: 0px;
-  bottom: 12%;
-  left: 2%;
-  font-size: 48px;
-  text-align: center;
-  border-width: 0px;
-  font-weight: bolder;
-  font-family: 'Trebuchet MS';
-  /* Added font family */
-  line-height: 1.2;
-  margin: 0px;
-  justify-content: bottom;
-  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
-    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
-}
-
 .dropdowncontainer {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 1px;
+  padding: 2px;
 }
 
 .dropdown {
@@ -635,14 +669,14 @@
   -moz-appearance: none;
   background-color: #ffffff;
   outline: none;
-  padding: 1px 2px;
+  padding: 2px 2px 2px 2px;
   font-size: 12px;
   color: #000000;
   cursor: pointer;
-  border-radius: 6px;
-  border: 1px solid #000000;
+  border-radius: 3px;
+  border: 2px solid #000000;
   max-width: 200px;
-  font-weight: 500;
+  font-weight: bold;
 }
 
 .dropdownContainer::after {
@@ -687,11 +721,12 @@
 }
 
 .select {
-  border: 1px solid #ccc;
+  border: 2px solid #000000;
   background-color: #fff;
-  padding: 2px 4px;
+  padding: 4px 4px 4px 4px;
+  padding: 4px;
   font-size: 8px;
-  border-radius: 2px;
+  border-radius: 3px;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -788,10 +823,105 @@
   cursor: pointer;
 }
 
+.feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(800px, 1fr));
+  gap: 1rem;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #ffffff;
+  color: #000000;
+  border: none;
+}
+
+.feedSection {
+  align-items: center;
+  padding: 20px;
+  background-color: #ffffff;
+  color: #000000;
+  border-radius: 1px;
+  border: 2px double #000000;
+}
+
+.story {
+  background-color: #000000;
+  color: #f1ebeb;
+  border: 4px double #008000;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+  word-wrap: overflow-wrap;
+  padding: 10px;
+  margin: 10px;
+}
+
+.story:hover {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.storyTitle {
+  display: block;
+  background: #FFC601;
+  padding: 2px;
+  font-size: 24px;
+  border: 4px double #0C4B8E;
+  border-radius: 6px;
+
+  text-align: left;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 500;
+  font-family:'Trebuchet MS';
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.storyContent {
+  word-wrap: break-word;
+  padding: 2px;
+  align-items: center;
+}
+
+.storyImage {
+  margin-top: 2px;
+  align-items: center;
+}
+
+.storyImage img {
+  max-height: 400px;
+  align-items: center;
+}
+
+.storyImageThumbnail {
+  width: 100px; /* Adjust as needed */
+  height: auto;
+  border-radius: 10%; /* This makes the images rounded */
+  overflow: hidden; /* This ensures the images stay within their rounded borders */
+  object-fit: cover; /* This ensures the images cover the entire area of the div */
+  padding: 2px;
+}
+
+.imageRow {
+  display: flex; /* This makes the images align horizontally */
+  overflow-x: auto; /* This allows horizontal scrolling if there are too many images */
+  gap: 10px; /* This adds some space between the images */
+  padding: 2px;
+  margin: 2px;
+}
+
 .message {
   margin-top: 1rem;
   color: red;
   font-size: 28px;
+}
+
+.storyImage {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  max-height: 400px;
+  align-items: center;
 }
 
 /* Mobile optimization */

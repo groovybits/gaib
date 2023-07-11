@@ -9,7 +9,7 @@ import ServiceInfo from './ServiceInfo';
 import 'firebase/functions';
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import Modal from "react-modal";
-import Link from 'next/link';
+import Layout from '@/components/Layout';
 
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
@@ -17,7 +17,7 @@ const stripePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
 const loginAuth = process.env.NEXT_PUBLIC_LOGIN_AUTH_ENABLE ?
   (process.env.NEXT_PUBLIC_LOGIN_AUTH_ENABLE == 'true') ?
     true : false : false;
-const debug = process.env.DEBUG ? (process.env.DEBUG == 'true') ? true : false : false; 
+const debug = process.env.DEBUG ? (process.env.DEBUG == 'true') ? true : false : false;
 
 interface Props { }
 
@@ -107,24 +107,24 @@ function Auth({ }: Props): ReactElement {
     } catch (error) {
       throw error;
     }
-  };  
+  };
 
   const handleSignIn = async () => {
     try {
       const user = await loginUser(email, password);
       if (debug) {
-          console.log("User logged in:", user);
+        console.log("User logged in:", user);
       }
       setMessage('Logged in successfully!');
       if (user) {
         firebase.functions().httpsCallable('updateLastLogin')().catch(console.error);
       }
-    } catch (error : any) {
+    } catch (error: any) {
       console.error("Error signing in:", error);
       setMessage('Error signing in: ' + error.message);
     }
   };
-  
+
   const handleRegister = async () => {
     try {
       const user = await registerUser(email, password);
@@ -132,19 +132,19 @@ function Auth({ }: Props): ReactElement {
         console.log("User registered:", user);
       }
       setMessage('User registered successfully!');
-    } catch (error : any) {
+    } catch (error: any) {
       console.error("Error registering user:", error);
       setMessage('Error registering user: ' + error.message);
     }
   };
-  
+
 
   async function signInWithGoogle() {
     try {
       const userCredentials = await firebase
         .auth()
         .signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      
+
       if (userCredentials && userCredentials.user) {
         const user = userCredentials.user;
 
@@ -178,7 +178,7 @@ function Auth({ }: Props): ReactElement {
 
   if (!userLoading && user) {
     return (
-      <div className={styles.mainTransparent}>
+      <>
         <Home user={user} /> {/* Pass user object to Home component */}
         <div className={styles.header}>
           <p>Welcome, {user.displayName}! Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</p>
@@ -187,7 +187,7 @@ function Auth({ }: Props): ReactElement {
           {!userIsPremium ? (
             <div className={styles.header}>
               {showPremium ? (
-              <><p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p><a href="#" onClick={() => createCheckoutSession(user.uid)} className={styles.header}>
+                <><p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p><a href="#" onClick={() => createCheckoutSession(user.uid)} className={styles.header}>
                   Purchase Premium Subscription
                 </a></>
               ) : (
@@ -228,13 +228,13 @@ function Auth({ }: Props): ReactElement {
             {(process.env.NEXT_PUBLIC_IMAGE_SERVICE == 'pexels') ?
               <span>
                 &nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://www.pexels.com">Photos provided by Pexels</a>
-                </span> : <span></span>
+              </span> : <span></span>
             }
             & nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>&nbsp;&nbsp;|&nbsp;&nbsp;
             <a href="#" onClick={signOut}>Sign out</a>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -249,50 +249,55 @@ function Auth({ }: Props): ReactElement {
   }
 
   return (
-    <div className={styles.cloud}>
-      <div className={styles.mainlogin}>
-        <title>GAIB</title>
-        <div className={styles.header}>
-          <div className={styles.header}>
-            <h1>Groovy AI Bot (GAIB)</h1>
-            <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>
-          </div>
-        </div>
-        {loginAuth ? (
-        <div className={styles.dropdowncontainer}>
-          <input
-            type="text"
-            className={styles.emailInput} 
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            className={styles.passwordInput} 
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button className={styles.signInButton} onClick={handleSignIn}>Sign In</button>
-          <button className={styles.signInButton} onClick={handleRegister}>Register</button>
-        </div>
-        ) : (
-          <div></div>
-        )}
-        <div className={styles.labelContainer}>
-          <Link href="/board" className={styles.header}>
-            <a>GAIBs Groovy Story Board</a>
-          </Link>
-        </div>
-        <div className={styles.footer}>
-          {message && <div className={styles.message}>{message}</div>}
-          <ServiceInfo /> {/* Add the ServiceInfo component */}
-        </div>
+    <>
+      <div className={styles.header}>
+        <title>GAIB The Groovy AI Bot</title>
       </div>
-    </div>
+      <Layout>
+        <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
+          <main className={styles.main}>
+            <div className={styles.cloud}>
+              <div className={styles.cloudform}>
+                <div className={styles.header}>
+                  <h1>Groovy AI Bot (GAIB)</h1>
+                </div>
+                <div className={styles.header}>
+                  <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>
+                </div>
+                {loginAuth ? (
+                  <div className={styles.cloudform}>
+                    <input
+                      type="text"
+                      className={styles.emailInput}
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                    <input
+                      type="password"
+                      className={styles.passwordInput}
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button className={styles.signInButton} onClick={handleSignIn}>Sign In</button>
+                    <button className={styles.signInButton} onClick={handleRegister}>Register</button>
+                  </div>
+                ) : (
+                  <></>
+                )}
+                <div className={styles.cloudform}>
+                  {message && <div className={styles.message}>{message}</div>}
+                  <ServiceInfo /> {/* Add the ServiceInfo component */}
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </Layout>
+    </>
   );
-  
+
 }
 
 export default Auth;

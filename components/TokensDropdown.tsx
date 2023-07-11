@@ -23,7 +23,7 @@ const TokensDropdown: React.FC<TokensDropdownProps> = ({ onChange }) => {
         onChange={handleChange}
     >
       <option value="" disabled>
-        Max Tokens to Generate
+        Max Tokens
       </option>
         {[...Array(81)].map((_, index) => {
           const value = index * 100;

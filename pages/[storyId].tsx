@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState, useRef, Key } from 'react';
 import firebase from '@/config/firebaseClientInit';
-import styles from '@/styles/Global.module.css';
+import styles from '@/styles/Home.module.css';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
 import { NextPage, NextPageContext } from 'next';

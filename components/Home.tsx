@@ -3,23 +3,12 @@ import Layout from '@/components/Layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import LoadingDots from '@/components/ui/LoadingDots';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import {
   PERSONALITY_PROMPTS,
-  CONDENSE_PROMPT_STORY,
-  CONDENSE_PROMPT_QUESTION,
-  CONDENSE_PROMPT_NEWS_STORY,
-  CONDENSE_PROMPT_NEWS_QUESTION,
-  STORY_FOOTER,
-  QUESTION_FOOTER,
-  ANSWER_FOOTER,
-  ANALYZE_FOOTER,
-  POET_FOOTER,
-  SONG_FOOTER,
-  NEWS_STORY_FOOTER,
-  NEWS_QUESTION_FOOTER,
+  buildPrompt,
+  buildCondensePrompt,
 } from '@/config/personalityPrompts';
 import { audioLanguages, subtitleLanguages, Language } from "@/config/textLanguages";
 import nlp from 'compromise';
@@ -123,6 +112,8 @@ function Home({ user }: HomeProps) {
   const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
   const [customPrompt, setCustomPrompt] = useState<string>('');
   const [condensePrompt, setCondensePrompt] = useState<string>('');
+  const [displayPrompt, setDisplayPrompt] = useState('');
+  const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
 
   const isSubmittingRef = useRef(false);
   interface StoryPart {
@@ -840,11 +831,6 @@ function Home({ user }: HomeProps) {
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
 
-  // Enable speech recognition toggle
-  const handleSpeechOutputToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSpeechOutputEnabled(event.target.checked);
-  };
-
   // Modify the handleSubmit function
   async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
     e.preventDefault();
@@ -1042,12 +1028,14 @@ function Home({ user }: HomeProps) {
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognition.continuous = true;
-      recognition.timeout = 10000;
+      recognition.timeout = 20000;
 
       // Update the listening state
       if (listening) {
         setStoppedManually(false);
         recognition.stop();
+        setListening(false);
+        return;
       } else {
         setSpeechRecognitionComplete(false);
         recognition.start();
@@ -1083,7 +1071,7 @@ function Home({ user }: HomeProps) {
         setQuery(text); // Set the query to the new text
 
         // If the transcript includes the word "game" or "gabe", stop the recognition
-        if (transcript.includes("gabe") || transcript.includes("game")) {
+        if (transcript.includes("gabe") || transcript.includes("game") || transcript.includes("gaib")) {
           setStoppedManually(false);
           recognition.stop();
         } else {
@@ -1135,17 +1123,6 @@ function Home({ user }: HomeProps) {
     }
   };
 
-  // pause speaking output
-  const handlePause = () => {
-    if (isPaused) {
-      handleReplay();
-      setIsPaused(false);
-    } else {
-      handleStop();
-      setIsPaused(true);
-    }
-  };
-
   // clear the chat history
   const handleClear = () => {
     setMessageState((state) => {
@@ -1154,24 +1131,6 @@ function Home({ user }: HomeProps) {
         history: [],
       };
     });
-  };
-
-  // replay the last spoken message
-  const handleReplay = () => {
-    // Find the last user message
-    if (lastSpokenMessageIndex > 0) {
-      // add a new message to the messages array with the last spoken message
-      setMessageState((state) => ({
-        ...state,
-        messages: [
-          ...state.messages,
-          {
-            type: 'apiMessage',
-            message: state.messages[lastSpokenMessageIndex].message,
-          },
-        ],
-      }));
-    }
   };
 
   // stop speaking and listening
@@ -1287,7 +1246,7 @@ function Home({ user }: HomeProps) {
                   top: isFullScreen ? 0 : "auto",
                   left: isFullScreen ? 0 : "auto",
                   width: isFullScreen ? "auto" : "auto",
-                  height: isFullScreen ? "100vh" : "480px",
+                  height: isFullScreen ? "100vh" : "auto",
                   zIndex: isFullScreen ? 1000 : "auto",
                   backgroundColor: isFullScreen ? "black" : "transparent",
                 }}
@@ -1302,12 +1261,12 @@ function Home({ user }: HomeProps) {
                 {selectedTheme === 'MultiModal' ? (
                   <div ref={messageListRef} className={styles.generatedImage}>
                     {(imageUrl === '') ? "" : (
-                      <div className={styles.generatedImage}>
+                      <>
                         <img
                           src={imageUrl}
                           alt="GAIB"
                         />
-                      </div>
+                      </>
                     )}
                     <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
@@ -1335,218 +1294,102 @@ function Home({ user }: HomeProps) {
                 <form onSubmit={handleSubmit}>
                   {/* Button Row */}
                   <div className={styles.cloudform}>
-                    <div className={styles.buttoncontainer}>
-                      <div className={styles.buttoncontainer}>
-                        <button
-                          title="Submit prompt to GAIB"
-                          type="submit"
-                          disabled={loading || !selectedPersonality || isSpeaking}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (selectedPersonality) {
-                              handleSubmit(e);
-                            }
-                          }}
-                          className={styles.generatebutton}
-                        >
-                          {(loading || isSpeaking) ? (
-                            <div className={styles.loadingwheel}>
-                              <LoadingDots color="#FFA500" />
-                            </div>
-                          ) : (
-                            // Send icon SVG in input field
-                            <svg
-                              viewBox="0 0 20 20"
-                              className={styles.svgicon}
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-                            </svg>
-                          )}
-                        </button>
-                        <button
-                          title="Start Listening for Voice Commands"
-                          type="button"
-                          disabled={loading || isSpeaking}
-                          className={`${styles.voicebutton} ${listening ? styles.listening : ''}`}
-                          onClick={startSpeechRecognition}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={styles.svgicon}
-                          >
-                            <path d="M12 1v6m0 0v6m-6-6h12"></path>
-                            <path d="M21 12v6a3 3 0 01-3 3h-12a3 3 0 01-3-3v-6"></path>
-                            <path d="M3 15l1.8-1.8c1.1-1.1 2.8-1.1 3.9 0l1.2 1.2 1.2-1.2c1.1-1.1 2.8-1.1 3.9 0L21 15"></path>
-                          </svg>
-                        </button>
-
-                        <button
-                          title="Stop Voice"
-                          type="button"
-                          className={styles.stopvoicebutton}
-                          onClick={handleStop}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={styles.svgicon}
-                          >
-                            <path d="M6 18L18 6M6 6l12 12"></path>
-                          </svg>
-                        </button>
-                        {/*
-                        <button
-                          type="button"
-                          disabled={loading || isSpeaking}
-                          className={styles.replaybutton}
-                          onClick={handleReplay}
-                        >
-                          {<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.svgicon}>
-                            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.41 3.59 8 8 8s8-3.59 8-8-3.59-8-8-8z"></path>
-                          </svg>
-                          }
-                        </button>
-                        */}
-                        <button
-                          title="Clear Chat History"
-                          type="button"
-                          disabled={loading || isSpeaking}
-                          className={styles.clearbutton}
-                          onClick={handleClear}
-                        >
-                          {<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.svgicon}>
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M15 9l-6 6"></path>
-                            <path d="M9 9l6 6"></path>
-                          </svg>
-                          }
-                        </button>
-                        <button
-                          title="Copy Story"
-                          onClick={copyStory}
-                          type="button"
-                          disabled={loading || isSpeaking}
-                          className={styles.footer}
-                        >Copy Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                        <button
-                          title="Share Story"
-                          onClick={shareStory}
-                          type="button"
-                          disabled={loading || isSpeaking}
-                          className={styles.footer}
-                        >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                        <button
-                          title="Fetch News"
-                          onClick={handleFetchButtonClick}
-                          className={styles.footer}
-                          type="button"
-                        >
-                          {isFetching ? 'Stop fetching news' : 'Start fetching news'}
-                        </button>
-
-                        <Modal
-                          isOpen={modalIsOpen}
-                          onRequestClose={handleModalClose}
-                          shouldCloseOnOverlayClick={false} // Prevents the modal from closing when clicking outside of it
-                          style={feedModalStyle}
-                          contentLabel="News Feed Settings"
-                        >
-                          <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <label>
-                              Add to Prompt (optional):
-                              <input type="text" value={feedPrompt} style={{ width: "300px" }} onChange={e => setFeedPrompt(e.target.value)} />
-                            </label>
-                            <label>
-                              Keywords (separated by spaces):
-                              <input type="text" value={feedKeywords} style={{ width: "300px" }} onChange={e => setFeedKeywords(e.target.value)} />
-                            </label>
-                            <label>
-                              Category:
-                              <select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
-                                {categoryOptions.map(option => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label>
-                              Sort Order:
-                              <select value={feedSort} onChange={e => setFeedSort(e.target.value)}>
-                                {sortOptions.map(option => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-                            <button onClick={handleModalClose}>Start Fetching News</button>
-                            <button onClick={() => setModalIsOpen(false)}>Cancel</button>
-                          </div>
-                        </Modal>&nbsp;&nbsp;|&nbsp;&nbsp;
-
-                        <Link href="/board" passHref>
-                          <a target="_blank" rel="noopener noreferrer" className={styles.footer}>View Shared Story Board</a>
-                        </Link>
-
-                        {/*<select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
-                          {categoryOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-
-                        <select value={feedSort} onChange={e => setFeedSort(e.target.value)}>
-                          {sortOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                          </select>*/}
-                        {/*
-                        <button
-                          title="Pause"
-                          type="button"
-                          className={styles.pausebutton}
-                          onClick={handlePause}
-                        >
-                          {<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.svgicon}>
-                            <rect x="4" y="6" width="16" height="4"></rect>
-                            <rect x="4" y="14" width="16" height="4"></rect>
-                          </svg>
-                        </button>
-                        */}
-                        {/*<label className={styles.label}>
-                          <input
-                            title="Speaking Enabled"
-                            type="checkbox"
-                            checked={speechOutputEnabled}
-                            onChange={handleSpeechOutputToggle}
-                          />
-                          &nbsp;&nbsp;Speak
-                      </label>*/}
+                    <button
+                      title="Start Listening for Voice Commands"
+                      className={`${styles.footer} ${listening ? styles.listening : ''}`}
+                      onClick={startSpeechRecognition}
+                      type="button"
+                      disabled={loading || isSpeaking}
+                    >
+                      {listening ? 'Stop listening' : 'Start listening'}
+                    </button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Stop Speaking"
+                      onClick={handleStop}
+                      type="button"
+                      disabled={loading || isSpeaking}
+                      className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
+                    >Stop Speaking</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Clear Chat History"
+                      onClick={handleClear}
+                      type="button"
+                      disabled={loading || isSpeaking}
+                      className={styles.footer}
+                    >Clear Chat History</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Copy Story"
+                      onClick={copyStory}
+                      type="button"
+                      disabled={loading || isSpeaking}
+                      className={styles.footer}
+                    >Copy Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Share Story"
+                      onClick={shareStory}
+                      type="button"
+                      disabled={loading || isSpeaking}
+                      className={styles.footer}
+                    >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Fetch News"
+                      onClick={handleFetchButtonClick}
+                      className={`${styles.footer} ${isFetching ? styles.listening : ''}`}
+                      type="button"
+                    >
+                      {isFetching ? 'Stop fetching news' : 'Start fetching news'}
+                    </button>
+                    <Modal
+                      isOpen={modalIsOpen}
+                      onRequestClose={handleModalClose}
+                      shouldCloseOnOverlayClick={false} // Prevents the modal from closing when clicking outside of it
+                      style={feedModalStyle}
+                      contentLabel="News Feed Settings"
+                    >
+                      <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <label>
+                          Add to Prompt (optional):
+                          <input type="text" value={feedPrompt} style={{ width: "300px" }} onChange={e => setFeedPrompt(e.target.value)} />
+                        </label>
+                        <label>
+                          Keywords (separated by spaces):
+                          <input type="text" value={feedKeywords} style={{ width: "300px" }} onChange={e => setFeedKeywords(e.target.value)} />
+                        </label>
+                        <label>
+                          Category:
+                          <select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
+                            {categoryOptions.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Sort Order:
+                          <select value={feedSort} onChange={e => setFeedSort(e.target.value)}>
+                            {sortOptions.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                       </div>
-                    </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                        <button onClick={handleModalClose}>Start Fetching News</button>
+                        <button onClick={() => setModalIsOpen(false)}>Cancel</button>
+                      </div>
+                    </Modal>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <Link href="/board/">
+                      <a className={styles.footer} onClick={(e) => {
+                        if (e.ctrlKey || e.metaKey) {
+                          e.preventDefault();
+                          window.open('/board/', '_blank');
+                        }
+                      }}>Browse Shared Stories</a>
+                    </Link>
                   </div>
                   {/* Drop down menu configuration row 1 and 2 */}
                   <div className={styles.cloudform}>
@@ -1568,7 +1411,9 @@ function Home({ user }: HomeProps) {
                           </option>
                         ))}
                       </select>
+                      &nbsp;&nbsp;
                       <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
+                      &nbsp;&nbsp;
                       {selectedTheme === 'MultiModal' ? (
                         <>
                           <select
@@ -1579,12 +1424,13 @@ function Home({ user }: HomeProps) {
                             onChange={(e) => setGender(e.target.value)}
                           >
                             <option value="" disabled>
-                              Choose Default Voice Gender
+                              Narrarator Voice Gender
                             </option>
                             <option value="FEMALE">Female Voice</option>
                             <option value="MALE">Male Voice</option>
                             <option value="NEUTRAL">Neutral Voice</option>
                           </select>
+                          &nbsp;&nbsp;
                           <select
                             id="audio-language-select"
                             className={styles.dropdown}
@@ -1593,12 +1439,13 @@ function Home({ user }: HomeProps) {
                             onChange={(e) => setAudioLanguage(e.target.value)}
                           >
                             <option value="" disabled>
-                              Choose Audio Language
+                              Audio Language
                             </option>
                             {audioLanguages.map((lang: Language) => (
-                              <option key={lang.code} value={lang.code}>{lang.name} Speaking</option>
+                              <option key={lang.code} value={lang.code}> Speaking {lang.name}</option>
                             ))}
                           </select>
+                          &nbsp;&nbsp;
                           <select
                             id="subtitle-language-select"
                             className={styles.dropdown}
@@ -1607,10 +1454,10 @@ function Home({ user }: HomeProps) {
                             onChange={(e) => setSubtitleLanguage(e.target.value)}
                           >
                             <option value="" disabled>
-                              Choose Subtitle Language
+                              Subtitle Language
                             </option>
                             {subtitleLanguages.map((lang: Language) => (
-                              <option key={lang.code} value={lang.code}>{lang.name} Subtitles</option>
+                              <option key={lang.code} value={lang.code}> Subtitles {lang.name}</option>
                             ))}
                           </select>
                         </>
@@ -1618,9 +1465,13 @@ function Home({ user }: HomeProps) {
                     </div>
                     <div className={styles.cloudform}>
                       <TokensDropdown onChange={handleTokensChange} />
+                      &nbsp;&nbsp;
                       <ModeDropdown onChange={handleIsStoryChange} />
+                      &nbsp;&nbsp;
                       <ThemeDropdown onChange={handleThemeChange} />
+                      &nbsp;&nbsp;
                       <DocumentDropdown onChange={handleDocumentsChange} />
+                      &nbsp;&nbsp;
                       <EpisodeDropdown onChange={handleEpisodesChange} />
                     </div>
                   </div>
@@ -1660,52 +1511,64 @@ function Home({ user }: HomeProps) {
                       ref={textAreaPersonalityRef}
                       id="customPrompt"
                       name="customPrompt"
-                      maxLength={750}
+                      maxLength={1500}
                       rows={2}
                       placeholder={
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
-                          (loading || isSpeaking)
-                            ? isStory
-                              ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
-                              : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}}`
-                            : isStory
-                              ? (customPrompt != '') ? `Personality prompt: ${customPrompt} ${STORY_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${PERSONALITY_PROMPTS['Stories']} ${STORY_FOOTER}`
-                              : (customPrompt != '') ? `Personality prompt: ${customPrompt} ${QUESTION_FOOTER}` : `Personality prompt: (optional) ${PERSONALITY_PROMPTS[selectedPersonality]} ${QUESTION_FOOTER}`
+                          (customPrompt != '') ? customPrompt : buildPrompt(selectedPersonality, isStory)
                       }
-                      value={customPrompt}
+                      value={displayPrompt}
                       onChange={(e) => {
                         setCustomPrompt(e.target.value);
+                        setDisplayPrompt(e.target.value);
                         autoResizePersonality();
                       }}
-                      className={styles.textareaConfig}
-                    />
-                  </div>
-                  {/* Question generator input text box */}
-                  <div className={styles.cloudform}>
-                    <textarea
-                      readOnly={loading || (selectedPersonality == 'Passthrough')}
-                      ref={textAreaCondenseRef}
-                      id="condensePrompt"
-                      name="condensePrompt"
-                      maxLength={600}
-                      rows={2}
-                      placeholder={
-                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
-                          (loading || isSpeaking)
-                            ? isStory
-                              ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (optional) ${CONDENSE_PROMPT_STORY}`
-                              : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (optional) ${CONDENSE_PROMPT_QUESTION}`
-                            : isStory
-                              ? (condensePrompt != '') ? `Title generator: ${condensePrompt}` : `Title generator: (optional) ${CONDENSE_PROMPT_STORY}`
-                              : (condensePrompt != '') ? `Question generator: ${condensePrompt}` : `Question generator: (optional) ${CONDENSE_PROMPT_QUESTION}`
-                      }
-                      value={condensePrompt}
-                      onChange={(e) => {
-                        setCondensePrompt(e.target.value);
-                        autoResizeCondense();
+                      onFocus={(e) => {
+                        if (customPrompt === '') {
+                          setDisplayPrompt(buildPrompt(selectedPersonality, isStory));
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (customPrompt === '') {
+                          setDisplayPrompt('');
+                        }
                       }}
                       className={styles.textareaConfig}
                     />
+                    </div>
+                  {/* Question generator input text box */}
+                  <div className={styles.cloudform}>
+                    <div className={styles.cloudform}>
+                      <textarea
+                        readOnly={loading || (selectedPersonality == 'Passthrough')}
+                        ref={textAreaCondenseRef}
+                        id="condensePrompt"
+                        name="condensePrompt"
+                        maxLength={800}
+                        rows={2}
+                        placeholder={
+                          (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
+                           (condensePrompt != '') ? condensePrompt : buildCondensePrompt(selectedPersonality, isStory)
+                        }
+                        value={displayCondensePrompt}
+                        onChange={(e) => {
+                          setCondensePrompt(e.target.value);
+                          setDisplayCondensePrompt(e.target.value);
+                          autoResizeCondense();
+                        }}
+                        onFocus={(e) => {
+                          if (condensePrompt === '') {
+                            setDisplayCondensePrompt(buildCondensePrompt(selectedPersonality, isStory));
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (condensePrompt === '') {
+                            setDisplayCondensePrompt('');
+                          }
+                        }}
+                        className={styles.textareaConfig}
+                      />
+                    </div>
                   </div>
                 </form>
               </div>

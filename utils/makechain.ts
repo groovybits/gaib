@@ -4,18 +4,8 @@ import { PineconeStore } from 'langchain/vectorstores';
 import { CallbackManager } from 'langchain/callbacks';
 import {
   PERSONALITY_PROMPTS,
-  CONDENSE_PROMPT_STORY,
-  CONDENSE_PROMPT_QUESTION,
-  CONDENSE_PROMPT_NEWS_STORY,
-  CONDENSE_PROMPT_NEWS_QUESTION,
-  STORY_FOOTER,
-  QUESTION_FOOTER,
-  ANSWER_FOOTER,
-  ANALYZE_FOOTER,
-  POET_FOOTER,
-  SONG_FOOTER,
-  NEWS_STORY_FOOTER,
-  NEWS_QUESTION_FOOTER,
+  buildPrompt,
+  buildCondensePrompt,
 } from '@/config/personalityPrompts';
 import { firestoreAdmin } from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
@@ -46,34 +36,18 @@ export const makeChain = async (
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
-  let CONDENSE_PROMPT_STRING = (condensePrompt != '') ? condensePrompt : storyMode ? CONDENSE_PROMPT_STORY : CONDENSE_PROMPT_QUESTION;
+  let condensePromptString = (condensePrompt != '') ? condensePrompt : buildCondensePrompt(personality, storyMode);
 
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt: string = '';
   if (customPrompt != '') {
     prompt = `${customPrompt}`;
-  } else if (personality == 'Stories') {
-    prompt = `${storyMode ? PERSONALITY_PROMPTS['Stories'] : 'You are a story teller and screenplay writer who can answer questions about writing stories and creating scripts for tv show episodes.'} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
-  } else if (personality == 'Poet') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : POET_FOOTER}`;
-  } else if (personality == 'SongWriter') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : SONG_FOOTER}`;
-  } else if (personality == 'Analyst') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANALYZE_FOOTER}`;
-  } else if (personality == 'Interviewer') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? STORY_FOOTER : ANSWER_FOOTER}`;
-  } else if (personality == 'NewsReporter' || personality == 'CondensedNews' || personality == 'HappyFunNews') {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? NEWS_STORY_FOOTER : NEWS_QUESTION_FOOTER}`;
-    if (condensePrompt != '') {
-      CONDENSE_PROMPT_STRING = storyMode ? CONDENSE_PROMPT_NEWS_STORY : CONDENSE_PROMPT_NEWS_QUESTION;
-    }
   } else {
-    prompt = `${PERSONALITY_PROMPTS[personality]} ${storyMode ? PERSONALITY_PROMPTS['Stories'] : ''} ${storyMode ? STORY_FOOTER : QUESTION_FOOTER}`;
+    prompt = buildPrompt(personality, storyMode);
   }
 
-  if (debug) {
-    console.log("makeChain: Prompt: ", prompt);
-  }
+  console.log("makeChain: Prompt: \n===\n", prompt, "\n===\n");
+  console.log("makeChain: Condense Prompt: \n===\n", condensePromptString, "\n===\n");
 
   let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
@@ -169,7 +143,7 @@ export const makeChain = async (
           },
           async handleLLMStart(llm, prompts, runId, parentRunId, extraParams) {
             if (debug) {
-              console.log(`makeChain: llm=${llm} ${personality} Starting using ${JSON.stringify(prompts)} with runId ${runId} and parentRunId ${parentRunId} with extraParams ${JSON.stringify(extraParams)}...`);
+              console.log(`makeChain: llm=${JSON.stringify(llm)}\nPersonality ${personality} prompt: ${JSON.stringify(prompts)}\nrunId ${runId}\nparentRunId ${parentRunId}\nextraParams ${JSON.stringify(extraParams)}`);
             }
           },
           async handleLLMEnd() {
@@ -209,16 +183,12 @@ export const makeChain = async (
 
   let chain;
   try {
-    if (debug) {
-      console.log(`makeChain: Retrieving ${documentsReturned} documents from the document store using [${CONDENSE_PROMPT_STRING}].`);
-    }
-
     if (documentsReturned > 0) {
       chain = ConversationalRetrievalQAChain.fromLLM(model,
         vectorstore.asRetriever(documentsReturned), // get more source documents, override default of 4
         {
           qaTemplate: prompt,
-          questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
+          questionGeneratorTemplate: condensePromptString,
           returnSourceDocuments: RETURN_SOURCE_DOCUMENTS,
           ...options,
         },
@@ -228,7 +198,7 @@ export const makeChain = async (
         vectorstore.asRetriever(1),
         {
           qaTemplate: prompt,
-          questionGeneratorTemplate: CONDENSE_PROMPT_STRING,
+          questionGeneratorTemplate: condensePromptString,
           returnSourceDocuments: false,
           ...options,
         },
