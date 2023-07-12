@@ -26,6 +26,8 @@ import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
+import { time } from 'console';
+
 const debug = process.env.NEXT_PUBLIC_DEBUG || false;
 
 type PendingMessage = {
@@ -41,6 +43,7 @@ interface HomeProps {
 
 function Home({ user }: HomeProps) {
   const [query, setQuery] = useState<string>('');
+  const [voiceQuery, setVoiceQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [messageState, setMessageState] = useState<{
@@ -55,7 +58,7 @@ function Home({ user }: HomeProps) {
         type: 'systemMessage',
       },
       {
-        message: 'Welcome, I am The Groovy AI Bot GAIB! Set my personality, and choose question answer or story generation mode. Then type your prompt and press enter to get started.',
+        message: 'Welcome, I am The Groovy AI Bot GAIB!',
         type: 'apiMessage',
       },
     ],
@@ -68,7 +71,7 @@ function Home({ user }: HomeProps) {
 
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(false);
-  const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(true);
+  const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(false);
   const [speechOutputEnabled, setSpeechOutputEnabled] = useState(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
   const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
@@ -114,8 +117,21 @@ function Home({ user }: HomeProps) {
   const [condensePrompt, setCondensePrompt] = useState<string>('');
   const [displayPrompt, setDisplayPrompt] = useState('');
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
+  
+  // Declare a new ref for start word detection
+  const startWordDetected = useRef(false);
+
+  // Declare a new ref for stop word detection
+  const stopWordDetected = useRef(false);
+
+  // Declare a new ref for timeout detection
+  const timeoutDetected = useRef(false);
 
   const isSubmittingRef = useRef(false);
+
+  // Declare a reference to the speech recognition object
+  let recognition: SpeechRecognition | null = null;
+
   interface StoryPart {
     sentence: string;
     imageUrl: string;
@@ -634,10 +650,10 @@ function Home({ user }: HomeProps) {
             && (imageSource == 'pexels'
               || count == 0 // first sentence
               || (sentence.includes('SCENE:')
-                || sentence.includes('Episode Title:')
+                || sentence.includes('Title:')
                 || sentence.includes('Question: ')
                 || sentence.includes('Answer: ')
-                || sentence.includes('Story Begins: ')
+                || sentence.includes('Begins: ')
                 || sentence.includes('Plotline: ')
                 /*|| (sentence.startsWith('*') && sentence.length > 60)*/))) {
             let imageDescription = sentence;
@@ -818,13 +834,8 @@ function Home({ user }: HomeProps) {
       messages[lastMessageIndex].type === 'apiMessage'
     ) {
       // Multi Modal theme
-      if (selectedTheme === 'MultiModal') {
-        displayImagesAndSubtitles();
-        setLastSpokenMessageIndex(lastMessageIndex);
-      } else /*if (selectedTheme === 'Terminal')*/ {
-        setLastSpokenMessageIndex(lastMessageIndex);
-        setIsSpeaking(false);
-      }
+      displayImagesAndSubtitles();
+      setLastSpokenMessageIndex(lastMessageIndex);
     }
   }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query]);
 
@@ -838,18 +849,8 @@ function Home({ user }: HomeProps) {
     const question = e.target?.value ? e.target.value.trim() : query.trim();
 
     // Don't submit if the query is empty
-    if (isSpeaking || !speechRecognitionComplete || !question) {
+    if (isSpeaking || !question) {
       console.log(`handleSubmit: Not submitting question: '${question}', isSpeaking: ${isSpeaking}, speechRecognitionComplete: ${speechRecognitionComplete}`);
-      return;
-    }
-
-    // Stop listening
-    if (listening) {
-      console.log(`handleSubmit: Speech recognition is listening, not submitting question: '${question}'`);
-      setStoppedManually(true);
-      if (recognitionInstance) {
-        recognitionInstance.stop();
-      }
       return;
     }
 
@@ -882,6 +883,7 @@ function Home({ user }: HomeProps) {
     setSubtitle(`Loading...`);
     setIsSpeaking(true);
     setQuery('');
+    setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
 
     if (!isFetching) {
@@ -1022,80 +1024,190 @@ function Home({ user }: HomeProps) {
   // Update the startSpeechRecognition function
   const startSpeechRecognition = () => {
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-      recognition.continuous = true;
-      recognition.timeout = 20000;
-
       // Update the listening state
       if (listening) {
-        setStoppedManually(false);
-        recognition.stop();
-        setListening(false);
+        if (stoppedManually && recognition) {
+          recognition.stop();
+          setListening(false);
+          setVoiceQuery('');
+          console.log(`startSpeechRecognition: Stopping speech recognition, stoppedManually: ${stoppedManually}`)
+        } else {
+          console.log(`startSpeechRecognition: Speech recognition already started, stoppedManually: ${stoppedManually}`);
+        }
         return;
-      } else {
-        setSpeechRecognitionComplete(false);
+      } else if (!listening && !stoppedManually) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        recognition.continuous = true;
+        recognition.timeout = 900000;
+
+        timeoutDetected.current = false;
+        setListening(true);
+        setVoiceQuery('');
         recognition.start();
+        console.log(`startSpeechRecognition: Starting speech recognition, stoppedManually: ${stoppedManually}`)
+      }
+
+      if (stoppedManually) {
+        return;
       }
 
       // Update the onstart function
       recognition.onstart = () => {
         setListening(true);
+        setVoiceQuery('');
+        setSpeechRecognitionComplete(false);
       };
 
       // Update the onend function
       recognition.onend = () => {
         setListening(false);
         setSpeechRecognitionComplete(true);
-
-        if (!stoppedManually) {
-          const mockEvent = {
-            preventDefault: () => { },
-            target: {
-              value: query,
-            },
-          };
-          handleSubmit(mockEvent, recognition);
-        }
       };
 
-      // Update the onresult function
+      // Declare a variable to hold the entire spoken input
+      let spokenInput = '';
+
+      // onresult function to handle the speech recognition results
       recognition.onresult = (event: { results: string | any[]; }) => {
         let last = event.results.length - 1;
         let text = event.results[last][0].transcript;
-        let transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+        let isFinal = event.results[last].isFinal;
+        let transcript = text.trim().toLowerCase();
 
-        setQuery(text); // Set the query to the new text
+        // Only process the result if it is final
+        if (isFinal) {
+          // Use the NLP library to split the new text into sentences
+          let sentences = nlp(text).sentences().out('array');
 
-        // If the transcript includes the word "game" or "gabe", stop the recognition
-        if (transcript.includes("gabe") || transcript.includes("game") || transcript.includes("gaib")) {
-          setStoppedManually(false);
-          recognition.stop();
-        } else {
-          // Clear the previous timeout if there's an active timeout
-          if (timeoutID) {
-            clearTimeout(timeoutID);
+          // Iterate over the sentences
+          for (let sentence of sentences) {
+            // Tokenize the sentence and the last few words of the spoken input
+            let sentenceWords = nlp(sentence).out('array');
+            let spokenWords = nlp(spokenInput).out('array').slice(-sentenceWords.length);
+
+            // Compare the sentence with the last few words of the spoken input
+            let isSimilar = sentenceWords.every((word: any, index: any) => word === spokenWords[index]);
+
+            // If the sentence is not similar to the last few words of the spoken input, add it to the spoken input
+            if (!isSimilar) {
+              spokenInput += ' ' + sentence;
+            }
           }
 
-          // Set a new timeout
-          const newTimeoutID = setTimeout(() => {
-            setStoppedManually(false);
+          // If the transcript includes the word "hey gabe", set the start word detected ref to true
+          if (spokenInput.toLowerCase().includes("hey gabe") || spokenInput.toLowerCase().includes("hey gaib")) {
+            // trim off the text prefixing "hey gabe" or "hey gaib" in the spokenInput
+            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey gabe|hey gaib)/gi, '').trim();
+            startWordDetected.current = true;
+          } else if (!startWordDetected.current) {
+            console.log(`Speech recognition onresult: Start word not detected, spokenInput: '${spokenInput.slice(0, 16)}...'`);
+            setVoiceQuery('');
+            spokenInput = '';
+          }
+
+          // If the transcript includes the word "stop gabe", stop the recognition
+          if (spokenInput.toLowerCase().includes("stop gabe") || spokenInput.toLowerCase().includes("stop gaib")) {
+            stopWordDetected.current = true;
             recognition.stop();
-          }, 10000); // Timeout after finished speaking
-          setTimeoutID(newTimeoutID);
+            setVoiceQuery('');
+            spokenInput = '';
+          } else {
+            stopWordDetected.current = false;
+          }
+
+          // Only set the query to the spoken input if the start word has been detected
+          if (startWordDetected.current && !stopWordDetected.current) {
+            console.log(`Speech recognition onresult: Setting voiceQuery, spokenInput: '${spokenInput.slice(0, 16)}...'`);
+            setVoiceQuery(spokenInput.trim());
+          }
         }
+
+        // Set a new timeout to stop the recognition after 10 seconds of no speaking
+        const newTimeoutID = setTimeout(() => {
+          recognition.stop();
+          if (!stopWordDetected.current && !isSpeaking && startWordDetected.current) {
+            console.log(`Speech recognition timed out with voiceQuery results, voiceQuery: '${voiceQuery.slice(0, 16)}...'`);
+            setSpeechRecognitionComplete(true);
+            timeoutDetected.current = true;
+          } else {
+            console.log(`Speech recognition timed out after 10 seconds without voiceQuery results, voiceQuery: '${voiceQuery.slice(0, 16)}...'`);
+            spokenInput = '';
+            setVoiceQuery('');
+          }
+        }, 10000); // Timeout after finished speaking
+        setTimeoutID(newTimeoutID);
       };
 
       recognition.onerror = (event: { error: any; }) => {
         console.error('Error occurred in recognition:', event.error);
-        setStoppedManually(true);
-        recognition.stop();
+        if (event.error === 'no-speech') {
+          console.log('No speech was detected. Try again.');
+        } else if (event.error === 'aborted') {
+          console.log('Speech recognition aborted.');
+        } else if (event.error === 'network') {
+          console.log('Network error occurred.');
+        } else if (!stoppedManually && !isSpeaking && !timeoutDetected.current) {
+          startSpeechRecognition();
+        } else {
+          console.error(`recognition.onerror: Error occurred in recognition: ${event.error}, stoppedManually: ${stoppedManually}, isSpeaking: ${isSpeaking}, timeoutDetected: ${timeoutDetected.current}`);
+        }
       };
     } else {
-      alert('Speech Recognition API is not supported in this browser.');
+      console.log('Speech Recognition API is not supported in this browser.');
+    }
+  };
+
+  // Add a useEffect hook to call handleSubmit whenever the query state changes
+  useEffect(() => {
+    if (voiceQuery && speechRecognitionComplete && timeoutDetected.current && !stopWordDetected.current && !isSpeaking) {
+      const mockEvent = {
+        preventDefault: () => { },
+        target: {
+          value: voiceQuery,
+        },
+      };
+      console.log(`useEffect: Calling handleSubmit, voiceQuery: '${voiceQuery.slice(0, 16)}...'`);
+      handleSubmit(mockEvent, recognition);
+      setVoiceQuery('');
+      timeoutDetected.current = false;
+      startWordDetected.current = false;
+      stopWordDetected.current = false;
+      if (!stoppedManually) {
+        console.log(`useEffect: Starting speech recognition after handleSubmit, stoppedManually: ${stoppedManually}`);
+        startSpeechRecognition();
+      }
+    }
+  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, timeoutDetected.current, stopWordDetected.current]);
+
+  // Add a useEffect hook to start the speech recognition when the component mounts
+  useEffect(() => {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      if (!listening && !isSpeaking && !stoppedManually && !voiceQuery) {
+        console.log(`useEffect: Starting speech recognition, stoppedManually: ${stoppedManually}`);
+        startSpeechRecognition();
+      }
+    }
+  }, [listening, isSpeaking, voiceQuery, stoppedManually]);
+
+  // speech toggle
+  const handleSpeechToggle = () => {
+    if (!stoppedManually) {
+      setStoppedManually(true);
+      setListening(false);
+      setVoiceQuery('');
+      timeoutDetected.current = true;
+      if (recognition) {
+        recognition.stop();
+      }
+    } else {
+      setStoppedManually(false);
+      timeoutDetected.current = false;
+      setVoiceQuery('');
+      startSpeechRecognition();
     }
   };
 
@@ -1133,15 +1245,11 @@ function Home({ user }: HomeProps) {
     });
   };
 
-  // stop speaking and listening
+  // stop speaking
   const handleStop = () => {
     stopSpeaking();
     setIsPaused(false);
     setIsSpeaking(false);
-    if (listening) {
-      setStoppedManually(true);
-      setSpeechRecognitionComplete(true);
-    }
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
     }
@@ -1297,11 +1405,11 @@ function Home({ user }: HomeProps) {
                     <button
                       title="Start Listening for Voice Commands"
                       className={`${styles.footer} ${listening ? styles.listening : ''}`}
-                      onClick={startSpeechRecognition}
+                      onClick={handleSpeechToggle}
                       type="button"
-                      disabled={loading || isSpeaking}
+                      
                     >
-                      {listening ? 'Stop listening' : 'Start listening'}
+                      {!stoppedManually ? 'Stop listening' : 'Start listening'}
                     </button>&nbsp;&nbsp;|&nbsp;&nbsp;
                     {isSpeaking ? (
                       <>
@@ -1309,9 +1417,9 @@ function Home({ user }: HomeProps) {
                           title="Stop Speaking"
                           onClick={handleStop}
                           type="button"
-                          disabled={loading || isSpeaking}
+                          disabled={!isSpeaking}
                           className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
-                        >Stop Speaking</button> & nbsp;&nbsp;|&nbsp;&nbsp;
+                        >Stop Speaking</button> &nbsp;&nbsp;|&nbsp;&nbsp;
                       </>
                     ) : (
                       <></>
@@ -1320,14 +1428,13 @@ function Home({ user }: HomeProps) {
                       title="Clear Chat History"
                       onClick={handleClear}
                       type="button"
-                      disabled={loading || isSpeaking}
+                      disabled={isSpeaking}
                       className={styles.footer}
                     >Clear Chat History</button>&nbsp;&nbsp;|&nbsp;&nbsp;
                     <button
                       title="Copy Story"
                       onClick={copyStory}
                       type="button"
-                      disabled={loading || isSpeaking}
                       className={styles.footer}
                     >Copy Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
                     <button
@@ -1420,54 +1527,50 @@ function Home({ user }: HomeProps) {
                       &nbsp;&nbsp;
                       <PersonalityNamespaceDropdown setSelectedNamespace={handleNamespaceChange} />
                       &nbsp;&nbsp;
-                      {selectedTheme === 'MultiModal' ? (
-                        <>
-                          <select
-                            id="gender-select"
-                            className={styles.dropdown}
-                            disabled={loading}
-                            value={gender}
-                            onChange={(e) => setGender(e.target.value)}
-                          >
-                            <option value="" disabled>
-                              Narrarator Voice Gender
-                            </option>
-                            <option value="FEMALE">Female Voice</option>
-                            <option value="MALE">Male Voice</option>
-                            <option value="NEUTRAL">Neutral Voice</option>
-                          </select>
-                          &nbsp;&nbsp;
-                          <select
-                            id="audio-language-select"
-                            className={styles.dropdown}
-                            disabled={loading}
-                            value={audioLanguage}
-                            onChange={(e) => setAudioLanguage(e.target.value)}
-                          >
-                            <option value="" disabled>
-                              Audio Language
-                            </option>
-                            {audioLanguages.map((lang: Language) => (
-                              <option key={lang.code} value={lang.code}> Speaking {lang.name}</option>
-                            ))}
-                          </select>
-                          &nbsp;&nbsp;
-                          <select
-                            id="subtitle-language-select"
-                            className={styles.dropdown}
-                            disabled={loading}
-                            value={subtitleLanguage}
-                            onChange={(e) => setSubtitleLanguage(e.target.value)}
-                          >
-                            <option value="" disabled>
-                              Subtitle Language
-                            </option>
-                            {subtitleLanguages.map((lang: Language) => (
-                              <option key={lang.code} value={lang.code}> Subtitles {lang.name}</option>
-                            ))}
-                          </select>
-                        </>
-                      ) : null}
+                      <select
+                        id="gender-select"
+                        className={styles.dropdown}
+                        disabled={loading}
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                      >
+                        <option value="" disabled>
+                          Narrarator Voice Gender
+                        </option>
+                        <option value="FEMALE">Female Voice</option>
+                        <option value="MALE">Male Voice</option>
+                        <option value="NEUTRAL">Neutral Voice</option>
+                      </select>
+                      &nbsp;&nbsp;
+                      <select
+                        id="audio-language-select"
+                        className={styles.dropdown}
+                        disabled={loading}
+                        value={audioLanguage}
+                        onChange={(e) => setAudioLanguage(e.target.value)}
+                      >
+                        <option value="" disabled>
+                          Audio Language
+                        </option>
+                        {audioLanguages.map((lang: Language) => (
+                          <option key={lang.code} value={lang.code}> Speaking {lang.name}</option>
+                        ))}
+                      </select>
+                      &nbsp;&nbsp;
+                      <select
+                        id="subtitle-language-select"
+                        className={styles.dropdown}
+                        disabled={loading}
+                        value={subtitleLanguage}
+                        onChange={(e) => setSubtitleLanguage(e.target.value)}
+                      >
+                        <option value="" disabled>
+                          Subtitle Language
+                        </option>
+                        {subtitleLanguages.map((lang: Language) => (
+                          <option key={lang.code} value={lang.code}> Subtitles {lang.name}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className={styles.cloudform}>
                       <TokensDropdown onChange={handleTokensChange} />
@@ -1499,8 +1602,8 @@ function Home({ user }: HomeProps) {
                               ? `Writing your story...`
                               : `Answering your question...`
                             : isStory
-                              ? `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} episodes]\nTell me a Plotline of a story you would like to hear, speak or type it here then press the Enter key.`
-                              : `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} answers]\nAsk me a Question, speak or type it here then press the Enter key.`
+                              ? `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} episodes]\nSay "Hey GAIB...Plotline" for a story, say "Stop GAIB" to cancel. You can also type it here then press the Enter key.`
+                              : `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} answers]\nSay "Hey GAIB...Question" for an answer, say "Stop GAIB" to cancel. You can also type it here then press the Enter key.`
                       }
                       value={query}
                       onChange={(e) => {
