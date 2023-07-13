@@ -901,8 +901,8 @@
   }
 
   .cloud {
-    width: 22rem;
-    height: 28rem;
+    width: fit-content;
+    height: fit-content;
   }
   .textarea {
     width: 22rem;
