@@ -364,7 +364,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           for (const [question, answer] of chatHistory) {
             historyIdx = historyIdx + 1;
             if (debug) {
-              consoleLog('info', `ChatAPI: History #${historyIdx}:\n  Input: "${question}"\n  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
+              consoleLog('info', `ChatAPI: History #${historyIdx}: Input: "${question}"  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
             }
           }
         } else {
@@ -382,10 +382,10 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           let references = '';
           for (const reference of uniqueSourceDocuments) {
             if (reference.metadata && reference.metadata.source) {
-              consoleLog('info', `ChatAPI: Reference ${path.basename(reference.metadata.source)}.`);
               references = references + `[Reference: ${path.basename(reference.metadata.source)}]\n`;
             }
           }
+          consoleLog('info', `ChatAPI: References ${references}.`);
           sendData(JSON.stringify({ data: `\n\nReferences: ${references}\n` }));
         } else {
           consoleLog('info', `ChatAPI: No reference documents.`);

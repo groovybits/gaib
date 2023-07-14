@@ -93,7 +93,6 @@ function Home({ user }: HomeProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [autoFullScreen, setAutoFullScreen] = useState(false);
   const [photographer, setPhotographer] = useState<string>('');
   const [photographerUrl, setPhotographerUrl] = useState<string>('');
   const [pexelsUrl, setPexelsUrl] = useState<string>('');
@@ -159,8 +158,8 @@ function Home({ user }: HomeProps) {
       if (debug) {
         console.log('Data being written:', {
           userId: user.uid,
-          text: storyText,
-          imageUrls: imageUrls,
+          text: storyText.replace('\n', ' '),
+          imageUrls: JSON.stringify(imageUrls),
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         });
         console.log('ID of the current user:', user.uid);

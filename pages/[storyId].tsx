@@ -166,6 +166,30 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     // Select the image for the current scene
     const imageUrl = selectedStory.imageUrls[currentScene % selectedStory.imageUrls.length];
     let imageSrc = imageUrl;
+    let imageShare = imageUrl;
+    const defaultImageDir = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL ? process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL : '/gaib/images/';
+
+    // find first image that isn't the default, else use the default found as first image
+    // default image is public.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL
+    try {
+      for (let i = 0; i < selectedStory.imageUrls.length; i++) {
+        if (isJsonString(selectedStory.imageUrls[i])) {
+          const image = JSON.parse(selectedStory.imageUrls[i]);
+          if (image.url && !image.url.includes(defaultImageDir)) {
+            imageShare = image.url;
+            break;
+          }
+        } else {
+          if (selectedStory.imageUrls[i] && !selectedStory.imageUrls[i].includes(defaultImageDir)) {
+            imageShare = selectedStory.imageUrls[i];
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.log(`Error finding image: ${e}`);
+    }
+
     let photographer = '';
     let photographerUrl = '';
     let pexelsUrl = '';
@@ -184,7 +208,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
           <meta name="description" content={storyParts[1] ? storyParts.slice(1).join(' ').slice(0, 500) : storyParts[0]} />
           <meta property="og:title" content={storyParts[0].replace(/\|$/g, '')} />
           <meta property="og:description" content={storyParts[1] ? storyParts.slice(1).join(' ').slice(0, 500) : storyParts[0]} />
-          <meta property="og:image" content={photographerUrl} />
+          <meta property="og:image" content={imageShare} />
           <meta property="og:url" content={`https://gaib.groovy.org/${storyId}`} />
         </Head>
         <p className={styles.header}>{storyParts[0].replace(/\|$/g, '')}</p>

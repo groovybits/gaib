@@ -46,8 +46,8 @@ export const makeChain = async (
     prompt = buildPrompt(personality, storyMode);
   }
 
-  console.log("makeChain: Prompt: \n===\n", prompt, "\n===\n");
-  console.log("makeChain: Condense Prompt: \n===\n", condensePromptString, "\n===\n");
+  console.log("makeChain: Prompt: [", prompt.replace('\n', ' '), "]");
+  console.log("makeChain: Condense Prompt: [", condensePromptString.replace('\n', ' '), "]");
 
   let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
@@ -143,12 +143,12 @@ export const makeChain = async (
           },
           async handleLLMStart(llm, prompts, runId, parentRunId, extraParams) {
             if (debug) {
-              console.log(`makeChain: llm=${JSON.stringify(llm)}\nPersonality ${personality} prompt: ${JSON.stringify(prompts)}\nrunId ${runId}\nparentRunId ${parentRunId}\nextraParams ${JSON.stringify(extraParams)}`);
+              console.log(`makeChain: llm=${JSON.stringify(llm)} Personality ${personality} prompt: ${JSON.stringify(prompts)} runId ${runId} parentRunId ${parentRunId} extraParams ${JSON.stringify(extraParams)}`);
             }
           },
           async handleLLMEnd() {
             console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
-            console.log('makeChain:', personality, "Stories Body: [\n", accumulatedBodyTokens.trim(), "\n]");
+            console.log('makeChain:', personality, "Stories Body: [", accumulatedBodyTokens.trim().replace('\n', ' '), "]");
             console.log(`makeChain: Deducting ${tokenCount} tokens from ${userId}...`);
             console.log(`makeChain: ${userId} has ${userTokenBalance} tokens left.`);
           },

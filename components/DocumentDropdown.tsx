@@ -25,7 +25,7 @@ const DocumentDropdown: React.FC<DocumentDropdownProps> = ({ onChange }) => {
       <option value="" disabled>
         Number of Documents for Context
       </option>
-        {[...Array(13)].map((_, index) => {
+        {[...Array(8)].map((_, index) => {
           const value = index * 1;
           return (
             <option key={value} value={value}>
