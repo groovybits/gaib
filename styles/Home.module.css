@@ -220,6 +220,23 @@
   text-align: center;
 }
 
+.readerHeader {
+  word-wrap: break-word;
+  white-space: pre-wrap !important;
+  width: auto;
+  text-align: left;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 500;
+  font-family:'Trebuchet MS';
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.readerHeader p {
+  text-align: left;
+}
+
 .personalityTable {
   line-height: 1.2;
   white-space: pre-wrap !important;
@@ -829,6 +846,25 @@
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+.readerStory {
+  background-color: #000000;
+  color: #f1ebeb;
+  border: 4px double #008000;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+  word-wrap: overflow-wrap;
+  padding: 10px;
+  margin: 10px;
+  width: 100%;
+  max-width: 1000px;
+  align-items: center;
+}
+
+.readerStory:hover {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
 .storyTitle {
   display: block;
   background: #FFC601;
@@ -837,7 +873,7 @@
   border: 4px double #0C4B8E;
   border-radius: 6px;
 
-  text-align: left;
+  text-align: center;
   color: #ffffff;
   font-size: 24px;
   font-weight: 500;
@@ -890,6 +926,22 @@
   font-size: 0.9rem;
   max-height: 400px;
   align-items: center;
+}
+
+/* story board individual page next/prev buttons */
+.pageButton {
+  font-size: 20px; /* increase the font size */
+  font-weight: bold; /* make the font bold */
+  color: #FFC601; /* change the font color to white */
+  background-color: #000000; /* change the background color to black */
+  border: none; /* remove the default button border */
+  padding: 10px; /* add some padding */
+  margin: 10px; /* add some margin */
+}
+
+.pageButton:hover {
+  background-color: #777777; /* change the background color to grey when the button is hovered over */
+  cursor: pointer; /* change the cursor to a pointer when the button is hovered over */
 }
 
 /* Mobile optimization */

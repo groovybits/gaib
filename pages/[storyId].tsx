@@ -33,6 +33,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const [initialLoad, setInitialLoad] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [storyIds, setStoryIds] = useState(new Set());
+  const [currentScene, setCurrentScene] = useState(0);
 
 
   const pageSize = process.env.NEXT_PUBLIC_FEED_PAGE_SIZE ? parseInt(process.env.NEXT_PUBLIC_FEED_PAGE_SIZE) : 8;
@@ -145,50 +146,61 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   };
 
   if (storyId && selectedStory) {
-    const storyParts = selectedStory.text.split(/\[SCENE: \d+\]/g).map(part => part.trim());
-    const images = selectedStory.imageUrls.map((imageUrl: string, index: number) => {
-      let imageSrc = imageUrl;
-      let photographer = '';
-      let photographerUrl = '';
-      let pexelsUrl = '';
-      if (isJsonString(imageUrl)) {
-        const image = JSON.parse(imageUrl);
-        imageSrc = image.url;
-        photographer = image.photographer;
-        photographerUrl = image.photographer_url;
-        pexelsUrl = image.pexels_url;
+    // Split the story text into scenes
+    const storyParts = selectedStory.text.split(/\[SCENE: \d+\]/g).map(part => part.trim().replace(/\|$/g, '')).slice(1);
+
+    // Create a function to go to the next page
+    const nextPage = () => {
+      if (currentScene < storyParts.length - 1) {
+        setCurrentScene(currentScene + 1);
       }
-      return (
-        <div key={index} className={styles.storyImage}>
-          <a href={imageSrc} className={styles.storyImage}><img src={imageSrc} alt={`Story Image #${index}`} className={styles.storyImage} /></a>
-          {photographer && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
-          {pexelsUrl && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
-        </div>
-      );
-    });
+    }
+
+    // Create a function to go to the previous page
+    const previousPage = () => {
+      if (currentScene > 0) {
+        setCurrentScene(currentScene - 1);
+      }
+    }
+
+    // Select the image for the current scene
+    const imageUrl = selectedStory.imageUrls[currentScene % selectedStory.imageUrls.length];
+    let imageSrc = imageUrl;
+    let photographer = '';
+    let photographerUrl = '';
+    let pexelsUrl = '';
+    if (isJsonString(imageUrl)) {
+      const image = JSON.parse(imageUrl);
+      imageSrc = image.url;
+      photographer = image.photographer;
+      photographerUrl = image.photographer_url;
+      pexelsUrl = image.pexels_url;
+    }
 
     return (
       <div className={styles.feed} >
+        <p className={styles.header}>{storyParts[0].replace(/\|$/g, '')}</p>
+        <div className={styles.readerStory}>
+          <div className={styles.header}>
+            <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
+          </div>
+          <div className={styles.storyContent}>
+            <div className={styles.storyImage}>
+              <a href={imageSrc} className={styles.storyImage}><img src={imageSrc} alt={`Story Image #${currentScene}`} className={styles.storyImage} /></a>
+              {(photographerUrl && photographer && !photographerUrl.includes("groovy.org")) && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
+              {(pexelsUrl && !pexelsUrl.includes("groovy.org")) && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
+            </div>
+            {currentScene > 0 &&
+              <p className={styles.readerHeader}>{storyParts[currentScene].replace(/\|$/g, '')}</p>
+            }
+          </div>
+        </div>
         <div className={styles.labelContainer}>
           <button onClick={() => {
             setSelectedStory(null);
             router.push('/board');
           }} className={styles.header}>Back to Stories</button>
-        </div>
-        <div className={styles.story}>
-          <div className={styles.header}>
-            <h1>{storyParts[0]}</h1>
-          </div>
-          <div className={styles.story}>
-          {storyParts.slice(1).map((part: string, index: number) => (
-          <div key={index} className={styles.storyContent}>
-            <p className={styles.header}>{part}</p>
-            <div className={styles.storyImage}>
-              {images[index]}
-            </div>
-          </div>
-          ))}
-          </div>
         </div>
       </div>
     );
@@ -220,8 +232,9 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
             const sampledImages = story.imageUrls.length > 8 ?
               story.imageUrls.filter((_: string, index: number) => index % Math.floor(story.imageUrls.length / 8) === 0) :
               story.imageUrls;
-            
-            {sampledImages.map((imageUrl: string, index: number) => {
+
+            {
+              sampledImages.map((imageUrl: string, index: number) => {
                 let imageSrc = imageUrl;
                 if (isJsonString(imageUrl)) {
                   const image = JSON.parse(imageUrl);
@@ -253,30 +266,30 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                 <a href={storyUrl} >Expand</a>
                 {isExpanded && (
                   <div className={styles.storyContent}>
-                    {story.text.split(/\[SCENE: \d+\]/g).map((part: string, index: Key | null | undefined) => (
-                      <p key={index}>
-                        {part.trim()}
-                        <br />
-                        <br />
-                      </p>
-                    ))}
-                    {story.imageUrls.map((imageUrl: string, index: number) => {
-                      let imageSrc = JSON.parse(imageUrl).url;
+                    {story.text.split(/\[SCENE: \d+\]/g).map((part: string, index: number) => {
+                      let imageSrc = JSON.parse(story.imageUrls[index % story.imageUrls.length]).url;
                       let photographer = '';
                       let photographerUrl = '';
                       let pexelsUrl = '';
-                      if (isJsonString(imageUrl)) {
-                        const image = JSON.parse(imageUrl);
+                      if (isJsonString(story.imageUrls[index % story.imageUrls.length])) {
+                        const image = JSON.parse(story.imageUrls[index % story.imageUrls.length]);
                         imageSrc = image.url;
                         photographer = image.photographer;
                         photographerUrl = image.photographer_url;
                         pexelsUrl = image.pexels_url;
                       }
                       return (
-                        <div key={index} className={styles.storyImage}>
-                          <img src={imageSrc} alt="Story image" />
-                          {photographer && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
-                          {pexelsUrl && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
+                        <div key={index}>
+                          <div className={styles.storyImage}>
+                            <img src={imageSrc} alt="Story image" />
+                            {(photographerUrl && photographer && !photographerUrl.includes("groovy.org")) && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
+                            {(pexelsUrl && !pexelsUrl.includes("groovy.org")) && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
+                          </div>
+                          <p>
+                            {part.trim().replace(/\|$/, '')}
+                            <br />
+                            <br />
+                          </p>
                         </div>
                       );
                     })}
@@ -295,8 +308,8 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
           <Link href="/" className={styles.header}>
             <a>Create a Story with GAIB</a>
           </Link>
-          </div>
-          <div className={styles.footer}>
+        </div>
+        <div className={styles.footer}>
           <div className={styles.footerContainer}>
             <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
             <a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>
