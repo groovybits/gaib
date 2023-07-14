@@ -179,6 +179,14 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
 
     return (
       <div className={styles.feed} >
+        <Head>
+          <title>{storyParts[0].replace(/\|$/g, '')}</title>
+          <meta name="description" content={storyParts[0].replace(/\|$/g, '')} />
+          <meta property="og:title" content={storyParts[0].replace(/\|$/g, '')} />
+          <meta property="og:description" content={storyParts.join(' ').slice(0, 1000)} />
+          <meta property="og:image" content={photographerUrl} />
+          <meta property="og:url" content={`https://gaib.groovy.org/${storyId}`} />
+        </Head>
         <p className={styles.header}>{storyParts[0].replace(/\|$/g, '')}</p>
         <div className={styles.readerStory}>
           <div className={styles.header}>
