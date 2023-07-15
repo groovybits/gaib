@@ -7,6 +7,8 @@ import copy from 'copy-to-clipboard';
 import { NextPage, NextPageContext } from 'next';
 import Head from 'next/head';
 import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
+import { type } from 'os';
+import { ParsedUrlQuery } from 'querystring';
 
 interface Story {
   id: string;
@@ -22,7 +24,7 @@ interface InitialProps {
 
 const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const router = useRouter();
-  const { storyId } = router.query;
+  const { storyId }: ParsedUrlQuery = router.query;
   const [selectedStory, setSelectedStory] = useState(initialStory);
 
   const [stories, setStories] = useState<any[]>([]);
@@ -61,7 +63,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
       useImages = true;
     } else if (storyId && typeof storyId === 'string' && storyId.startsWith('images')) {
       // If the current route is '/images/episodeId', fetch from the 'images' collection
-      const episodeId = storyId.split('/')[1]; // Extract the episodeId from the route
+      const episodeId = storyId.replace('images', ''); // Extract the episodeId from the route
       query = firebase.firestore().collection('images').where('episodeId', '==', episodeId).orderBy('count', 'desc').orderBy('created', 'desc');
       useImages = true;
     } else {
@@ -147,10 +149,52 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   }, [storyId, loadMoreTrigger]);
 
   useEffect(() => {
-    if (storyId) {
+    if (storyId && storyId !== 'images' && storyId !== 'board' && typeof storyId === 'string') {
       const fetchStory = async () => {
-        const doc = await firebase.firestore().collection('stories').doc(storyId as string).get();
-        if (doc.exists) {
+        let doc;
+        if (storyId.startsWith('images')) {
+          // If the storyId starts with 'images', fetch from the 'images' collection
+          const episodeId = storyId.replace('images', ''); // Extract the episodeId from the route
+          doc = await firebase.firestore().collection('images').where('episodeId', '==', episodeId).get();
+        } else {
+          // Otherwise, fetch from the 'stories' collection
+          doc = await firebase.firestore().collection('stories').doc(storyId).get();
+        }
+
+        if (doc instanceof firebase.firestore.QuerySnapshot) {
+          // Handle the case where doc is a QuerySnapshot
+          const storiesMap: { [key: string]: any } = {};
+          let count = 1;
+          doc.docs.forEach(doc => {
+            const image = doc.data();
+            let imageObject;
+            if (typeof image.url === 'string') {
+              // If it's not JSON, assume it's a string and create an object with a single property
+              imageObject = { url: image.url, photographer: '', photographer_url: '', pexels_url: '' };
+            } else if (typeof image.url === 'object') {
+              // If image.url is already an object, assign it directly to imageObject
+              imageObject = image.url;
+            } else {
+              // If image.url is neither a string nor an object, create an object with a single property
+              imageObject = { url: image.url, photographer: '', photographer_url: '', pexels_url: '' };
+            }
+            if (!storiesMap[image.episodeId]) {
+              storiesMap[image.episodeId] = {
+                userId: "unknown",
+                id: image.episodeId,
+                text: `[SCENE: 1] ${image.keywords.join('| [SCENE: 1] ')}`,
+                imageUrls: [JSON.stringify(imageObject)],
+                timestamp: image.created,
+              };
+            } else {
+              count += 1;
+              storiesMap[image.episodeId].imageUrls.push(JSON.stringify(imageObject));
+              storiesMap[image.episodeId].text += `| [SCENE: ${count}] ${image.keywords.join(`| [SCENE: ${count}] `)}`;
+            }
+          });
+          setSelectedStory(Object.values(storiesMap)[0]); // Select the first story
+        } else if (doc.exists) {
+          // Handle the case where doc is a DocumentSnapshot
           setSelectedStory({ id: doc.id, ...(doc.data() as any) }); // Cast to any to avoid TypeScript error
         }
       };
@@ -323,7 +367,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                 <>
                   <button onClick={() => {
                     setSelectedStory(null);
-                    router.push('/board');
+                    if (storyId.toString().startsWith('images')) {
+                      router.push('/images');
+                    } else {
+                      router.push('/board');
+                    }
                   }} className={styles.header}>Back to Stories</button> &nbsp;&nbsp;|&nbsp;&nbsp;
                 </>
               ) : (
@@ -418,11 +466,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                     );
                   })}
                 </div>
-                <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
+                <button onClick={() => handleShareClick(`${storyId?.toString().startsWith('images') ? 'images' + story.id : story.id}`)}>Copy Link</button>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
-                <button onClick={() => handleFacebookShareClick(story.id)}>Facebook Post</button>
+                <button onClick={() => handleFacebookShareClick(`${storyId?.toString().startsWith('images') ? 'images' + story.id : story.id}`)}>Facebook Post</button>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
-                <a href={storyId === 'images' ? `${baseUrl}/images/${story.id}` : storyUrl} >Expand</a>
+                <a href={storyId === 'images' ? `${baseUrl}/images${story.id}` : storyUrl}>Expand</a>
                 <p className={styles.storyTimestamp}>{dateString}</p>
                 {isExpanded && (
                   <div className={styles.storyContent}>
