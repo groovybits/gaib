@@ -70,7 +70,7 @@ function Home({ user }: HomeProps) {
   const { speakText, stopSpeaking } = useSpeakText();
 
   const [listening, setListening] = useState<boolean>(false);
-  const [stoppedManually, setStoppedManually] = useState<boolean>(false);
+  const [stoppedManually, setStoppedManually] = useState<boolean>(true);
   const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(false);
   const [speechOutputEnabled, setSpeechOutputEnabled] = useState(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
@@ -116,6 +116,7 @@ function Home({ user }: HomeProps) {
   const [condensePrompt, setCondensePrompt] = useState<string>('');
   const [displayPrompt, setDisplayPrompt] = useState('');
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
+  const [autoSave, setAutoSave] = useState<boolean>(false);
   
   // Declare a new ref for start word detection
   const startWordDetected = useRef(false);
@@ -149,7 +150,9 @@ function Home({ user }: HomeProps) {
 
       if (currentStory.length === 0) {
         console.log(`shareStory: No stories to share`);
-        alert('Please generate a story first!');
+        if (!autoSave) {
+          alert('Please generate a story first!');
+        }
         return;
       }
       const storyText = currentStory.map((item) => item.sentence).join('|');
@@ -176,7 +179,9 @@ function Home({ user }: HomeProps) {
       // Clear the current story
       setCurrentStory([]);
 
-      alert('Story shared successfully!');
+      if (!autoSave) {
+        alert('Story shared successfully!');
+      }
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
     }
@@ -244,6 +249,7 @@ function Home({ user }: HomeProps) {
 
   const handleModalClose = () => {
     setModalIsOpen(false);
+    setNews([]); // Clear the news feed
     setIsFetching(true);
   };
 
@@ -631,7 +637,7 @@ function Home({ user }: HomeProps) {
       let sceneIndex = 0;
 
       // clear current story for save story
-      if (!isFetching) {
+      if (!isFetching && !autoSave) {
         setCurrentStory([]);
       }
 
@@ -827,6 +833,11 @@ function Home({ user }: HomeProps) {
       setSubtitle('');
       gaibImage = await generateImageUrl('', false, '', episodeId);
       setPexelImageUrls(gaibImage);
+
+      if (autoSave) {
+        // save story automatically
+        shareStory();
+      }
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -836,7 +847,7 @@ function Home({ user }: HomeProps) {
       displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -885,12 +896,8 @@ function Home({ user }: HomeProps) {
     setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
 
-    if (!isFetching) {
+    if (!isFetching && !autoSave) {
       setCurrentStory([]);
-    } else {
-      if (latestMessage.message !== '') {
-        // TODO: collect each episode in fetching mode separately and save each episode separately
-      }
     }
 
     // Send the question to the server
@@ -1192,6 +1199,15 @@ function Home({ user }: HomeProps) {
     }
   }, [listening, isSpeaking, voiceQuery, stoppedManually]);
 
+  // autoSave toggle
+  const handleAutoSaveToggle = () => {
+    if (!autoSave) {
+      setAutoSave(true);
+    } else {
+      setAutoSave(false);
+    }
+  };
+
   // speech toggle
   const handleSpeechToggle = () => {
     if (!stoppedManually) {
@@ -1242,6 +1258,18 @@ function Home({ user }: HomeProps) {
         history: [],
       };
     });
+  };
+
+  // replay episode from history using passthrough REPLAY: <story> submit mock handlesubmit
+  const handleReplay = () => {
+    // mock handle submit with the lastMessage.message as the question with REPLAY: prepended to it
+    const mockEvent = {
+      preventDefault: () => { },
+      target: {
+        value: `REPLAY: ${latestMessage.message}`,
+      },
+    };
+    handleSubmit(mockEvent);
   };
 
   // stop speaking
@@ -1408,48 +1436,15 @@ function Home({ user }: HomeProps) {
                       type="button"
                       
                     >
-                      {!stoppedManually ? 'Stop listening' : 'Start listening'}
+                      {!stoppedManually ? 'Stop Listening' : 'Start Listening'}
                     </button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    {isSpeaking ? (
-                      <>
-                        <button
-                          title="Stop Speaking"
-                          onClick={handleStop}
-                          type="button"
-                          disabled={!isSpeaking}
-                          className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
-                        >Stop Speaking</button> &nbsp;&nbsp;|&nbsp;&nbsp;
-                      </>
-                    ) : (
-                      <></>
-                    )}
-                    <button
-                      title="Clear Chat History"
-                      onClick={handleClear}
-                      type="button"
-                      disabled={isSpeaking}
-                      className={styles.footer}
-                    >Clear Chat History</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button
-                      title="Copy Story"
-                      onClick={copyStory}
-                      type="button"
-                      className={styles.footer}
-                    >Copy Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button
-                      title="Share Story"
-                      onClick={shareStory}
-                      type="button"
-                      disabled={loading || isSpeaking}
-                      className={styles.footer}
-                    >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
                     <button
                       title="Fetch News"
                       onClick={handleFetchButtonClick}
                       className={`${styles.footer} ${isFetching ? styles.listening : ''}`}
                       type="button"
                     >
-                      {isFetching ? 'Stop fetching news' : 'Start fetching news'}
+                      {isFetching ? 'Stop Feed' : 'Start Feed'}
                     </button>
                     <Modal
                       isOpen={modalIsOpen}
@@ -1494,14 +1489,63 @@ function Home({ user }: HomeProps) {
                         <button onClick={() => setModalIsOpen(false)}>Cancel</button>
                       </div>
                     </Modal>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    {isSpeaking ? (
+                      <>
+                        <button
+                          title="Stop Speaking"
+                          onClick={handleStop}
+                          type="button"
+                          disabled={!isSpeaking}
+                          className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
+                        >Stop Speaking</button> &nbsp;&nbsp;|&nbsp;&nbsp;
+                      </>
+                    ) : (
+                        <>
+                        <button
+                          title="Replay"
+                          onClick={handleReplay}
+                          type="button"
+                          disabled={isSpeaking}
+                          className={`${styles.footer}`}
+                        >Replay</button> &nbsp;&nbsp;|&nbsp;&nbsp;</>
+                    )}
+                    <button
+                      title="Clear History"
+                      onClick={handleClear}
+                      type="button"
+                      disabled={isSpeaking}
+                      className={styles.footer}
+                    >Clear Chat History</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Copy Story"
+                      onClick={copyStory}
+                      type="button"
+                      className={styles.footer}
+                    >Copy Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Share Story"
+                      onClick={shareStory}
+                      type="button"
+                      disabled={loading || isSpeaking}
+                      className={styles.footer}
+                    >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
                     <Link href="/board/">
                       <a className={styles.footer} onClick={(e) => {
                         if (e.ctrlKey || e.metaKey) {
                           e.preventDefault();
                           window.open('/board/', '_blank');
                         }
-                      }}>Browse Shared Stories</a>
-                    </Link>
+                      }}>Browse Stories</a>
+                    </Link>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Auto Save Stories"
+                      className={`${styles.footer} ${autoSave ? styles.listening : ''}`}
+                      onClick={handleAutoSaveToggle}
+                      type="button"
+
+                    >
+                      {autoSave ? 'Stop Saving Stories' : 'Save Stories'}
+                    </button>
                   </div>
                   {/* Drop down menu configuration row 1 and 2 */}
                   <div className={styles.cloudform}>

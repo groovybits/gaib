@@ -42,7 +42,7 @@
 }
 
 .generatedImage img {
-  height: 720px; /* Set the height to 720px */
+  height: 600px; /* Set the height */
   width: auto; /* Set the width to auto to maintain aspect ratio */
   object-fit: contain; /* Image will scale to maintain aspect ratio */
   border-radius: 8px;
@@ -57,20 +57,26 @@
   object-fit: scale-up;
   border-radius: 8px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
-  max-height: 720px; /* Set maximum height */
+  max-height: 600px; /* Set maximum height */
 }
 
 .generatedTerminal {
-  /*display: flex;*/
-  /*max-height: 500px; */
+  max-height: 600px;
   overflow-y: scroll; /* Allows vertical scrolling */
   width: 100%;
   height: 100%;
-  /*height: 100%;
-  min-height: 100%;*/
+  height: 100%;
+  min-height: 100%;
   object-fit: scale-up;
   border-radius: 8px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
+}
+
+.generatedTerminal img {
+  height: 600px; /* Set the height */
+  width: auto; /* Set the width to auto to maintain aspect ratio */
+  object-fit: contain; /* Image will scale to maintain aspect ratio */
+  border-radius: 8px;
 }
 
 .fullscreenButton {
@@ -472,72 +478,6 @@
   border-radius: 0.2rem;
 }
 
-.pausebutton {
-  background-color: #FEC601;
-  border: none;
-  border-radius: 5px;
-  color: #000000;
-  font-size: 14px;
-  padding: 10px 12px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  margin: 4px 2px;
-  cursor: pointer;
-  transition-duration: 0.4s;
-}
-
-.pausebutton:hover {
-  background: rgb(254, 198, 1, 0.5);
-  border-radius: 0.2rem;
-}
-
-.clearbutton {
-  background-color: #000000;
-  border: none;
-  border-radius: 5px;
-  color: #ffffff;
-  font-size: 14px;
-  padding: 10px 12px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  margin: 4px 2px;
-  cursor: pointer;
-  transition-duration: 0.4s;
-}
-
-.clearbutton:hover {
-  background: rgb(0,0,0,.5);
-  border-radius: 0.2rem;
-}
-
-.clearbutton:disabled {
-  opacity: 0.9;
-  cursor: not-allowed;
-  background: none;
-}
-
-.replaybutton {
-  background-color: #0C4B8E;
-  border: none;
-  border-radius: 5px;
-  color: white;
-  font-size: 14px;
-  padding: 10px 12px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  margin: 4px 2px;
-  cursor: pointer;
-  transition-duration: 0.4s;
-}
-
-.replaybutton:hover {
-  background: rgb(254, 198, 1, 0.5);
-  border-radius: 0.2rem;
-}
-
 .loadingwheel {
   position: absolute;
   top: 0.2rem;
@@ -894,7 +834,7 @@
 }
 
 .storyImage img {
-  max-height: 400px;
+  max-height: 600px;
   align-items: center;
 }
 
@@ -905,6 +845,13 @@
   overflow: hidden; /* This ensures the images stay within their rounded borders */
   object-fit: cover; /* This ensures the images cover the entire area of the div */
   padding: 2px;
+}
+
+.storyTimestamp {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 0.5em;
+  text-align: right;
 }
 
 .imageRow {
@@ -924,7 +871,7 @@
 .storyImage {
   margin-top: 0.5rem;
   font-size: 0.9rem;
-  max-height: 400px;
+  max-height: 600px;
   align-items: center;
 }
 

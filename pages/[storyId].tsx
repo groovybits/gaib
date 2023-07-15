@@ -6,6 +6,7 @@ import Link from 'next/link';
 import copy from 'copy-to-clipboard';
 import { NextPage, NextPageContext } from 'next';
 import Head from 'next/head';
+import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
 
 interface Story {
   id: string;
@@ -34,19 +35,39 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [storyIds, setStoryIds] = useState(new Set());
   const [currentScene, setCurrentScene] = useState(0);
-
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const pageSize = process.env.NEXT_PUBLIC_FEED_PAGE_SIZE ? parseInt(process.env.NEXT_PUBLIC_FEED_PAGE_SIZE) : 8;
+  const debug = process.env.DEBUG === 'true' ? true : false; // Debug mode
   // Number of stories to fetch at a time
 
   useEffect(() => {
     if (!baseUrl) {
       setBaseUrl(window.location.origin);
     }
-  }, []);
+  }, [baseUrl]);
 
   const fetchStories = async () => {
-    let query = firebase.firestore().collection('stories').orderBy('timestamp', 'desc');
+    let query;
+    let useImages = false;
+
+    if (debug) {
+      console.log(`Router query: ${storyId}`);
+    }
+    // Check the current route
+    if (storyId === 'images') {
+      // If the current route is '/images', fetch from the 'images' collection
+      query = firebase.firestore().collection('images').orderBy('count', 'desc').orderBy('created', 'desc');
+      useImages = true;
+    } else if (storyId && typeof storyId === 'string' && storyId.startsWith('images')) {
+      // If the current route is '/images/episodeId', fetch from the 'images' collection
+      const episodeId = storyId.split('/')[1]; // Extract the episodeId from the route
+      query = firebase.firestore().collection('images').where('episodeId', '==', episodeId).orderBy('count', 'desc').orderBy('created', 'desc');
+      useImages = true;
+    } else {
+      // Otherwise, fetch from the 'stories' collection
+      query = firebase.firestore().collection('stories').orderBy('timestamp', 'desc');
+    }
 
     if (process.env.NEXT_PUBLIC_CONTINUOUS_SCROLLING === 'true') {
       // If continuous scrolling is enabled, paginate the query
@@ -60,10 +81,55 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     const snapshot = await query.get();
 
     if (snapshot.docs.length > 0) {
-      const newStories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(story => !storyIds.has(story.id));
+      let newStories: any[];
+
+      if (useImages) {
+        // Group images by episodeId to form stories
+        const storiesMap: { [key: string]: any } = {};
+        let count = 1;
+        snapshot.docs.forEach(doc => {
+          const image = doc.data();
+          let imageObject;
+          if (typeof image.url === 'string') {
+            // If it's not JSON, assume it's a string and create an object with a single property
+            imageObject = { url: image.url, photographer: '', photographer_url: '', pexels_url: '' };
+          } else if (typeof image.url === 'object') {
+            // If image.url is already an object, assign it directly to imageObject
+            imageObject = image.url;
+          } else {
+            // If image.url is neither a string nor an object, create an object with a single property
+            imageObject = { url: image.url, photographer: '', photographer_url: '', pexels_url: '' };
+          }
+          if (!storiesMap[image.episodeId]) {
+            storiesMap[image.episodeId] = {
+              userId: "unknown",
+              id: image.episodeId,
+              text: `[SCENE: 1] ${image.keywords.join('| [SCENE: 1] ')}`,
+              imageUrls: [JSON.stringify(imageObject)],
+              timestamp: image.created,
+            };
+          } else {
+            count += 1;
+            storiesMap[image.episodeId].imageUrls.push(JSON.stringify(imageObject));
+            storiesMap[image.episodeId].text += `| [SCENE: ${count}] ${image.keywords.join(`| [SCENE: ${count}] `)}`;
+          }
+        });
+
+        if (debug) {
+          console.log(`Stories map: ${JSON.stringify(storiesMap)}`);
+        }
+
+        newStories = Object.values(storiesMap).filter(story => !storyIds.has(story.id));
+      } else {
+        newStories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(story => !storyIds.has(story.id));
+      }
+
+      if (debug) {
+        console.log(`New stories: ${JSON.stringify(newStories)}`);
+      }
 
       setStories(prevStories => [...prevStories, ...newStories]);
-      setStoryIds(prevStoryIds => new Set([...prevStoryIds, ...newStories.map(story => story.id)]));
+      setStoryIds(prevStoryIds => new Set([...prevStoryIds, ...newStories.map((story: any) => story.id)]));
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
     }
 
@@ -78,7 +144,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
 
   useEffect(() => {
     fetchStories();
-  }, [loadMoreTrigger]);
+  }, [storyId, loadMoreTrigger]);
 
   useEffect(() => {
     if (storyId) {
@@ -117,11 +183,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     };
   }, [loadMoreTrigger, hasMore]);
 
-  const handleShareClick = (storyId: string) => {
+  const handleShareClick = (storyId: string | string[]) => {
     copy(`${baseUrl}/${storyId}`);
   };
 
-  const handleFacebookShareClick = (storyId: string) => {
+  const handleFacebookShareClick = (storyId: string | string[]) => {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${baseUrl}/${storyId}`)}`, '_blank');
   };
 
@@ -130,6 +196,26 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
       setExpandedStoryId(null);
     } else {
       setExpandedStoryId(id);
+    }
+  };
+
+  // toggle the full screen state
+  const toggleFullScreen = () => {
+    const imageContainer = document.querySelector(`.${styles.imageContainer}`);
+    const image = document.querySelector(`.${styles.generatedImage} img`);
+
+    if (!document.fullscreenElement) {
+      if (imageContainer?.requestFullscreen) {
+        imageContainer.requestFullscreen();
+        image?.classList.add(styles.fullScreenImage);
+        setIsFullScreen(true);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        image?.classList.remove(styles.fullScreenImage);
+        setIsFullScreen(false);
+      }
     }
   };
 
@@ -202,7 +288,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     }
 
     return (
-      <div className={styles.feed} >
+      <div className={styles.cloud} >
         <Head>
           <title>{storyParts[0].replace(/\|$/g, '')}</title>
           <meta name="description" content={storyParts[1] ? storyParts.slice(1).join(' ').slice(0, 500) : storyParts[0]} />
@@ -211,28 +297,63 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
           <meta property="og:image" content={imageShare} />
           <meta property="og:url" content={`https://gaib.groovy.org/${storyId}`} />
         </Head>
-        <p className={styles.header}>{storyParts[0].replace(/\|$/g, '')}</p>
         <div className={styles.readerStory}>
-          <div className={styles.header}>
-            <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
-          </div>
-          <div className={styles.storyContent}>
-            <div className={styles.storyImage}>
-              <a href={imageSrc} className={styles.storyImage}><img src={imageSrc} alt={`Story Image #${currentScene}`} className={styles.storyImage} /></a>
-              {(photographerUrl && photographer && !photographerUrl.includes("groovy.org")) && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
-              {(pexelsUrl && !pexelsUrl.includes("groovy.org")) && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
+          <div
+            className={styles.imageContainer}
+            style={{
+              position: isFullScreen ? "fixed" : "relative",
+              top: isFullScreen ? 0 : "auto",
+              left: isFullScreen ? 0 : "auto",
+              width: isFullScreen ? "auto" : "auto",
+              height: isFullScreen ? "100vh" : "100%",
+              zIndex: isFullScreen ? 1000 : "auto",
+              backgroundColor: isFullScreen ? "black" : "transparent",
+            }}
+          >
+            <button
+              type="button"
+              className={styles.fullscreenButton}
+              onClick={toggleFullScreen}
+            >
+              {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+            </button>
+            <div className={styles.footer}>
+              <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              {!isFullScreen ? (
+                <>
+                  <button onClick={() => {
+                    setSelectedStory(null);
+                    router.push('/board');
+                  }} className={styles.header}>Back to Stories</button> &nbsp;&nbsp;|&nbsp;&nbsp;
+                </>
+              ) : (
+                <></>
+              )}
+              <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
             </div>
-            {currentScene > 0 &&
-              <p className={styles.readerHeader}>{storyParts[currentScene].replace(/\|$/g, '')}</p>
-            }
+            <div className={styles.generatedImage}>
+              {(imageSrc === '') ? "" : (
+                <>
+                  <img
+                    src={imageSrc}
+                    alt="GAIB"
+                  />
+                </>
+              )}
+              <div className={
+                isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+              }>{storyParts[currentScene].replace(/\|$/g, '')}
+              </div>
+              {(imageSrc === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
+                <div>
+                  <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
+                </div>
+              )}
+              <button onClick={() => handleShareClick(storyId)}>Copy Link</button>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <button onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
+            </div>
           </div>
-        </div>
-        <div className={styles.labelContainer}>
-          <button onClick={() => {
-            setSelectedStory(null);
-            router.push('/board');
-          }} className={styles.header}>Back to Stories</button>
         </div>
       </div>
     );
@@ -259,6 +380,12 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
           {stories.map(story => {
             const isExpanded = story.id === expandedStoryId;
             const storyUrl = `${baseUrl}/${story.id}`;
+
+            // Convert the Firestore timestamp to a JavaScript Date object
+            const date = story.timestamp ? story.timestamp.toDate() : story.created ? story.created.toDate() : new Date();
+
+            // Format the date to a human-readable string
+            const dateString = date.toLocaleString();
 
             // Sample 8 images from the story's imageUrls
             const sampledImages = story.imageUrls.length > 8 ?
@@ -295,7 +422,8 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                 &nbsp;&nbsp;|&nbsp;&nbsp;
                 <button onClick={() => handleFacebookShareClick(story.id)}>Facebook Post</button>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
-                <a href={storyUrl} >Expand</a>
+                <a href={storyId === 'images' ? `${baseUrl}/images/${story.id}` : storyUrl} >Expand</a>
+                <p className={styles.storyTimestamp}>{dateString}</p>
                 {isExpanded && (
                   <div className={styles.storyContent}>
                     {story.text.split(/\[SCENE: \d+\]/g).map((part: string, index: number) => {
@@ -312,15 +440,13 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                       }
                       return (
                         <div key={index}>
-                          <div className={styles.storyImage}>
-                            <img src={imageSrc} alt="Story image" />
+                          {/*<div className={styles.storyImage}>
+                            {<img src={imageSrc} alt="Story image" />
                             {(photographerUrl && photographer && !photographerUrl.includes("groovy.org")) && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
                             {(pexelsUrl && !pexelsUrl.includes("groovy.org")) && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
-                          </div>
+                          </div>*/}
                           <p>
                             {part.trim().replace(/\|$/, '')}
-                            <br />
-                            <br />
                           </p>
                         </div>
                       );
@@ -353,10 +479,15 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
 };
 
 Global.getInitialProps = async ({ query }: NextPageContext) => {
-  const { storyId } = query as { storyId?: string };
+  const { storyId, episodeId } = query as { storyId?: string, episodeId?: string };
   let initialStory = null;
 
-  if (storyId) {
+  if (storyId === 'images' && episodeId) {
+    const doc = await firebase.firestore().collection('images').doc(episodeId).get();
+    if (doc.exists) {
+      initialStory = { id: doc.id, ...(doc.data() as any) }; // Cast to any to avoid TypeScript error
+    }
+  } else if (storyId) {
     const doc = await firebase.firestore().collection('stories').doc(storyId).get();
     if (doc.exists) {
       initialStory = { id: doc.id, ...(doc.data() as any) }; // Cast to any to avoid TypeScript error

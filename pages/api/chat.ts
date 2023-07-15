@@ -174,7 +174,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         Connection: 'keep-alive',
       });
       sendData(JSON.stringify({ data: '' }));
-      sendData(JSON.stringify({ data: question }));
+      sendData(JSON.stringify({ data: question.replace('REPLAY:', '') }));
       sendData('[DONE]');
       res.end();
       return;
