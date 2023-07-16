@@ -1663,7 +1663,7 @@ function Home({ user }: HomeProps) {
                       ref={textAreaPersonalityRef}
                       id="customPrompt"
                       name="customPrompt"
-                      maxLength={1500}
+                      maxLength={2000}
                       rows={2}
                       placeholder={
                         (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
