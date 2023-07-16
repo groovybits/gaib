@@ -211,6 +211,10 @@
   /* Add any other existing styles for the .main class */
 }
 
+.episodeList {
+  text-align: left;
+}
+
 .header {
   width: auto;
   text-align: center;

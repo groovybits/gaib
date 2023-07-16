@@ -26,8 +26,7 @@ import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
-import { time } from 'console';
-
+import EpisodePlanner from '@/components/EpisodePlanner';
 const debug = process.env.NEXT_PUBLIC_DEBUG || false;
 
 type PendingMessage = {
@@ -117,6 +116,8 @@ function Home({ user }: HomeProps) {
   const [displayPrompt, setDisplayPrompt] = useState('');
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
   const [autoSave, setAutoSave] = useState<boolean>(false);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [feedMode, setFeedMode] = useState<'episode' | 'news'>('news'); // Add this line
   
   // Declare a new ref for start word detection
   const startWordDetected = useRef(false);
@@ -221,6 +222,21 @@ function Home({ user }: HomeProps) {
     },
   };
 
+  // Define a type for an episode
+  type Episode = {
+    title: string;
+    plotline: string;
+  };
+
+  // This function will be passed to the EpisodePlanner component
+  const handleNewEpisode = (episode: Episode) => {
+    setEpisodes([...episodes, episode]);
+  };
+
+  const handleEpisodeChange = (newEpisodes: Episode[]) => {
+    setEpisodes(newEpisodes);
+  };
+
   // fetch news from mediastack service and set the news state
   const fetchNews = async () => {
     const idToken = await user.getIdToken();
@@ -260,38 +276,61 @@ function Home({ user }: HomeProps) {
         isProcessingRef.current = true;  // Set isProcessing to true when a news article is being processed
         let currentNews = news;
         let index = currentNewsIndex;  // Use a local variable to keep track of the current news index
-        if (index >= currentNews.length || currentNews.length === 0) {
-          console.log(`Reached end of news feed, fetching new news`);
-          currentNews = await fetchNews();
-          console.log(`Fetching news found ${currentNews.length} news articles`);
-          setNews(currentNews);
-          index = 0;  // Reset the local variable to 0 when a new batch of news is fetched
-        }
-        if (currentNews[index]) {  // Check that currentNews[index] is defined
-          const headline = currentNews[index].title;
-          const body = currentNews[index].description.substring(0, 300);
-          let currentQuery = `${headline}\n\n${body}`;
 
-          if (feedPrompt != '') {
-            currentQuery = `${feedPrompt}\n\n${currentQuery}`;
+        // Check if there are any episodes
+        if (feedMode === 'episode' && episodes.length > 0) {
+          // Use the title and plotline of the next episode as the input
+          const episode = episodes.shift();
+          if (episode) { // Check if episode is defined
+            const currentQuery = `${episode.title}\n\n${episode.plotline}`;
+
+            console.log(`Sending Episode #${index}: ${episode.title}`);
+            setQuery(currentQuery);
+            const mockEvent = {
+              preventDefault: () => { },
+              target: {
+                value: currentQuery,
+              },
+            };
+            isSubmittingRef.current = true;
+            handleSubmit(mockEvent);
+            setCurrentNewsIndex(index + 1);  // Increment the state variable after processing an episode
           }
-
-          if (currentQuery === query) {
-            console.log(`Skipping duplicate news headline #${index}: ${headline}`);
-            processNewsArticle();
+        } else {
+          // If there are no episodes, continue with the news feed as before
+          if (index >= currentNews.length || currentNews.length === 0) {
+            console.log(`Reached end of news feed, fetching new news`);
+            currentNews = await fetchNews();
+            console.log(`Fetching news found ${currentNews.length} news articles`);
+            setNews(currentNews);
+            index = 0;  // Reset the local variable to 0 when a new batch of news is fetched
           }
+          if (currentNews[index]) {  // Check that currentNews[index] is defined
+            const headline = currentNews[index].title;
+            const body = currentNews[index].description.substring(0, 300);
+            let currentQuery = `${headline}\n\n${body}`;
 
-          console.log(`Sending News headline #${index}: ${headline}`);
-          setQuery(currentQuery);
-          const mockEvent = {
-            preventDefault: () => { },
-            target: {
-              value: currentQuery,
-            },
-          };
-          isSubmittingRef.current = true;
-          handleSubmit(mockEvent);
-          setCurrentNewsIndex(index + 1);  // Increment the state variable after processing a news article
+            if (feedPrompt != '') {
+              currentQuery = `${feedPrompt}\n\n${currentQuery}`;
+            }
+
+            if (currentQuery === query) {
+              console.log(`Skipping duplicate news headline #${index}: ${headline}`);
+              processNewsArticle();
+            }
+
+            console.log(`Sending News headline #${index}: ${headline}`);
+            setQuery(currentQuery);
+            const mockEvent = {
+              preventDefault: () => { },
+              target: {
+                value: currentQuery,
+              },
+            };
+            isSubmittingRef.current = true;
+            handleSubmit(mockEvent);
+            setCurrentNewsIndex(index + 1);  // Increment the state variable after processing a news article
+          }
         }
         isProcessingRef.current = false;  // Set isProcessing to false when a news article has been processed
       }
@@ -1405,7 +1444,25 @@ function Home({ user }: HomeProps) {
                     )}
                     <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
-                    }>{subtitle}
+                    }>
+                      {subtitle ? subtitle : (episodes.length > 0) && (
+                        <>
+                          <h3 className={styles.header}>Upcoming Episodes:</h3>
+                          <hr></hr>
+                          <table className={`${styles.table} ${styles.episodeList}`}>
+                            {[...episodes].reverse().map((episode, index) => (
+                              <tr key={index}>
+                                <td>
+                                  <p className={styles.footer}>Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
+                                </td><tr></tr>
+                                <td>
+                                  <p className={styles.footer}>{episode.plotline}</p>
+                                </td>
+                              </tr>
+                            ))}
+                          </table>
+                        </>
+                      )}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
@@ -1721,6 +1778,12 @@ function Home({ user }: HomeProps) {
                         className={styles.textareaConfig}
                       />
                     </div>
+                  </div>
+                  <div className={styles.cloudform}>
+                    <button className={styles.header} onClick={() => setFeedMode(feedMode === 'episode' ? 'news' : 'episode')}>
+                      {feedMode === 'episode' ? 'Switch to News Mode' : 'Switch to Episode Mode'}
+                    </button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <EpisodePlanner onNewEpisode={handleNewEpisode} onEpisodeChange={handleEpisodeChange} />
                   </div>
                 </form>
               </div>
