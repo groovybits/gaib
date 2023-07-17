@@ -26,6 +26,12 @@ const translateHandler = async (req: NextApiRequestWithUser, res: NextApiRespons
   if (req.method === 'POST') {
     const { text, targetLanguage } = req.body;
 
+    if (process.env.GOOGLE_TRANSLATE_API_KEY === undefined || process.env.GOOGLE_TRANSLATE_API_KEY === '') {
+      alert("Error: GOOGLE_TRANSLATE_API_KEY not found in environment variables.");
+      res.status(500).json({ error: 'Error in translating text, statusText: GOOGLE_TRANSLATE_API_KEY not found in environment variables.' });
+      return;
+    }
+
     try {
       const translatedText = await fetchTranslation(text, targetLanguage);
       res.status(200).json({ translatedText });

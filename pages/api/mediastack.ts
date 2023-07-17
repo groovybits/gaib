@@ -13,6 +13,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     const { offset = 0, sort = '', category = '', keywords = '' } = req.query; // Get the offset from the query parameters
 
     if (!mediastackApiKey) {
+      alert('ERROR: The Mediastack API key is not set, setup .env with MEDIASTACK_API_KEY.');
       res.status(500).json({ error: 'The Mediastack API key is not set' });
     }
 

@@ -2,6 +2,8 @@ import firebase from "firebase/app";
 import "firebase/auth";
 import "firebase/firestore";
 
+const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true' ? true : false;
+
 // Firebase configuration variables loaded from environment variables
 const clientCredentials = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,7 +15,7 @@ const clientCredentials = {
 };
 
 // If Firebase isn't already initialized, initialize it using the above credentials.
-if (!firebase.apps.length) {
+if (!firebase.apps.length && authEnabled) {
   firebase.initializeApp(clientCredentials);
 }
 

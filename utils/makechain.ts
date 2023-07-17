@@ -19,6 +19,7 @@ const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(proce
 const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.7;
 const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.0;
 const debug = process.env.DEBUG !== undefined ? Boolean(process.env.DEBUG) : false;
+const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH == 'true' ? true : false;
 
 const fasterModel = new OpenAI({
   modelName: fasterModelName,
@@ -130,7 +131,7 @@ export const makeChain = async (
               );
             }
             // Deduct tokens based on the tokenCount
-            if (!isAdmin) {
+            if (!isAdmin && authEnabled) {
               const newTokenBalance = userTokenBalance - tokenCount;
               if (newTokenBalance >= 0) {
                 await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });

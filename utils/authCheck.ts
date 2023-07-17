@@ -8,6 +8,13 @@ export interface NextApiRequestWithUser extends NextApiRequest {
 
 export const authCheck = async (req: NextApiRequestWithUser, res: NextApiResponse, next: () => void) => {
     const token = req.headers.authorization?.split(' ')[1];
+    const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true' ? true : false;
+
+    if (!authEnabled) {
+        // auth not enabled, let the request through
+        next();
+        return;
+    }
 
     if (!token) {
         console.log(`authCheck: No token provided for request ${req.url} from ${req.headers['x-forwarded-for']} - ${req.headers['user-agent']}`);

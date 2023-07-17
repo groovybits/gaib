@@ -37,7 +37,7 @@ type PendingMessage = {
 
 // Add a type for the user prop
 interface HomeProps {
-  user: firebase.User;
+  user: firebase.User | null;
 }
 
 function Home({ user }: HomeProps) {
@@ -119,6 +119,10 @@ function Home({ user }: HomeProps) {
   const [autoSave, setAutoSave] = useState<boolean>(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [feedMode, setFeedMode] = useState<'episode' | 'news'>('news'); // Add this line
+  const [enableSpeaking, setEnableSpeaking] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_SPEAKING === 'true');
+  const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
+  const [newsFeedEnabled, setNewsFeedEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_NEWS_FEED === 'true');
+  const [authEnabled, setAuthEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true');
 
   // Declare a new ref for start word detection
   const startWordDetected = useRef(false);
@@ -146,6 +150,13 @@ function Home({ user }: HomeProps) {
 
   const shareStory = async () => {
     try {
+      if (!user && authEnabled) {
+        alert('Please sign in first!');
+        return;
+      } else if (!user) {
+        alert('Cannot share story when user auth is disabled without a firestore db hooked up.')
+        return;
+      }
       if (debug) {
         console.log(`Current story: ${JSON.stringify(currentStory)}`);
       }
@@ -240,7 +251,7 @@ function Home({ user }: HomeProps) {
 
   // fetch news from mediastack service and set the news state
   const fetchNews = async () => {
-    const idToken = await user.getIdToken();
+    const idToken = await user?.getIdToken();
     const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
       headers: {
         Authorization: `Bearer ${idToken}`,
@@ -300,7 +311,7 @@ function Home({ user }: HomeProps) {
             handleSubmit(mockEvent);
             setCurrentNewsIndex(index + 1);  // Increment the state variable after processing an episode
           }
-        } else if (feedMode === 'news') {
+        } else if (feedMode === 'news' && newsFeedEnabled) {
           // If there are no episodes, continue with the news feed as before
           if (index >= currentNews.length || currentNews.length === 0) {
             console.log(`Reached end of news feed, fetching new news`);
@@ -395,6 +406,12 @@ function Home({ user }: HomeProps) {
     async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = '', episodeId = '', count = 0): Promise<ImageData | string> {
       const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai'
       const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
+
+      // check if enabled
+      if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
+        return '';
+      }
+
       // Check if it has been 5 seconds since we last generated an image
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
@@ -420,7 +437,7 @@ function Home({ user }: HomeProps) {
         try {
           let response;
           if (imageSource === 'pexels') {
-            const idToken = await user.getIdToken();
+            const idToken = await user?.getIdToken();
             let extracted_keywords = extractKeywords(sentence, 32).join(' ');
             console.log('Extracted keywords: [', extracted_keywords, ']');
             keywords = encodeURIComponent(extracted_keywords);
@@ -430,7 +447,7 @@ function Home({ user }: HomeProps) {
               body: JSON.stringify({ keywords }),
             });
           } else if (imageSource === 'deepai') {
-            const idToken = await user.getIdToken();
+            const idToken = await user?.getIdToken();
             let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
             let exampleImage = '' as ImageData | string;
             if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
@@ -468,7 +485,7 @@ function Home({ user }: HomeProps) {
               duplicateImage = true;
             }
             if (saveImages === 'true' && !duplicateImage) {
-              const idToken = await user.getIdToken();
+              const idToken = await user?.getIdToken();
               // Store the image and index it
               await fetch('/api/storeImage', {
                 method: 'POST',
@@ -517,7 +534,7 @@ function Home({ user }: HomeProps) {
     }
 
     async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
-      const idToken = await user.getIdToken();
+      const idToken = await user?.getIdToken();
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -533,7 +550,7 @@ function Home({ user }: HomeProps) {
     }
 
     async function displayImagesAndSubtitles() {
-      const idToken = await user.getIdToken();
+      const idToken = await user?.getIdToken();
       let sentences: string[];
       if (isPaused) {
         stopSpeaking();
@@ -738,7 +755,7 @@ function Home({ user }: HomeProps) {
           for (const sentence_by_character of sentences_by_character) {
             // Set the subtitle to the translated text if the text is not in English
             let translatedText = '';
-            if (subtitleLanguage !== 'en-US') {
+            if (subtitleLanguage !== 'en-US' && translateText) {
               translatedText = await fetchTranslation(sentence_by_character, subtitleLanguage);
               setSubtitle(splitSentence(translatedText));
             } else {
@@ -819,7 +836,7 @@ function Home({ user }: HomeProps) {
                   console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
                 }
                 const cleanText = removeMarkdownAndSpecialSymbols(sentence_by_character);
-                if (cleanText !== '') {
+                if (cleanText !== '' && enableSpeaking && idToken) {
                   await speakText(cleanText, idToken, 1, detectedGender, audioLanguage, model);
                 } else {
                   // Wait anyways even if speaking fails so that the subtitles are displayed
@@ -830,7 +847,7 @@ function Home({ user }: HomeProps) {
               } else {
                 // Speak the translated text
                 let translationEntry: string = '';
-                if (translatedText !== '' && audioLanguage == subtitleLanguage) {
+                if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
                   // Use the previously translated text
                   translationEntry = translatedText;
                 } else {
@@ -842,7 +859,7 @@ function Home({ user }: HomeProps) {
                 }
                 try {
                   const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
-                  if (cleanText !== '') {
+                  if (cleanText !== '' && enableSpeaking && idToken) {
                     await speakText(translationEntry, idToken, 1, detectedGender, audioLanguage, model);
                   } else {
                     // Wait anyways even if speaking fails so that the subtitles are displayed
@@ -949,7 +966,7 @@ function Home({ user }: HomeProps) {
     // Send the question to the server
     const ctrl = new AbortController();
     try {
-      const idToken = await user.getIdToken();
+      const idToken = await user?.getIdToken();
       fetchEventSource('/api/chat', {
         method: 'POST',
         headers: {
@@ -959,7 +976,7 @@ function Home({ user }: HomeProps) {
         },
         body: JSON.stringify({
           question,
-          userId: user.uid,
+          userId: user?.uid,
           selectedPersonality,
           selectedNamespace,
           isStory,
