@@ -81,6 +81,7 @@ function Home({ user }: HomeProps) {
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
   const [subtitle, setSubtitle] = useState<string>('');
+  const [loadingOSD, setLoadingOSD] = useState<string>('');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
@@ -284,7 +285,6 @@ function Home({ user }: HomeProps) {
           if (episode) { // Check if episode is defined
             if (episodes.length === 0) {
               console.log(`Reached end of episode feed.`);
-              setIsFetching(false);
             }
             const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
@@ -566,6 +566,7 @@ function Home({ user }: HomeProps) {
       let lastImage = gaibImage;
       setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
+      setLoadingOSD('');
 
       let maleVoiceModels = {
         'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
@@ -874,6 +875,7 @@ function Home({ user }: HomeProps) {
       stopSpeaking();
       setIsSpeaking(false);
       setSubtitle('');
+      setLoadingOSD('');
       gaibImage = await generateImageUrl('', false, '', episodeId);
       setPexelImageUrls(gaibImage);
 
@@ -890,7 +892,7 @@ function Home({ user }: HomeProps) {
       displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -933,7 +935,8 @@ function Home({ user }: HomeProps) {
     setError(null);
     setIsPaused(false);
     setLoading(true);
-    setSubtitle(`Loading...`);
+    setLoadingOSD(`Loading...`);
+    setSubtitle('');
     setIsSpeaking(true);
     setQuery('');
     setVoiceQuery('');
@@ -985,6 +988,7 @@ function Home({ user }: HomeProps) {
             }));
             setLoading(false);
             setSubtitle('');
+            setLoadingOSD('');
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             ctrl.abort();
           } else if (event.data === '[OUT_OF_TOKENS]') {
@@ -1001,7 +1005,8 @@ function Home({ user }: HomeProps) {
               pendingSourceDocs: undefined,
             }));
             setLoading(false);
-            setSubtitle('System Error... Please try again.');
+            setLoadingOSD('System Error... Please try again.');
+            setSubtitle('');
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             ctrl.abort();
           } else {
@@ -1017,7 +1022,8 @@ function Home({ user }: HomeProps) {
                 pending: (state.pending ?? '') + data.data,
               }));
             }
-            setSubtitle(`Loading... ${data.data.slice(0, 80).replace(/\n/g, ' ')}`);
+            setLoadingOSD(`Loading... ${data.data.slice(0, 80).replace(/\n/g, ' ')}`);
+            setSubtitle('');
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
@@ -1027,7 +1033,8 @@ function Home({ user }: HomeProps) {
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
     } catch (error: any) {
       setLoading(false);
-      setSubtitle(`System Error: ${error.message}}`);
+      setLoadingOSD(`System Error: ${error.message}}`);
+      setSubtitle('');
       setError('An error occurred while fetching the data. Please try again.');
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
       console.log(error);
@@ -1452,9 +1459,9 @@ function Home({ user }: HomeProps) {
                       </>
                     )}
                     <div className={
-                      isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+                      isFullScreen ? styles.fullScreenOSD : styles.osd
                     }>
-                      {(!subtitle.toString().startsWith('Loading') && episodes.length == 0) ? subtitle : (episodes.length > 0) && (
+                      {(episodes.length == 0) ? loading ? loadingOSD : '' : ((!isSpeaking || loading) && episodes.length > 0) && (
                         <>
                           <h3 className={`${styles.header} ${styles.center}`}>--- Upcoming Episodes ---</h3>
                           <hr></hr>
@@ -1470,11 +1477,16 @@ function Home({ user }: HomeProps) {
                               </tr>
                             ))}
                           </table>
-                          <div className={isFullScreen ? styles.fullScreenSubtitle : styles.subtitle}>
-                            {subtitle}
+                          <div className={isFullScreen ? styles.fullScreenOSD : styles.osd}>
+                            {loadingOSD}
                           </div>
                         </>
                       )}
+                    </div>
+                    <div className={
+                      isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+                    }>
+                      {subtitle}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
