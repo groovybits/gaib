@@ -7,7 +7,6 @@ import {
   buildPrompt,
   buildCondensePrompt,
 } from '@/config/personalityPrompts';
-import { firestoreAdmin } from '@/config/firebaseAdminInit';
 import isUserPremium from '@/config/isUserPremium';
 import { BaseLanguageModel } from 'langchain/dist/base_language';
 
@@ -20,6 +19,11 @@ const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloa
 const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.0;
 const debug = process.env.DEBUG !== undefined ? Boolean(process.env.DEBUG) : false;
 const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH == 'true' ? true : false;
+
+let firebaseFunctions: any;
+if (authEnabled) {
+  firebaseFunctions = await import('@/config/firebaseAdminInit');
+}
 
 const fasterModel = new OpenAI({
   modelName: fasterModelName,
@@ -53,34 +57,19 @@ export const makeChain = async (
   let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
   let logInterval = 100; // Adjust this value to log less or more frequently
-  let isPremium = await isUserPremium();
-  const isAdmin = await isUserAdmin(userId!);
+  let isAdmin = false;
+  if (authEnabled) {
+    isAdmin = await firebaseFunctions.isUserAdmin(userId!);
+  }
   const maxTokens = tokensCount;
 
-  async function getUserDetails(userId: string) {
-    const userDoc = await firestoreAdmin.collection("users").doc(userId).get();
-    const userData = userDoc.data();
-    return {
-      displayName: userData ? userData.displayName : '',
-      email: userData ? userData.email : '',
-    };
+  let userTokenBalance = 0;
+  if (authEnabled) {
+    userTokenBalance = await firebaseFunctions.getUserTokenBalance(userId!);
   }
-
-  async function getUserTokenBalance(userId: string): Promise<number> {
-    const userDoc = await firestoreAdmin.collection("users").doc(userId).get();
-    const userData = userDoc.data();
-    return userData ? userData.tokenBalance : 0;
-  }
-
-  async function isUserAdmin(userId: string): Promise<boolean> {
-    const userDoc = await firestoreAdmin.collection("users").doc(userId).get();
-    const userData = userDoc.data();
-    return userData ? userData.isAdmin : false;
-  }
-
-  const userTokenBalance = await getUserTokenBalance(userId!);
-  if (userTokenBalance <= 0 && !isAdmin) {
-    const userDetails = await getUserDetails(userId!);
+  if (userTokenBalance <= 0 && !isAdmin && authEnabled) {
+    const userDetails = await firebaseFunctions.getUserDetails(userId!);
+    const isPremium = await isUserPremium();
     console.log(
       `makeChain: ${userId} (${userDetails.displayName}, 
         ${userDetails.email}) Premium:${isPremium} does not have enough tokens to run this model, only ${userTokenBalance} left.`
@@ -134,7 +123,20 @@ export const makeChain = async (
             if (!isAdmin && authEnabled) {
               const newTokenBalance = userTokenBalance - tokenCount;
               if (newTokenBalance >= 0) {
-                await firestoreAdmin.collection("users").doc(userId).update({ tokenBalance: newTokenBalance });
+                try {
+                  if (firebaseFunctions.firestoreAdmin && authEnabled) {
+                    await firebaseFunctions.updateTokenBalance(userId, newTokenBalance);
+                  } else {
+                    // Firebase Admin SDK is not initialized. Anonymous mode
+                  }
+                } catch (error: any) {
+                  if (error.code === 'app/no-app') {
+                    // Firebase Admin SDK is not initialized. Anonymous mode
+                  } else {
+                    // Some other error occurred
+                    throw error;
+                  }
+                }
               } else {
                 console.log(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
                 // Send signal that user does not have enough tokens to run this model

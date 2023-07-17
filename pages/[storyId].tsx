@@ -7,7 +7,6 @@ import copy from 'copy-to-clipboard';
 import { NextPage, NextPageContext } from 'next';
 import Head from 'next/head';
 import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
-import { type } from 'os';
 import { ParsedUrlQuery } from 'querystring';
 
 interface Story {

@@ -836,8 +836,8 @@ function Home({ user }: HomeProps) {
                   console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
                 }
                 const cleanText = removeMarkdownAndSpecialSymbols(sentence_by_character);
-                if (cleanText !== '' && enableSpeaking && idToken) {
-                  await speakText(cleanText, idToken, 1, detectedGender, audioLanguage, model);
+                if (cleanText !== '' && enableSpeaking) {
+                  await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
                 } else {
                   // Wait anyways even if speaking fails so that the subtitles are displayed
                   const sentenceLength = sentence_by_character.length;
@@ -859,8 +859,8 @@ function Home({ user }: HomeProps) {
                 }
                 try {
                   const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
-                  if (cleanText !== '' && enableSpeaking && idToken) {
-                    await speakText(translationEntry, idToken, 1, detectedGender, audioLanguage, model);
+                  if (cleanText !== '' && enableSpeaking) {
+                    await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
                   } else {
                     // Wait anyways even if speaking fails so that the subtitles are displayed
                     const sentenceLength = sentence_by_character.length;
@@ -1568,22 +1568,29 @@ function Home({ user }: HomeProps) {
                       onClick={copyStory}
                       type="button"
                       className={styles.footer}
-                    >Copy Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button
-                      title="Share Story"
-                      onClick={shareStory}
-                      type="button"
-                      disabled={loading || isSpeaking}
-                      className={styles.footer}
-                    >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <Link href="/board/">
-                      <a className={styles.footer} onClick={(e) => {
-                        if (e.ctrlKey || e.metaKey) {
-                          e.preventDefault();
-                          window.open('/board/', '_blank');
-                        }
-                      }}>Browse Stories</a>
-                    </Link>
+                    >Copy Story</button>
+                    {authEnabled ? (
+                      <>
+                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <button
+                          title="Share Story"
+                          onClick={shareStory}
+                          type="button"
+                          disabled={loading || isSpeaking}
+                          className={styles.footer}
+                        >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                        <Link href="/board/">
+                          <a className={styles.footer} onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey) {
+                              e.preventDefault();
+                              window.open('/board/', '_blank');
+                            }
+                          }}>Browse Stories</a>
+                        </Link>
+                      </>
+                    ) : (
+                      <></>
+                    )}
                   </div>
                   {/* Drop down menu configuration row 1 and 2 */}
                   <div className={styles.cloudform}>
@@ -1823,16 +1830,22 @@ function Home({ user }: HomeProps) {
                       </div>
                     </Modal>
                     &nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button
-                      title="Auto Save Stories"
-                      className={`${styles.header} ${autoSave ? styles.listening : ''}`}
-                      onClick={handleAutoSaveToggle}
-                      type="button"
+                    {authEnabled ? (
+                      <>
+                        <button
+                          title="Auto Save Stories"
+                          className={`${styles.header} ${autoSave ? styles.listening : ''}`}
+                          onClick={handleAutoSaveToggle}
+                          type="button"
 
-                    >
-                      {autoSave ? 'Stop Saving Stories' : 'Save Stories'}
-                    </button>
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                        >
+                          {autoSave ? 'Stop Saving Stories' : 'Save Stories'}
+                        </button>
+                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                      </>
+                    ) : (
+                      <></>
+                    )}
                     <EpisodePlanner episodes={episodes} onNewEpisode={handleNewEpisode} onEpisodeChange={handleEpisodeChange} />
                   </div>
                 </form>
