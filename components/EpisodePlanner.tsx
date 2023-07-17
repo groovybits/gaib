@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from '@/styles/Home.module.css';
 
 // Define a type for an episode
@@ -7,15 +7,21 @@ type Episode = {
   plotline: string;
 };
 
-// Define the props for the EpisodePlanner component
+// Add the Episode type to the EpisodePlannerProps interface
 type EpisodePlannerProps = {
-  onNewEpisode: (episode: Episode) => void; // This is a function that takes an Episode and returns nothing
-  onEpisodeChange: (episodes: Episode[]) => void; // This is a function that takes an array of Episodes and returns nothing
+  episodes: Episode[]; // Add this prop
+  onNewEpisode: (episode: Episode) => void;
+  onEpisodeChange: (episodes: Episode[]) => void;
 };
 
-function EpisodePlanner({ onNewEpisode, onEpisodeChange }: EpisodePlannerProps) {
-  // Use the Episode type for the state variable
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
+function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange }: EpisodePlannerProps) {
+  const [episodes, setEpisodes] = useState<Episode[]>(episodesProp);
+
+  // Update the local episodes state whenever the episodes prop changes
+  useEffect(() => {
+    setEpisodes(episodesProp);
+  }, [episodesProp]);
+
   const [title, setTitle] = useState('');
   const [plotline, setPlotline] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -41,14 +47,11 @@ function EpisodePlanner({ onNewEpisode, onEpisodeChange }: EpisodePlannerProps) 
 
   return (
     <>
-      <button className={styles.header} onClick={() => setShowModal(true)}>Add Episode to Playback Queue</button>
+      <button className={styles.header} onClick={() => setShowModal(true)}>Schedule Episodes</button>
 
       {showModal && (
         <>
           <div className={styles.cloudform}>
-            <div className={styles.cloudform}>
-              <h2 className={styles.header}>Episode Title and Plotline</h2>
-            </div>
             <div className={styles.cloudform}>
             <input
               className={styles.textarea}
@@ -74,14 +77,14 @@ function EpisodePlanner({ onNewEpisode, onEpisodeChange }: EpisodePlannerProps) 
         </>
       )}
 
-      <table className={`${styles.table} ${styles.episodeList}`}>
+      <table className={`${styles.episodeTable} ${styles.episodeList}`}>
         {[...episodes].map((episode, index) => (
           <tr key={index}>
             <td>
-              <p className={styles.footer}>Episode {index + 1}: &quot;{episode.title}&quot;</p>
+              <p className={`${styles.footer} ${styles.episodeList}`}>Episode {index + 1}: &quot;{episode.title}&quot;</p>
             </td><tr></tr>
             <td>
-              <p className={styles.footer}>{episode.plotline}</p>
+              <p className={`${styles.footer} ${styles.episodeList}`}>{episode.plotline}</p>
             </td>
           </tr>
         ))}

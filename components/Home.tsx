@@ -107,7 +107,7 @@ function Home({ user }: HomeProps) {
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [feedCategory, setFeedCategory] = useState<string>('');
   const [feedKeywords, setFeedKeywords] = useState<string>('');
-  const [feedPrompt, setFeedPrompt] = useState<string>('Report on the following news story...');
+  const [feedPrompt, setFeedPrompt] = useState<string>('');
   const [feedSort, setFeedSort] = useState<string>('popularity');
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
@@ -118,7 +118,7 @@ function Home({ user }: HomeProps) {
   const [autoSave, setAutoSave] = useState<boolean>(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [feedMode, setFeedMode] = useState<'episode' | 'news'>('news'); // Add this line
-  
+
   // Declare a new ref for start word detection
   const startWordDetected = useRef(false);
 
@@ -282,6 +282,10 @@ function Home({ user }: HomeProps) {
           // Use the title and plotline of the next episode as the input
           const episode = episodes.shift();
           if (episode) { // Check if episode is defined
+            if (episodes.length === 0) {
+              console.log(`Reached end of episode feed.`);
+              setIsFetching(false);
+            }
             const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
             console.log(`Sending Episode #${index}: ${episode.title}`);
@@ -296,7 +300,7 @@ function Home({ user }: HomeProps) {
             handleSubmit(mockEvent);
             setCurrentNewsIndex(index + 1);  // Increment the state variable after processing an episode
           }
-        } else {
+        } else if (feedMode === 'news') {
           // If there are no episodes, continue with the news feed as before
           if (index >= currentNews.length || currentNews.length === 0) {
             console.log(`Reached end of news feed, fetching new news`);
@@ -1428,6 +1432,11 @@ function Home({ user }: HomeProps) {
                 <button
                   type="button"
                   className={styles.fullscreenButton}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                  }}
                   onClick={toggleFullScreen}
                 >
                   {isFullScreen ? "Exit Full Screen" : "Full Screen"}
@@ -1445,22 +1454,25 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle ? subtitle : (episodes.length > 0) && (
+                      {(!subtitle.toString().startsWith('Loading') && episodes.length == 0) ? subtitle : (episodes.length > 0) && (
                         <>
-                          <h3 className={styles.header}>Upcoming Episodes:</h3>
+                          <h3 className={`${styles.header} ${styles.center}`}>--- Upcoming Episodes ---</h3>
                           <hr></hr>
-                          <table className={`${styles.table} ${styles.episodeList}`}>
+                          <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
                             {[...episodes].reverse().map((episode, index) => (
                               <tr key={index}>
                                 <td>
-                                  <p className={styles.footer}>Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
+                                  <p className={`${styles.footer} ${styles.episodeList}`}>Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
                                 </td><tr></tr>
                                 <td>
-                                  <p className={styles.footer}>{episode.plotline}</p>
+                                  <p className={`${styles.footer} ${styles.episodeList}`}>{episode.plotline}</p>
                                 </td>
                               </tr>
                             ))}
                           </table>
+                          <div className={isFullScreen ? styles.fullScreenSubtitle : styles.subtitle}>
+                            {subtitle}
+                          </div>
                         </>
                       )}
                     </div>
@@ -1491,61 +1503,10 @@ function Home({ user }: HomeProps) {
                       className={`${styles.footer} ${listening ? styles.listening : ''}`}
                       onClick={handleSpeechToggle}
                       type="button"
-                      
+
                     >
                       {!stoppedManually ? 'Stop Listening' : 'Start Listening'}
                     </button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button
-                      title="Fetch News"
-                      onClick={handleFetchButtonClick}
-                      className={`${styles.footer} ${isFetching ? styles.listening : ''}`}
-                      type="button"
-                    >
-                      {isFetching ? 'Stop Feed' : 'Start Feed'}
-                    </button>
-                    <Modal
-                      isOpen={modalIsOpen}
-                      onRequestClose={handleModalClose}
-                      shouldCloseOnOverlayClick={false} // Prevents the modal from closing when clicking outside of it
-                      style={feedModalStyle}
-                      contentLabel="News Feed Settings"
-                    >
-                      <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <label>
-                          Add to Prompt (optional):
-                          <input type="text" value={feedPrompt} style={{ width: "300px" }} onChange={e => setFeedPrompt(e.target.value)} />
-                        </label>
-                        <label>
-                          Keywords (separated by spaces):
-                          <input type="text" value={feedKeywords} style={{ width: "300px" }} onChange={e => setFeedKeywords(e.target.value)} />
-                        </label>
-                        <label>
-                          Category:
-                          <select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
-                            {categoryOptions.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Sort Order:
-                          <select value={feedSort} onChange={e => setFeedSort(e.target.value)}>
-                            {sortOptions.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-                        <button onClick={handleModalClose}>Start Fetching News</button>
-                        <button onClick={() => setModalIsOpen(false)}>Cancel</button>
-                      </div>
-                    </Modal>&nbsp;&nbsp;|&nbsp;&nbsp;
                     {isSpeaking ? (
                       <>
                         <button
@@ -1557,7 +1518,7 @@ function Home({ user }: HomeProps) {
                         >Stop Speaking</button> &nbsp;&nbsp;|&nbsp;&nbsp;
                       </>
                     ) : (
-                        <>
+                      <>
                         <button
                           title="Replay"
                           onClick={handleReplay}
@@ -1593,16 +1554,7 @@ function Home({ user }: HomeProps) {
                           window.open('/board/', '_blank');
                         }
                       }}>Browse Stories</a>
-                    </Link>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button
-                      title="Auto Save Stories"
-                      className={`${styles.footer} ${autoSave ? styles.listening : ''}`}
-                      onClick={handleAutoSaveToggle}
-                      type="button"
-
-                    >
-                      {autoSave ? 'Stop Saving Stories' : 'Save Stories'}
-                    </button>
+                    </Link>
                   </div>
                   {/* Drop down menu configuration row 1 and 2 */}
                   <div className={styles.cloudform}>
@@ -1781,9 +1733,78 @@ function Home({ user }: HomeProps) {
                   </div>
                   <div className={styles.cloudform}>
                     <button className={styles.header} onClick={() => setFeedMode(feedMode === 'episode' ? 'news' : 'episode')}>
-                      {feedMode === 'episode' ? 'Switch to News Mode' : 'Switch to Episode Mode'}
-                    </button>&nbsp;&nbsp;|&nbsp;&nbsp;
-                    <EpisodePlanner onNewEpisode={handleNewEpisode} onEpisodeChange={handleEpisodeChange} />
+                      {feedMode === 'episode' ? 'Episode Mode' : 'News Mode'}
+                    </button>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Fetch Feed"
+                      onClick={handleFetchButtonClick}
+                      className={`${styles.header} ${isFetching ? styles.listening : ''}`}
+                      type="button"
+                    >
+                      {isFetching ? `Stop ${feedMode} Feed` : `Start ${feedMode} Feed`}
+                    </button>
+                    <Modal
+                      isOpen={modalIsOpen}
+                      onRequestClose={handleModalClose}
+                      shouldCloseOnOverlayClick={false} // Prevents the modal from closing when clicking outside of it
+                      style={feedModalStyle}
+                      contentLabel="News Feed Settings"
+                    >
+                      {(feedMode === 'news') ? (
+                        <>
+                          <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <label>
+                              Add to Prompt (optional):
+                              <input type="text" value={feedPrompt} style={{ width: "300px" }} onChange={e => setFeedPrompt(e.target.value)} />
+                            </label>
+                            <label>
+                              Keywords (separated by spaces):
+                              <input type="text" value={feedKeywords} style={{ width: "300px" }} onChange={e => setFeedKeywords(e.target.value)} />
+                            </label>
+                            <label>
+                              Category:
+                              <select value={feedCategory} onChange={e => setFeedCategory(e.target.value)}>
+                                {categoryOptions.map(option => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              Sort Order:
+                              <select value={feedSort} onChange={e => setFeedSort(e.target.value)}>
+                                {sortOptions.map(option => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                        <button className={styles.footer} onClick={handleModalClose}>Start {feedMode === 'news' ? "Fetching" : "Playing"} {feedMode} Feed</button>
+                        <button className={styles.footer} onClick={() => setModalIsOpen(false)}>Cancel</button>
+                      </div>
+                    </Modal>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button
+                      title="Auto Save Stories"
+                      className={`${styles.header} ${autoSave ? styles.listening : ''}`}
+                      onClick={handleAutoSaveToggle}
+                      type="button"
+
+                    >
+                      {autoSave ? 'Stop Saving Stories' : 'Save Stories'}
+                    </button>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <EpisodePlanner episodes={episodes} onNewEpisode={handleNewEpisode} onEpisodeChange={handleEpisodeChange} />
                   </div>
                 </form>
               </div>

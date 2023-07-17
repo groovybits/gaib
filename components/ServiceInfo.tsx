@@ -8,7 +8,7 @@ import Link from 'next/link';
 const ServiceInfo = () => {
   return (
     <>
-      <div className={styles.header}>
+      <div className={`${styles.header} ${styles.center}`}>
         <Link href="/board/">
           <a onClick={(e) => {
             if (e.ctrlKey || e.metaKey) {
@@ -27,7 +27,7 @@ const ServiceInfo = () => {
         tasks. Furthermore, GAIB has an Anime generation theme that creates
         stories based on the data from PDFs stored in the vector database.
       </div>
-      <div className={styles.header}>
+      <div className={`${styles.header} ${styles.center}`}>
         <h1>AI Bot Modes</h1>
       </div>
       <div className={styles.cloudform}>

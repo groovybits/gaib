@@ -180,29 +180,32 @@ function Auth({ }: Props): ReactElement {
     return (
       <>
         <Home user={user} /> {/* Pass user object to Home component */}
-        <div className={styles.header}>
-          <p>Welcome, {user.displayName}! Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</p>
-        </div>
-        <div className={styles.header}>
+        <div className={`${styles.header} ${styles.center}`}>
+          Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}&nbsp;&nbsp;|&nbsp;&nbsp;
           {!userIsPremium ? (
-            <div className={styles.header}>
+            <>
               {showPremium ? (
-                <><p>(${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)</p><a href="#" onClick={() => createCheckoutSession(user.uid)} className={styles.header}>
+                <>
+                  (${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)
+                  &nbsp;&nbsp;<a href="#" onClick={() => createCheckoutSession(user.uid)} className={`${styles.header} ${styles.center}`}>
                   Purchase Premium Subscription
-                </a></>
+                  </a>
+                </>
               ) : (
-                <p>Currently in Beta.</p>
+                <>
+                  [Currently in Beta.]
+                </>
               )}
-            </div>
+            </>
           ) : (
-            <div className={styles.header}>
-              <p>You are a Groovy Human!!! [PREMIUM]</p>
-            </div>
+            <>
+              [PREMIUM]
+            </>
           )}
         </div>
-        <div className={styles.header}>
+        <div className={`${styles.header} ${styles.center}`}>
           {userIsPremium ? (
-            <div className={styles.footer}>
+            <div className={`${styles.footer} ${styles.center}`}>
               <a href="#" onClick={cancelSubscription} className={styles.cancelsubbutton}>Cancel Subscription</a>
               <Modal
                 isOpen={showModal}
@@ -211,8 +214,8 @@ function Auth({ }: Props): ReactElement {
                 ariaHideApp={false}
                 className={styles.popupContent}
               >
-                <div className={styles.footer}>
-                  <p className={styles.header}>Are you sure you want to cancel your premium subscription?</p>
+                <div className={`${styles.footer} ${styles.center}`}>
+                  <p className={`${styles.header} ${styles.center}`}>Are you sure you want to cancel your premium subscription?</p>
                 </div>
                 <button onClick={handleConfirmation} className={styles.stopvoicebutton}>Yes, cancel my subscription</button>
                 <button onClick={() => setShowModal(false)} className={styles.generatebutton}>No, keep my subscription</button>
@@ -222,7 +225,7 @@ function Auth({ }: Props): ReactElement {
             <div></div>
           )}
         </div>
-        <div className={styles.footer}>
+        <div className={`${styles.footer} ${styles.center}`}>
           <a href="https://groovy.org">The Groovy Organization</a>
           {(process.env.NEXT_PUBLIC_IMAGE_SERVICE == 'pexels') ?
             <span>
@@ -239,7 +242,7 @@ function Auth({ }: Props): ReactElement {
   if (!user && userLoading) {
     return (
       <div className={styles.mainlogin}>
-        <div className={styles.header}>
+        <div className={`${styles.header} ${styles.center}`}>
           <p>GAIB is Manifesting reality for you...</p>
         </div>
       </div>
@@ -248,7 +251,7 @@ function Auth({ }: Props): ReactElement {
 
   return (
     <>
-      <div className={styles.header}>
+      <div className={`${styles.header} ${styles.center}`}>
         <title>GAIB The Groovy AI Bot</title>
       </div>
       <Layout>
@@ -256,10 +259,10 @@ function Auth({ }: Props): ReactElement {
           <main className={styles.main}>
             <div className={styles.cloud}>
               <div className={styles.cloudform}>
-                <div className={styles.header}>
+                <div className={`${styles.header} ${styles.center}`}>
                   <h1>Groovy AI Bot (GAIB)</h1>
                 </div>
-                <div className={styles.header}>
+                <div className={`${styles.header} ${styles.center}`}>
                   <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>
                 </div>
                 {loginAuth ? (
