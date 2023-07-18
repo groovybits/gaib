@@ -23,15 +23,49 @@
   box-sizing: content-box;
 }
 
-.fullScreenImage {
+.readerImage img {
+  height: 600px; /* Set the height */
+  width: auto; /* Set the width to auto to maintain aspect ratio */
+  object-fit: contain; /* Image will scale to maintain aspect ratio */
+  border-radius: 10px;
+  box-sizing: content-box;
+  padding: 0;
+  min-height: 100%;
+}
+
+.readerImage {
+  position: relative; /* Add this to position the subtitle */
+  width: auto;
+  height: 100%;
+  min-height: 100%;
+  object-fit: scale-up;
+  border-radius: 10px;
+  padding: 0px; /* Adjust the padding to reduce the black area around the image */
+  max-height: 600px; /* Set maximum height */
+  box-sizing: content-box;
+}
+
+.readerFullScreenImage {
   max-width: 100%;
   max-height: 100%;
   min-width: 100%;
-  min-height: 100%;
   width: auto;
   height: 100%;
   object-fit: scale-up;
   border-radius: 10px;
+  box-sizing: content-box;
+}
+
+.fullScreenImage {
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 100%;
+  width: auto;
+  height: 100%;
+  object-fit: scale-up;
+  border-radius: 10px;
+  box-sizing: content-box;
+  min-height: 100%;
 }
 
 .generatedImage img {
@@ -41,6 +75,7 @@
   border-radius: 10px;
   box-sizing: content-box;
   padding: 0;
+  min-height: 100%;
 }
 
 .generatedImage {
@@ -61,8 +96,7 @@
   overflow-y: scroll; /* Allows vertical scrolling */
   width: 100%;
   height: 100%;
-  height: 100%;
-  min-height: 100%;
+  min-height: 600px;
   object-fit: scale-up;
   border-radius: 10px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
@@ -130,6 +164,26 @@
     /* top right */ -2px 2px 2px #006a0e, /* bottom left */ 3px 3px 3px #006a0e; /* bottom right */
 }
 
+.readerFullScreenSubtitle {
+  position: absolute;
+  white-space: pre-wrap !important;
+  background: transparent;
+  color: white;
+  padding: 8px;
+  bottom: 10%;
+  left: 2%;
+  font-size: 30px;
+  text-align: center;
+  border-width: 0px;
+  font-weight: bolder;
+  font-family: 'Trebuchet MS';
+  /* Added font family */
+  line-height: 1.2;
+  margin: 2px;
+  justify-content: bottom;
+  text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
+    /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
 
 .fullScreenSubtitle {
   position: absolute;
@@ -944,17 +998,18 @@
 
 /* story board individual page next/prev buttons */
 .pageButton {
-  font-size: 20px; /* increase the font size */
+  font-size: 10px; /* increase the font size */
   font-weight: bold; /* make the font bold */
-  color: #FFC601; /* change the font color to white */
-  background-color: #000000; /* change the background color to black */
-  border: none; /* remove the default button border */
-  padding: 10px; /* add some padding */
-  margin: 10px; /* add some margin */
+  color: #000000; /* change the font color to white */
+  background-color: #FFC601; /* change the background color to black */
+  padding: 2px; /* add some padding */
+  margin: 2px; /* add some margin */
+  border-radius: 8px; /* add a rounded border */
+  border: 2px double #000000;
 }
 
 .pageButton:hover {
-  background-color: #777777; /* change the background color to grey when the button is hovered over */
+  background-color: #bd9d27; /* change the background color to grey when the button is hovered over */
   cursor: pointer; /* change the cursor to a pointer when the button is hovered over */
 }
 

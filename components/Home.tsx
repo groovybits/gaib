@@ -464,10 +464,19 @@ function Home({ user }: HomeProps) {
             });
           } else if (imageSource === 'openai') {
             const idToken = await user?.getIdToken();
+            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+            let exampleImage = '' as ImageData | string;
+            if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+              if (lastImage !== '') {
+                exampleImage = lastImage;
+              } else {
+                exampleImage = await getGaib();
+              }
+            }
             response = await fetch('/api/openai', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-              body: JSON.stringify({ prompt: sentence }),
+              body: JSON.stringify({ prompt: `${context} ${sentence}` }),
             });
           }
 
@@ -732,8 +741,8 @@ function Home({ user }: HomeProps) {
             let imageDescription = sentence;
             if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE:')) {
               if (sentence.includes('SCENE:')) {
-                sentence = sentence.replace('[', '');
-                sentence = sentence.replace(']', '');
+                //sentence = sentence.replace('[', '');
+                //sentence = sentence.replace(']', '');
                 sentence = sentence.replace('SCENE:', '');
                 imageDescription = sceneTexts[sceneIndex];
                 sceneIndex++;  // Move to the next scene

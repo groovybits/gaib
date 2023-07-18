@@ -8,6 +8,7 @@ import { NextPage, NextPageContext } from 'next';
 import Head from 'next/head';
 import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
 import { ParsedUrlQuery } from 'querystring';
+import Layout from '@/components/Layout';
 
 interface Story {
   id: string;
@@ -250,13 +251,13 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     if (!document.fullscreenElement) {
       if (imageContainer?.requestFullscreen) {
         imageContainer.requestFullscreen();
-        image?.classList.add(styles.fullScreenImage);
+        image?.classList.add(styles.readerFullScreenImage);
         setIsFullScreen(true);
       }
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-        image?.classList.remove(styles.fullScreenImage);
+        image?.classList.remove(styles.readerFullScreenImage);
         setIsFullScreen(false);
       }
     }
@@ -331,7 +332,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     }
 
     return (
-      <div className={styles.cloud} >
+      <>
         <Head>
           <title>{storyParts[0].replace(/\|$/g, '')}</title>
           <meta name="description" content={storyParts[1] ? storyParts.slice(1).join(' ').slice(0, 500) : storyParts[0]} />
@@ -340,69 +341,78 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
           <meta property="og:image" content={imageShare} />
           <meta property="og:url" content={`https://gaib.groovy.org/${storyId}`} />
         </Head>
-        <div className={styles.readerStory}>
-          <div
-            className={styles.imageContainer}
-            style={{
-              position: isFullScreen ? "fixed" : "relative",
-              top: isFullScreen ? 0 : "auto",
-              left: isFullScreen ? 0 : "auto",
-              width: isFullScreen ? "auto" : "auto",
-              height: isFullScreen ? "100vh" : "100%",
-              zIndex: isFullScreen ? 1000 : "auto",
-              backgroundColor: isFullScreen ? "black" : "transparent",
-            }}
-          >
-            <button
-              type="button"
-              className={styles.fullscreenButton}
-              onClick={toggleFullScreen}
-            >
-              {isFullScreen ? "Exit Full Screen" : "Full Screen"}
-            </button>
-            <div className={styles.footer}>
-              <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              {!isFullScreen ? (
-                <>
-                  <button onClick={() => {
-                    setSelectedStory(null);
-                    if (storyId.toString().startsWith('images')) {
-                      router.push('/images');
-                    } else {
-                      router.push('/board');
-                    }
-                  }} className={styles.header}>Back to Stories</button> &nbsp;&nbsp;|&nbsp;&nbsp;
-                </>
-              ) : (
-                <></>
-              )}
-              <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
-            </div>
-            <div className={styles.generatedImage}>
-              {(imageSrc === '') ? "" : (
-                <>
-                  <img
-                    src={imageSrc}
-                    alt="GAIB"
-                  />
-                </>
-              )}
-              <div className={
-                isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
-              }>{storyParts[currentScene].replace(/\|$/g, '')}
-              </div>
-              {(imageSrc === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
-                <div>
-                  <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
+        <Layout>
+          <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
+            <div className={styles.main} >
+              <div className={styles.cloud}>
+                <div
+                  className={styles.imageContainer}
+                  style={{
+                    position: isFullScreen ? "fixed" : "relative",
+                    top: isFullScreen ? 0 : "auto",
+                    left: isFullScreen ? 0 : "auto",
+                    width: isFullScreen ? "auto" : "auto",
+                    height: isFullScreen ? "100vh" : "100%",
+                    zIndex: isFullScreen ? 1000 : "auto",
+                    backgroundColor: isFullScreen ? "black" : "transparent",
+                  }}
+                >
+                  <button
+                    type="button"
+                    className={styles.fullscreenButton}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                    }}
+                    onClick={toggleFullScreen}
+                  >
+                    {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                  </button>
+                  <div className={styles.readerImage}>
+                    {(imageSrc === '') ? "" : (
+                      <>
+                        <img
+                          src={imageSrc}
+                          alt="GAIB"
+                        />
+                      </>
+                    )}
+                    <div className={
+                      isFullScreen ? styles.readerFullScreenSubtitle : styles.subtitle
+                    }>{storyParts[currentScene].replace(/\|$/g, '')}
+                    </div>
+                    {(imageSrc === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
+                      <div>
+                        <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
+                      </div>
+                    )}
+                  </div>
+                  <div className={`${styles.footer} ${styles.center}`}>
+                    <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                    <button onClick={() => {
+                      setSelectedStory(null);
+                      if (storyId.toString().startsWith('images')) {
+                        router.push('/images');
+                      } else {
+                        router.push('/board');
+                      }
+                    }} className={styles.footer}>Back to Stories</button> &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                    <button className={styles.footer} onClick={() => handleShareClick(storyId)}>Copy Link</button>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button className={styles.footer} onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
+                  </div>
                 </div>
-              )}
-              <button onClick={() => handleShareClick(storyId)}>Copy Link</button>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              <button onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </Layout>
+      </>
     );
   }
 

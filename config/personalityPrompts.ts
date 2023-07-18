@@ -88,8 +88,8 @@ Answer in Markdown format:`;
 export const ROLE_ENFORCER = `Do not mention your an AI Language model or that you can't access current information, stick to the role.`;
 
 export const SCENE_MARKER = `Add narrator style lines every new character or change of topic that start with the string "[SCENE:...]"
-that fills in the ... with a full detailed description of the current scene
-with context of characters and environment giving a visual representation in words for creating a prompt to be used to execute image generation.`;
+that fills in the ... with a full detailed description of the current scene in a prompt style format for image generation through stable diffusion.
+include with the scene description the context of characters and environment giving a visual representation in words summarizing the upcoming scene.`;
 
 export const GENDER_MARKER = `Add gender markers in the format of [m] or [f] or [n] after each characters name, 
 starting all lines like "Name[gender]: Dialogue Line..." filling in Dialogue line... with the speakers line, using an extra new line after each speakers line. 
