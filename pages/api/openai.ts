@@ -7,6 +7,9 @@ const openaiHandler = async (req: NextApiRequestWithUser, res: NextApiResponse) 
     if (req.method === 'POST') {
       const { prompt } = req.body;
 
+      const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
+      const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true" ? true : false;
+
       let width: string = process.env.DEEPAI_WIDTH || '512';
       let height: string = process.env.DEEPAI_HEIGHT || '512';
       const n: number = 1;
@@ -43,8 +46,10 @@ const openaiHandler = async (req: NextApiRequestWithUser, res: NextApiResponse) 
         }
 
         const data: any = await response.json();
-        console.log(`openaiHandler: OpenAI API response: ${JSON.stringify(data)}`);
-        console.log(`openaiHandler: data.data type: ${typeof data.data}`);
+        if (debug) {
+          console.log(`openaiHandler: OpenAI API response: ${JSON.stringify(data)}`);
+          console.log(`openaiHandler: data.data type: ${typeof data.data}`);
+        }
 
         if (!Array.isArray(data.data) || data.data.length === 0 || !data.data[0].url) {
           throw new Error(`No 'data' field in the OpenAI API response or the 'data' array is empty or the first object does not have a 'url' field`);

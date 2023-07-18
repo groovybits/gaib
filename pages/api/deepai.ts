@@ -5,7 +5,7 @@ import nlp from 'compromise';
 import Fuse from 'fuse.js';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
-const debug = process.env.DEBUG || false;
+const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
 const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true" ? true : false;
 
 let firebaseFunctions: any;
