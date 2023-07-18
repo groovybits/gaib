@@ -37,11 +37,11 @@
   position: relative; /* Add this to position the subtitle */
   width: auto;
   height: 100%;
-  min-height: 100%;
+  min-height: 95%;
   object-fit: scale-up;
   border-radius: 10px;
   padding: 0px; /* Adjust the padding to reduce the black area around the image */
-  max-height: 600px; /* Set maximum height */
+  max-height: 95%; /* Set maximum height */
   box-sizing: content-box;
 }
 
