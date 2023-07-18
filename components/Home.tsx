@@ -404,7 +404,7 @@ function Home({ user }: HomeProps) {
 
     // Choose Pexles, DeepAI or local images
     async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = '', episodeId = '', count = 0): Promise<ImageData | string> {
-      const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai'
+      const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai'
       const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
 
       // check if enabled
@@ -462,6 +462,13 @@ function Home({ user }: HomeProps) {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
               body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
             });
+          } else if (imageSource === 'openai') {
+            const idToken = await user?.getIdToken();
+            response = await fetch('/api/openai', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+              body: JSON.stringify({ prompt: sentence }),
+            });
           }
 
           if (!response) {
@@ -479,12 +486,12 @@ function Home({ user }: HomeProps) {
               photographer_url: data.photos[0].photographer_url,
               pexels_url: data.photos[0].url,
             };
-          } else if (imageSource === 'deepai' && data.output_url) {
+          } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
             const imageUrl = data.output_url;
             if (data?.duplicate === true) {
               duplicateImage = true;
             }
-            if (saveImages === 'true' && !duplicateImage) {
+            if (saveImages === 'true' && !duplicateImage && authEnabled) {
               const idToken = await user?.getIdToken();
               // Store the image and index it
               await fetch('/api/storeImage', {
