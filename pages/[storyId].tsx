@@ -245,12 +245,12 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
 
   // toggle the full screen state
   const toggleFullScreen = () => {
-    const imageContainer = document.querySelector(`.${styles.imageContainer}`);
+    const readerImageContainer = document.querySelector(`.${styles.readerImageContainer}`);
     const image = document.querySelector(`.${styles.generatedImage} img`);
 
     if (!document.fullscreenElement) {
-      if (imageContainer?.requestFullscreen) {
-        imageContainer.requestFullscreen();
+      if (readerImageContainer?.requestFullscreen) {
+        readerImageContainer.requestFullscreen();
         image?.classList.add(styles.readerFullScreenImage);
         setIsFullScreen(true);
       }
@@ -346,7 +346,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
             <div className={styles.main} >
               <div className={styles.cloud}>
                 <div
-                  className={styles.imageContainer}
+                  className={styles.readerImageContainer}
                   style={{
                     position: isFullScreen ? "fixed" : "relative",
                     top: isFullScreen ? 0 : "auto",
