@@ -476,7 +476,7 @@ function Home({ user }: HomeProps) {
             response = await fetch('/api/openai', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-              body: JSON.stringify({ prompt: `${context} ${sentence}` }),
+              body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 1000)}` }),
             });
           }
 

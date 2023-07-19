@@ -275,39 +275,39 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
     // Create a chain for each episode
     for (let i = 0; i < episodeCount; i++) {
-      consoleLog('info', `ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
-      const chain = await createChain(i, namespaceResult, selectedPersonality, requestedTokens, documentsReturned, userId, isStory);
-      let title: string = sanitizedQuestion;
+      try {
+        consoleLog('info', `ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
+        const chain = await createChain(i, namespaceResult, selectedPersonality, requestedTokens, documentsReturned, userId, isStory);
+        let title: string = sanitizedQuestion;
 
-      // Check if it's not the first episode and chatHistory is not empty
-      if (i > 0 && chatHistory.length > 0) {
-        // Get the last chat message from the chat history
-        const lastChat = chatHistory.slice(-1)[0];
-
-        // Check if lastChat exists and has more than one element
-        const lastChatMessage = lastChat && lastChat.length > 1 ? lastChat[1] : '';
-
-        // Check if it's a story
-        if (isStory) {
-          // If it's the last episode
-          if (episodeCount === (i + 1)) {
-            title = `Last episode continuing as episode ${i} of ${episodeCount}: ${lastChatMessage}`;
+        // Check if it's not the first episode and chatHistory is not empty
+        if (i > 0) {
+          // Check if it's a story
+          if (isStory) {
+            // If it's the last episode
+            if (episodeCount === (i + 1)) {
+              title = `Last episode continuing as episode ${i} of ${episodeCount}.`;
+            } else {
+              title = `Next episode continuing as episode ${i} of ${episodeCount}`;
+            }
           } else {
-            title = `Next episode continuing as episode ${i} of ${episodeCount}: ${lastChatMessage}`;
-          }
-        } else {
-          // If it's the last episode
-          if (episodeCount === (i + 1)) {
-            title = `In context of the previous questions and answers, end the conversation with a final answer: ${lastChatMessage}`;
-          } else {
-            title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer: ${lastChatMessage}`;
+            // If it's the last episode
+            if (episodeCount === (i + 1)) {
+              title = `In context of the previous questions and answers, end the conversation with a final answer.`;
+            } else {
+              title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer.`;
+            }
           }
         }
-      }
 
-      // Add the chain to the array
-      chains.push(chain);
-      titles.push(title);
+        // Add the chain to the array
+        chains.push(chain);
+        titles.push(title);
+      } catch (error: any) {
+        consoleLog('error', `ChatAPI: Error creating chain ${i} of ${episodeCount} episodes:`, error);
+        sendData(JSON.stringify({ data: 'Error creating chain' }));
+        sendData(JSON.stringify({ data: error.message }));
+      }
     }
 
     // Track the total token count
@@ -320,7 +320,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Now, run each chain sequentially per episode
     for (let i = 0; i < chains.length; i++) {
       const chain = chains[i];
-      const title = titles[i];
+      let title = titles[i];
       const episodeNumber = i + 1;
 
       if (debug) {
@@ -341,6 +341,17 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       const condensedHistory = (countTokens(chatHistory) > spaceLeft) ? condenseHistory(chatHistory, spaceLeft) : chatHistory;
       if (condensedHistory.length != chatHistory.length) {
         consoleLog('info', `ChatAPI: Condensed history from ${chatHistory.length} to ${condensedHistory.length} items condensed to ${countTokens(condensedHistory)} tokens.`);
+      }
+
+      // append the title with the last history entry
+      if (condensedHistory.length > 0) {
+        try {
+          const [lastTitle, lastStory] = condensedHistory[condensedHistory.length - 1];
+          title = `${title} ${lastTitle} ${lastStory.substring(0, 80).replace('\n', ' ').trim()}...`;
+          consoleLog('info', `ChatAPI: Appended title with last history entry: ${title}`);
+        } catch (error: any) {
+          consoleLog('error', `ChatAPI: Error appending title with last history entry:`, error);
+        }
       }
 
       let histories: BaseMessage[] = [];
@@ -365,7 +376,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           if (response && response.text) {
             sendData(JSON.stringify({ data: response.text }));
           }
-          break;
         }
         total_token_count = total_token_count + countTokens([response.text]);
         consoleLog('info', `ChatAPI: Finished Episode #${episodeNumber} of ${episodeCount} episodes.`);
@@ -415,14 +425,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
           sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error}.` }));
         }
-        break;
-      }
-
-      // check if we have used the max tokens requested
-      if (total_token_count >= totalTokens && episodeCount > 1) {
-        consoleLog('info', `ChatAPI: ERROR!!! Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.`);
-        sendData(JSON.stringify({ data: `\n\nChatAPI: Total token count ${total_token_count} exceeds requested tokens ${totalTokens}.` }));
-        break;
       }
     }
 
