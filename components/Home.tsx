@@ -338,7 +338,7 @@ function Home({ user }: HomeProps) {
           fetchEpisodeData(twitchChannelId);
         }
         // Check if there are any episodes
-        if (feedMode === 'episode' && episodes.length > 0) {
+        if (episodes.length > 0) {
           // Use the title and plotline of the next episode as the input
           const episode = episodes.shift();
           if (episode) { // Check if episode is defined
