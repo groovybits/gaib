@@ -22,6 +22,9 @@ dependencies:
   '@types/jsdom':
     specifier: ^21.1.1
     version: 21.1.1
+  bad-words:
+    specifier: ^3.0.4
+    version: 3.0.4
   child_process:
     specifier: ^1.0.2
     version: 1.0.2
@@ -1981,6 +1984,17 @@ packages:
     dependencies:
       deep-equal: 2.2.0
     dev: true
+
+  /bad-words@3.0.4:
+    resolution: {integrity: sha512-v/Q9uRPH4+yzDVLL4vR1+S9KoFgOEUl5s4axd6NIAq8SV2mradgi4E8lma/Y0cw1ltVdvyegCQQKffCPRCp8fg==}
+    engines: {node: '>=8.0.0'}
+    dependencies:
+      badwords-list: 1.0.0
+    dev: false
+
+  /badwords-list@1.0.0:
+    resolution: {integrity: sha512-oWhaSG67e+HQj3OGHQt2ucP+vAPm1wTbdp2aDHeuh4xlGXBdWwzZ//pfu6swf5gZ8iX0b7JgmSo8BhgybbqszA==}
+    dev: false
 
   /bail@2.0.2:
     resolution: {integrity: sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw==}

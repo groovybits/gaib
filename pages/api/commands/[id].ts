@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
+import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
+
 
 // Initialize Firebase Admin SDK
 if (admin && admin.apps && !admin.apps.length) {
@@ -15,12 +17,17 @@ if (admin && admin.apps && !admin.apps.length) {
 
 const db = admin.firestore();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'DELETE') {
-    const { id } = req.query;
-    await db.collection('commands').doc(id as string).delete();
-    res.status(200).json({ message: 'Document deleted' });
-  } else {
-    res.status(405).json({ error: 'Invalid request method' });
-  }
+const allowedUserId = process.env.NEXT_PUBLIC_ALLOWED_USER_ID ? process.env.NEXT_PUBLIC_ALLOWED_USER_ID : '';
+
+export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
+  await authCheck(req, res, async () => {
+
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      await db.collection('commands').doc(id as string).delete();
+      res.status(200).json({ message: 'Document deleted' });
+    } else {
+      res.status(405).json({ error: 'Invalid request method' });
+    }
+  });
 }

@@ -28,6 +28,7 @@
     "@radix-ui/react-accordion": "^1.1.1",
     "@stripe/stripe-js": "^1.52.1",
     "@types/jsdom": "^21.1.1",
+    "bad-words": "^3.0.4",
     "child_process": "^1.0.2",
     "clsx": "^1.2.1",
     "compromise": "^14.8.2",

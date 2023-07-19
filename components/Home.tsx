@@ -123,7 +123,9 @@ function Home({ user }: HomeProps) {
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
   const [newsFeedEnabled, setNewsFeedEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_NEWS_FEED === 'true');
   const [authEnabled, setAuthEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true');
-  const [channelId, setChannelId] = useState('');
+  const [channelId, setChannelId] = useState(process.env.NEXT_PUBLIC_TWITCH_CHANNEL_ID || '');
+  const [twitchChatEnabled, setTwitchChatEnabled] = useState(false);
+
 
   const connectToChannel = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
@@ -146,14 +148,39 @@ function Home({ user }: HomeProps) {
     // This could involve updating the state of your component, showing a message to the user, etc.
   };
 
+  const postResponse = async (channel: string, message: string, userId: string | undefined) => {
+    const idToken = await user?.getIdToken();
+    const response = await fetch('/api/addResponse', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ channel, message, userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to post response');
+    }
+  };
+
   async function fetchEpisodeData(channelName: string) {
-    const res = await fetch(`/api/commands?channelName=${channelName}`);
+    const idToken = await user?.getIdToken();
+    const res = await fetch(`/api/commands?channelName=${channelName}&userId=${user?.uid}`,
+      {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
     const data = await res.json();
 
     const newEpisodes = data.map((item: any) => ({
       title: item.title,
       plotline: item.plotline,
       // Add any other necessary fields here
+      type: item.type,
+      username: item.username,
+      timestamp: item.timestamp,
     }));
 
     // Add the new episodes to the episodes array
@@ -161,8 +188,11 @@ function Home({ user }: HomeProps) {
 
     // Delete the documents from Firestore
     data.forEach((item: any) => {
-      fetch(`/api/commands/${item.id}`, {
+      fetch(`/api/commands/${item.id}?userId=${user?.uid}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
       });
     });
   }
@@ -281,6 +311,8 @@ function Home({ user }: HomeProps) {
   type Episode = {
     title: string;
     plotline: string;
+    type: string;
+    username: string;
   };
 
   // This function will be passed to the EpisodePlanner component
@@ -333,9 +365,8 @@ function Home({ user }: HomeProps) {
         let index = currentNewsIndex;  // Use a local variable to keep track of the current news index
 
         // Check if the user has enabled a twitch chat control feed
-        const twitchChannelId = process.env.NEXT_PUBLIC_TWITCH_CHANNEL_ID || '';
-        if (twitchChannelId !== '') {
-          fetchEpisodeData(twitchChannelId);
+        if (channelId !== '' && twitchChatEnabled) {
+          fetchEpisodeData(channelId);
         }
         // Check if there are any episodes
         if (episodes.length > 0) {
@@ -347,12 +378,13 @@ function Home({ user }: HomeProps) {
             }
             const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
-            console.log(`Sending Episode #${index}: ${episode.title}`);
+            console.log(`Sending ${episode.type} #${index}: ${episode.title}`);
+            
             setQuery(currentQuery);
             const mockEvent = {
               preventDefault: () => { },
               target: {
-                value: currentQuery,
+                value: `!${episode.type}: ${currentQuery}`,
               },
             };
             isSubmittingRef.current = true;
@@ -687,7 +719,7 @@ function Home({ user }: HomeProps) {
       }
 
       let voiceModels: { [key: string]: string } = {};
-      let genderMarkedNames = [];
+      let genderMarkedNames: any[] = [];
       let detectedGender: string = gender;
       let currentSpeaker: string = 'GAIB';
       let isContinuingToSpeak = false;
@@ -764,6 +796,38 @@ function Home({ user }: HomeProps) {
       // clear current story for save story
       if (!isFetching && !autoSave) {
         setCurrentStory([]);
+      }
+
+      // Extract all unique speakers for twitch channel chat responses
+      if (channelId !== '' && twitchChatEnabled) {
+        const uniqueSpeakers = Array.from(new Set(genderMarkedNames.map(item => item.name)));
+
+        // Create a list of speakers with their genders
+        const speakerList = uniqueSpeakers.map(speaker => {
+          const speakerGender = genderMarkedNames.find(item => item.name.toLowerCase() === speaker.toLowerCase());
+          return `${speaker} (Gender: ${speakerGender?.marker || 'Unknown'})`;
+        }).join(', ');
+
+        // Create a title for the story from the first sentence
+        const title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
+
+        // Create a brief introduction of the story from the second sentence
+        const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
+
+        // Create the summary
+        let summary: string = '';
+        if (isStory) {
+          summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
+        } else {
+          summary = `Question: ${title}\n\nSpeaker(s) ${speakerList}.\n\nAnswer: ${introduction}...`;
+        }
+
+        // Post the summary to the API endpoint
+        try {
+          await postResponse(channelId, summary, user?.uid);
+        } catch (error) {
+          console.error('Failed to post response: ', error);
+        }
       }
 
       let count = 0;
@@ -982,7 +1046,7 @@ function Home({ user }: HomeProps) {
   async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
     e.preventDefault();
 
-    const question = e.target?.value ? e.target.value.trim() : query.trim();
+    let question = e.target?.value ? e.target.value.trim() : query.trim();
 
     // Don't submit if the query is empty
     if (isSpeaking || !question) {
@@ -1027,6 +1091,23 @@ function Home({ user }: HomeProps) {
       setCurrentStory([]);
     }
 
+    // Check if the message is a story and remove the "!type:" prefix
+    let isQuestion = !isStory;
+    if (question.startsWith('!question: ') || question.startsWith('!episode: ')) {
+      if (question.startsWith('!question: ')) {
+        isQuestion = true;
+      } else if (question.startsWith('!episode: ')) {
+        isQuestion = false;
+      }
+      if (isQuestion) {
+        question = question.replace(/^!(episode|question):?/i, '').trim();
+      }
+
+      // Set the isStory state
+      setIsStory(!isQuestion);
+    }
+    let localIsStory = !isQuestion;
+
     // Send the question to the server
     const ctrl = new AbortController();
     try {
@@ -1043,7 +1124,7 @@ function Home({ user }: HomeProps) {
           userId: user?.uid,
           selectedPersonality,
           selectedNamespace,
-          isStory,
+          localIsStory,
           customPrompt,
           condensePrompt,
           tokensCount,
@@ -1834,6 +1915,12 @@ function Home({ user }: HomeProps) {
                   <div className={styles.cloudform}>
                     <button className={styles.footer} onClick={() => setFeedMode(feedMode === 'episode' ? 'news' : 'episode')}>
                       {feedMode === 'episode' ? 'Episode Mode' : 'News Mode'}
+                    </button>
+                    &nbsp;&nbsp;&nbsp;&nbsp;
+                    <button
+                      className={`${styles.footer} ${isFetching ? styles.listening : ''}`}
+                      onClick={() => setTwitchChatEnabled(!twitchChatEnabled)}>
+                      {twitchChatEnabled ? 'Disable Twitch Chat' : 'Enable Twitch Chat'}
                     </button>
                     &nbsp;&nbsp;&nbsp;&nbsp;
                     <button

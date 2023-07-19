@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
+import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
+
 
 // Initialize Firebase Admin SDK
 if (admin && admin.apps && !admin.apps.length) {
@@ -15,24 +17,34 @@ if (admin && admin.apps && !admin.apps.length) {
 
 const db = admin.firestore();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
-    // Get the channel name from the query parameters
-    const { channelName } = req.query;
+const allowedUserId = process.env.TWITCH_ALLOWED_USER_ID ? process.env.TWITCH_ALLOWED_USER_ID : '';
 
-    // Get the commands for this channel from Firestore
-    const snapshot = await db.collection('commands').where('channelId', '==', channelName).get();
+export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
+  await authCheck(req, res, async () => {
 
-    const commands: any[] = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      data.id = doc.id;  // Include the document ID in the data
-      commands.push(data);
-    });
+    if (req.method === 'GET') {
+      // Get the channel name from the query parameters
+      const { channelName, userId } = req.query;
 
-    // Send the commands to the client
-    res.status(200).json(commands);
-  } else {
-    res.status(405).json({ error: 'Invalid request method' });
-  }
+      if (userId != allowedUserId) {
+        console.log(`Unauthorized user ${userId} tried to get commands for channel ${channelName}`);
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      // Get the commands for this channel from Firestore
+      const snapshot = await db.collection('commands').where('channelId', '==', channelName).get();
+
+      const commands: any[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        data.id = doc.id;  // Include the document ID in the data
+        commands.push(data);
+      });
+
+      // Send the commands to the client
+      res.status(200).json(commands);
+    } else {
+      res.status(405).json({ error: 'Invalid request method' });
+    }
+  });
 }

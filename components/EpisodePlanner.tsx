@@ -5,6 +5,8 @@ import styles from '@/styles/Home.module.css';
 type Episode = {
   title: string;
   plotline: string;
+  type: string;
+  username: string;
 };
 
 // Add the Episode type to the EpisodePlannerProps interface
@@ -25,16 +27,18 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
   const [title, setTitle] = useState('');
   const [plotline, setPlotline] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [type, setType] = useState('');
+  const [username, setUsername] = useState('');
 
   const handleAddEpisode = () => {
     const newEpisodes = [...episodes];
     const index = newEpisodes.findIndex(episode => episode.title === title && episode.plotline === plotline);
     if (index !== -1) {
-      newEpisodes[index] = { title, plotline };
+      newEpisodes[index] = { title, plotline, type, username };
       // Call onEpisodeChange with the new list of episodes
       onEpisodeChange(newEpisodes);
     } else {
-      const newEpisode = { title, plotline };
+      const newEpisode = { title, plotline, type, username };
       newEpisodes.push(newEpisode);
       // Call onNewEpisode with the new episode
       onNewEpisode(newEpisode);
@@ -43,6 +47,8 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
     setTitle('');
     setPlotline('');
     setShowModal(false);
+    setType('');
+    setUsername('');
   };
 
   return (
