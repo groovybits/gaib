@@ -86,5 +86,7 @@ steps:
   - 'NEXT_PUBLIC_ENABLE_NEWS_FEED=${_NEXT_PUBLIC_ENABLE_NEWS_FEED}'
   - '--build-arg'
   - 'NEXT_PUBLIC_ENABLE_AUTH=${_NEXT_PUBLIC_ENABLE_AUTH}'
+  - '--build-arg'
+  - 'NEXT_PUBLIC_TWITCH_CHANNEL_ID=${_NEXT_PUBLIC_TWITCH_CHANNEL_ID}'
   - '.'
 images: ['gcr.io/$PROJECT_ID/github.com/groovybits/gaib:$COMMIT_SHA']

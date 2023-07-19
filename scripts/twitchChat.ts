@@ -35,9 +35,11 @@ const client = new tmi.Client({
 
 client.connect();
 
-client.on('message', (channel: any, tags: any, message: { startsWith: (arg0: string) => any; slice: (arg0: number) => { (): any; new(): any; split: { (arg0: string): [any, any]; new(): any; }; }; }, self: any) => {
+client.on('message', (channel: any, tags: { username: any; }, message: { startsWith: (arg0: string) => any; slice: (arg0: number) => { (): any; new(): any; split: { (arg0: string): [any, any]; new(): any; }; }; }, self: any) => {
   // Ignore messages from the bot itself
   if (self) return;
+
+  console.log(`Received message: ${message} from ${tags.username} in ${channel} with tags: ${JSON.stringify(tags)}`)
 
   // Check if the message is a command
   if (message.startsWith('!episode:')) {
@@ -53,11 +55,14 @@ client.on('message', (channel: any, tags: any, message: { startsWith: (arg0: str
         type: 'episode',
         title,
         plotline,
+        username: tags.username, // Add this line to record the username
         timestamp: admin.firestore.FieldValue.serverTimestamp()
       });
     } else {
-      console.log('Invalid command format. Use: !episode: title - plotline');
+      console.log(`Invalid command format. Use: !episode: title - plotline (received: ${message})`);
     }
+  } else {
+    console.log(`Unknown command: ${message}`);
   }
 });
 

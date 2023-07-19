@@ -16,22 +16,10 @@ if (admin && admin.apps && !admin.apps.length) {
 const db = admin.firestore();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
-    // Get the channel name from the query parameters
-    const { channelName } = req.query;
-
-    // Get the commands for this channel from Firestore
-    const snapshot = await db.collection('commands').where('channelId', '==', channelName).get();
-
-    const commands: any[] = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      data.id = doc.id;  // Include the document ID in the data
-      commands.push(data);
-    });
-
-    // Send the commands to the client
-    res.status(200).json(commands);
+  if (req.method === 'DELETE') {
+    const { id } = req.query;
+    await db.collection('commands').doc(id as string).delete();
+    res.status(200).json({ message: 'Document deleted' });
   } else {
     res.status(405).json({ error: 'Invalid request method' });
   }

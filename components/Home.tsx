@@ -123,6 +123,49 @@ function Home({ user }: HomeProps) {
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
   const [newsFeedEnabled, setNewsFeedEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_NEWS_FEED === 'true');
   const [authEnabled, setAuthEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true');
+  const [channelId, setChannelId] = useState('');
+
+  const connectToChannel = async (event: { preventDefault: () => void; }) => {
+    event.preventDefault();
+
+    // Send the channel ID to your server
+    const response = await fetch('/api/connectToChannel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: user?.uid,
+        channelId: channelId
+      })
+    });
+
+    const data = await response.json();
+
+    // Handle the response from the server
+    // This could involve updating the state of your component, showing a message to the user, etc.
+  };
+
+  async function fetchEpisodeData(channelName: string) {
+    const res = await fetch(`/api/commands?channelName=${channelName}`);
+    const data = await res.json();
+
+    const newEpisodes = data.map((item: any) => ({
+      title: item.title,
+      plotline: item.plotline,
+      // Add any other necessary fields here
+    }));
+
+    // Add the new episodes to the episodes array
+    setEpisodes([...episodes, ...newEpisodes]);
+
+    // Delete the documents from Firestore
+    data.forEach((item: any) => {
+      fetch(`/api/commands/${item.id}`, {
+        method: 'DELETE',
+      });
+    });
+  }
 
   // Declare a new ref for start word detection
   const startWordDetected = useRef(false);
@@ -289,6 +332,11 @@ function Home({ user }: HomeProps) {
         let currentNews = news;
         let index = currentNewsIndex;  // Use a local variable to keep track of the current news index
 
+        // Check if the user has enabled a twitch chat control feed
+        const twitchChannelId = process.env.NEXT_PUBLIC_TWITCH_CHANNEL_ID || '';
+        if (twitchChannelId !== '') {
+          fetchEpisodeData(twitchChannelId);
+        }
         // Check if there are any episodes
         if (feedMode === 'episode' && episodes.length > 0) {
           // Use the title and plotline of the next episode as the input
