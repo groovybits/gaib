@@ -49,10 +49,22 @@ const client = new tmi.Client({
 client.connect();
 
 let lastMessageArray: string[] = [];
+const processedMessageIds: { [id: string]: boolean } = {};
 
-client.on('message', (channel: any, tags: { username: any; }, message: any, self: any) => {
+client.on('message', (channel: any, tags: {
+  id: any; username: any; 
+}, message: any, self: any) => {
   // Ignore messages from the bot itself
   if (self) return;
+
+  // Ignore messages that have already been processed
+  if (processedMessageIds[tags.id]) {
+    console.log(`Ignoring duplicate message with ID ${tags.id}`);
+    return;
+  }
+
+  // Mark this message as processed
+  processedMessageIds[tags.id] = true;
 
   // check if message is in lastMessageArray, if so ignore it
   if (lastMessageArray.includes(message)) {
