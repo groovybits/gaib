@@ -3,7 +3,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background-color: #FFC601;
+  background-color: #ffc601;
   border-radius: 10px;
   border: 2px double rgb(0, 0, 0, 0.8);
   max-width: 1000px; /* limit width */
@@ -127,7 +127,6 @@
 .fullscreenButton:hover {
   background-color: rgba(0, 0, 0, 0.9);
 }
-
 
 .readerImageContainer {
   display: flex;
@@ -334,7 +333,7 @@
   border: 2px double #ffffff;
   background: rgb(0, 0, 0, 0.3);
   width: 100%;
- }
+}
 
 .episodeList {
   text-align: left;
@@ -351,7 +350,7 @@
   color: #ffffff;
   font-size: 12px;
   font-weight: 500;
-  font-family:'Trebuchet MS';
+  font-family: 'Trebuchet MS';
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
@@ -405,7 +404,7 @@
   font-size: 1.1rem;
   padding: 2px 2px 2px 2px;
   width: 100%;
-  max-width: 1000px; 
+  max-width: 1000px;
   border-radius: 8px;
   border: 2px double #000000;
   color: #000000; /* Changed font color to yellow-green */
@@ -436,7 +435,7 @@
 }
 
 .labelButton {
-  background-color: #0C4B8E;
+  background-color: #0c4b8e;
   color: white;
   font-weight: bold;
   border: 2px double #000;
@@ -470,7 +469,7 @@
 }
 
 .voicebutton {
-  background-color: #0C4B8E;
+  background-color: #0c4b8e;
   border: none;
   border-radius: 5px;
   color: white;
@@ -525,7 +524,6 @@
   vertical-align: middle;
 }
 
-
 .cancelcontainer {
   /*position: relative; */
   background-color: black;
@@ -560,13 +558,13 @@
   margin: 1rem;
   text-align: center;
   font-weight: 500;
-  font-family:'Trebuchet MS', monospace;
+  font-family: 'Trebuchet MS', monospace;
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
 .stopvoicebutton {
-  background-color: #C70025;
+  background-color: #c70025;
   border: none;
   border-radius: 5px;
   color: #ffffff;
@@ -590,7 +588,7 @@
   position: absolute;
   top: 0.2rem;
   right: 0.25rem;
-  color: #C70025;
+  color: #c70025;
 }
 
 .svgicon {
@@ -660,7 +658,7 @@
   margin: 2px;
   padding: 2px;
   font-weight: 500;
-  font-family:'Trebuchet MS', monospace;
+  font-family: 'Trebuchet MS', monospace;
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
@@ -669,7 +667,7 @@
   font-weight: 500;
   color: #ffffff;
   font-size: 12px;
-  font-family:'Trebuchet MS', monospace;
+  font-family: 'Trebuchet MS', monospace;
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
@@ -680,13 +678,12 @@
   opacity: 0.8;
 }
 
-
 .header {
   width: auto;
   color: #ffffff;
   font-size: 24px;
   font-weight: 500;
-  font-family:'Trebuchet MS';
+  font-family: 'Trebuchet MS';
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
@@ -707,7 +704,7 @@
   color: #ffffff;
   font-size: 24px;
   font-weight: 500;
-  font-family:'Trebuchet MS';
+  font-family: 'Trebuchet MS';
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
@@ -852,7 +849,7 @@
   width: 100%;
   max-width: 900px;
   text-align: left;
-  border:rgb(0, 0, 0);
+  border: rgb(0, 0, 0);
   border-radius: 8px;
   font-size: 14px;
 }
@@ -878,7 +875,7 @@
   width: 100%;
   padding: 8px 12px;
   margin: 8px 0;
-  background-color: #4CAF50;
+  background-color: #4caf50;
   border: none;
   color: white;
   cursor: pointer;
@@ -941,18 +938,19 @@
 }
 
 .storyTitle {
-  display: block;
-  background: #FFC601;
+  display: flex;
+  align-items: flex-start; /* aligns items to the top */
+  background: #ffc601;
   padding: 2px;
   font-size: 24px;
-  border: 4px double #0C4B8E;
+  border: 4px double #0c4b8e;
   border-radius: 6px;
 
   text-align: center;
   color: #ffffff;
   font-size: 24px;
   font-weight: 500;
-  font-family:'Trebuchet MS';
+  font-family: 'Trebuchet MS';
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
@@ -997,6 +995,22 @@
   margin: 2px;
 }
 
+.imageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* adjust size as needed */
+  gap: 1rem; /* adjust gap as needed */
+}
+
+.storyImageThumbnailTitle {
+  width: 100px; /* adjust as needed */
+}
+
+.storyHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* adjust as needed */
+}
+
 .message {
   margin-top: 1rem;
   color: red;
@@ -1015,7 +1029,7 @@
   font-size: 10px; /* increase the font size */
   font-weight: bold; /* make the font bold */
   color: #000000; /* change the font color to white */
-  background-color: #FFC601; /* change the background color to black */
+  background-color: #ffc601; /* change the background color to black */
   padding: 2px; /* add some padding */
   margin: 2px; /* add some margin */
   border-radius: 8px; /* add a rounded border */
@@ -1045,7 +1059,7 @@
     background: #ffffff; /* Changed background color to a darker color */
     font-family: 'Trebuchet MS', monospace; /* Added font family */
   }
-   .textareaConfig {
+  .textareaConfig {
     width: 22rem;
     color: #000000; /* Changed font color to yellow-green */
     background: #979797; /* Changed background color to a darker color */
@@ -1066,5 +1080,45 @@
     font-size: 0.7rem;
     width: 100%;
     text-align: center;
+  }
+
+  .readerImageContainer {
+    padding: 0.5rem;
+    position: relative;
+  }
+
+  .readerImage {
+    width: 100%;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px;
+  }
+
+  .readerImage img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .footer {
+    margin: 0.5rem 0;
+  }
+
+  .pageButton {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    margin: 0 0.25rem;
+  }
+
+  .readerImage img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain; /* added for maintaining image aspect ratio */
   }
 }

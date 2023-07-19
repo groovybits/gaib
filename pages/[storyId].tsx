@@ -38,6 +38,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const [storyIds, setStoryIds] = useState(new Set());
   const [currentScene, setCurrentScene] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const pageSize = process.env.NEXT_PUBLIC_FEED_PAGE_SIZE ? parseInt(process.env.NEXT_PUBLIC_FEED_PAGE_SIZE) : 8;
   const debug = process.env.DEBUG === 'true' ? true : false; // Debug mode
@@ -391,24 +392,23 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                   <div className={`${styles.footer} ${styles.center}`}>
                     <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>
                     &nbsp;&nbsp;|&nbsp;&nbsp;
-
-                    <button onClick={() => {
-                      setSelectedStory(null);
-                      if (storyId.toString().startsWith('images')) {
-                        router.push('/images');
-                      } else {
-                        router.push('/board');
-                      }
-                    }} className={styles.footer}>Back to Stories</button> &nbsp;&nbsp;|&nbsp;&nbsp;
-
-                    <button className={styles.footer} onClick={() => handleShareClick(storyId)}>Copy Link</button>
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
-                    <button className={styles.footer} onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
                     <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
                   </div>
                 </div>
               </div>
+              <button onClick={() => {
+                setSelectedStory(null);
+                if (storyId.toString().startsWith('images')) {
+                  router.push('/images');
+                } else {
+                  router.push('/board');
+                }
+              }} className={styles.footer}>Back to Stories</button> &nbsp;&nbsp;|&nbsp;&nbsp;
+
+              <button className={styles.footer} onClick={() => handleShareClick(storyId)}>Copy Link</button>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
             </div>
           </div>
         </Layout>
@@ -444,70 +444,67 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
             // Format the date to a human-readable string
             const dateString = date.toLocaleString();
 
-            // Sample 8 images from the story's imageUrls
-            const sampledImages = story.imageUrls.length > 8 ?
-              story.imageUrls.filter((_: string, index: number) => index % Math.floor(story.imageUrls.length / 8) === 0) :
-              story.imageUrls;
-
-            {
-              sampledImages.map((imageUrl: string, index: number) => {
-                let imageSrc = imageUrl;
-                if (isJsonString(imageUrl)) {
-                  const image = JSON.parse(imageUrl);
-                  imageSrc = image.url;
-                }
-                return (
-                  <img key={index} src={imageSrc} alt={`Story Image #${index}`} className={styles.storyImageThumbnail} />
-                );
-              })
+            // Select the first image for the thumbnail
+            let thumbnailSrc = story.imageUrls[0];
+            if (isJsonString(thumbnailSrc)) {
+              const image = JSON.parse(thumbnailSrc);
+              thumbnailSrc = image.url;
             }
 
             return (
               <div key={story.id} className={styles.story}>
-                <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>{story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}</a>
-                {/* Add the image previews here */}
-                <div className={styles.imageRow}>
-                  {sampledImages.map((imageUrl: string, index: number) => {
-                    const image = JSON.parse(imageUrl);
-                    const imageSrc = image.url;
-                    return (
-                      <img key={index} src={imageSrc} alt={`Story Image #${index}`} className={styles.storyImageThumbnail} />
-                    );
-                  })}
-                </div>
+                <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>
+                  <img src={thumbnailSrc} alt="" className={styles.storyImageThumbnailTitle} /> {/* Thumbnail image here */}
+                  {story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}
+                </a>
+                <p className={styles.storyTimestamp}>{dateString}</p>
                 <button onClick={() => handleShareClick(`${storyId?.toString().startsWith('images') ? 'images' + story.id : story.id}`)}>Copy Link</button>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
                 <button onClick={() => handleFacebookShareClick(`${storyId?.toString().startsWith('images') ? 'images' + story.id : story.id}`)}>Facebook Post</button>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
                 <a href={storyId === 'images' ? `${baseUrl}/images${story.id}` : storyUrl}>Expand</a>
-                <p className={styles.storyTimestamp}>{dateString}</p>
+                {/* Expanded view starts here */}
                 {isExpanded && (
-                  <div className={styles.storyContent}>
-                    {story.text.split(/\[SCENE: \d+\]/g).map((part: string, index: number) => {
-                      let imageSrc = JSON.parse(story.imageUrls[index % story.imageUrls.length]).url;
-                      let photographer = '';
-                      let photographerUrl = '';
-                      let pexelsUrl = '';
-                      if (isJsonString(story.imageUrls[index % story.imageUrls.length])) {
-                        const image = JSON.parse(story.imageUrls[index % story.imageUrls.length]);
-                        imageSrc = image.url;
-                        photographer = image.photographer;
-                        photographerUrl = image.photographer_url;
-                        pexelsUrl = image.pexels_url;
-                      }
-                      return (
-                        <div key={index}>
-                          {/*<div className={styles.storyImage}>
-                            {<img src={imageSrc} alt="Story image" />
-                            {(photographerUrl && photographer && !photographerUrl.includes("groovy.org")) && <p>Photo by <a href={photographerUrl}>{photographer}</a></p>}
-                            {(pexelsUrl && !pexelsUrl.includes("groovy.org")) && <p>Source: <a href={pexelsUrl}>Pexels</a></p>}
-                          </div>*/}
-                          <p>
-                            {part.trim().replace(/\|$/, '')}
-                          </p>
-                        </div>
-                      );
-                    })}
+                  <div>
+                    {/* Grid of images here */}
+                    <div className={styles.imageGrid}>
+                      {story.imageUrls.map((imageUrl: string, index: number) => {
+                        const image = JSON.parse(imageUrl);
+                        const imageSrc = image.url;
+                        return (
+                          <img
+                            key={index}
+                            src={imageSrc}
+                            alt={`Story Image #${index}`}
+                            className={styles.storyImageThumbnail}
+                            onClick={() => setSelectedImage(imageSrc)}
+                          />
+                        );
+                      })}
+                    </div>
+                    {/* Story text here */}
+                    <div className={styles.storyContent}>
+                      {story.text.split(/\[SCENE: \d+\]/g).map((part: string, index: number) => {
+                        let imageSrc = JSON.parse(story.imageUrls[index % story.imageUrls.length]).url;
+                        let photographer = '';
+                        let photographerUrl = '';
+                        let pexelsUrl = '';
+                        if (isJsonString(story.imageUrls[index % story.imageUrls.length])) {
+                          const image = JSON.parse(story.imageUrls[index % story.imageUrls.length]);
+                          imageSrc = image.url;
+                          photographer = image.photographer;
+                          photographerUrl = image.photographer_url;
+                          pexelsUrl = image.pexels_url;
+                        }
+                        return (
+                          <div key={index}>
+                            <p>
+                              {part.trim().replace(/\|$/, '')}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

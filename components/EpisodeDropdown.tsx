@@ -10,7 +10,7 @@ const EpisodeDropdown: React.FC<EpisodeDropdownProps> = ({ onChange }) => {
   const [episodeCount, setEpisodeCount] = useState<number>(1);
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = parseInt(event.target.value, 3);
+    const selectedValue = parseInt(event.target.value, 10);
     setEpisodeCount(selectedValue);
     onChange(selectedValue);
   };
@@ -25,7 +25,7 @@ const EpisodeDropdown: React.FC<EpisodeDropdownProps> = ({ onChange }) => {
       <option value="" disabled>
         Number of Episodes / QAs
       </option>
-        {[...Array(3)].map((_, index) => {
+        {[...Array(4)].map((_, index) => {
           const value = index + 1;
           return (
             <option key={value} value={value}>

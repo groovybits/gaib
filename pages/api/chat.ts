@@ -281,15 +281,16 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       if (i > 0) { // not the first episode
         if (isStory) {
           if (episodeCount === (i + 1)) {
-            title = `the final episode...`;
+            // take the history of the episodes and get the last episode structure of title and story, take that and use it as the title for the next episode
+            title = `Last episode continuing as episode ${i} of ${episodeCount}: ${chatHistory.slice(-1)[0][1]}`;
           } else {
-            title = `next episode...`;
+            title = `Next episode continuing as episode ${i} of ${episodeCount}: ${chatHistory.slice(-1)[0][1]}`;
           }
         } else {
           if (episodeCount === (i + 1)) {
-            title = `in context of the previous questions and answers, end the conversation with a final answer.`;
+            title = `In context of the previous questions and answers, end the conversation with a final answer: ${chatHistory.slice(-1)[0][1]}}`;
           } else {
-            title = `keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer.`;
+            title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer: ${chatHistory.slice(-1)[0][1]}}`;
           }
         }
       }
@@ -319,9 +320,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       // Generate a title for the next episode
       if (i > 0) {
         if (isStory) {
-          sendData(JSON.stringify({ data: `\n\nEpisode #${episodeNumber}.\n\n` }));
+          sendData(JSON.stringify({ data: `\n\n[Episode #${episodeNumber}.]\n\n` }));
         } else {
-          sendData(JSON.stringify({ data: `\n\nAnswer #${episodeNumber}.\n\n` }));
+          sendData(JSON.stringify({ data: `\n\n[Answer #${episodeNumber}.]\n\n` }));
         }
       }
 
