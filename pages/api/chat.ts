@@ -278,19 +278,29 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       consoleLog('info', `ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
       const chain = await createChain(i, namespaceResult, selectedPersonality, requestedTokens, documentsReturned, userId, isStory);
       let title: string = sanitizedQuestion;
-      if (i > 0) { // not the first episode
+
+      // Check if it's not the first episode and chatHistory is not empty
+      if (i > 0 && chatHistory.length > 0) {
+        // Get the last chat message from the chat history
+        const lastChat = chatHistory.slice(-1)[0];
+
+        // Check if lastChat exists and has more than one element
+        const lastChatMessage = lastChat && lastChat.length > 1 ? lastChat[1] : '';
+
+        // Check if it's a story
         if (isStory) {
+          // If it's the last episode
           if (episodeCount === (i + 1)) {
-            // take the history of the episodes and get the last episode structure of title and story, take that and use it as the title for the next episode
-            title = `Last episode continuing as episode ${i} of ${episodeCount}: ${chatHistory.slice(-1)[0][1]}`;
+            title = `Last episode continuing as episode ${i} of ${episodeCount}: ${lastChatMessage}`;
           } else {
-            title = `Next episode continuing as episode ${i} of ${episodeCount}: ${chatHistory.slice(-1)[0][1]}`;
+            title = `Next episode continuing as episode ${i} of ${episodeCount}: ${lastChatMessage}`;
           }
         } else {
+          // If it's the last episode
           if (episodeCount === (i + 1)) {
-            title = `In context of the previous questions and answers, end the conversation with a final answer: ${chatHistory.slice(-1)[0][1]}}`;
+            title = `In context of the previous questions and answers, end the conversation with a final answer: ${lastChatMessage}`;
           } else {
-            title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer: ${chatHistory.slice(-1)[0][1]}}`;
+            title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer: ${lastChatMessage}`;
           }
         }
       }
