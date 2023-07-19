@@ -1510,7 +1510,7 @@ function Home({ user }: HomeProps) {
                               </tr>
                             ))}
                           </table>
-                          <div className={isFullScreen ? styles.fullScreenOSD : styles.osd}>
+                          <div className={isFullScreen ? styles.fullScreenLoadingOSD : styles.loadingOSD}>
                             {loadingOSD}
                           </div>
                         </>
@@ -1551,7 +1551,7 @@ function Home({ user }: HomeProps) {
 
                     >
                       {!stoppedManually ? 'Stop Listening' : 'Start Listening'}
-                    </button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    </button>&nbsp;&nbsp;&nbsp;&nbsp;
                     {isSpeaking ? (
                       <>
                         <button
@@ -1560,7 +1560,7 @@ function Home({ user }: HomeProps) {
                           type="button"
                           disabled={!isSpeaking}
                           className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
-                        >Stop Speaking</button> &nbsp;&nbsp;|&nbsp;&nbsp;
+                        >Stop Speaking</button> &nbsp;&nbsp;&nbsp;&nbsp;
                       </>
                     ) : (
                       <>
@@ -1570,7 +1570,7 @@ function Home({ user }: HomeProps) {
                           type="button"
                           disabled={isSpeaking}
                           className={`${styles.footer}`}
-                        >Replay</button> &nbsp;&nbsp;|&nbsp;&nbsp;</>
+                        >Replay</button> &nbsp;&nbsp;&nbsp;&nbsp;</>
                     )}
                     <button
                       title="Clear History"
@@ -1578,7 +1578,7 @@ function Home({ user }: HomeProps) {
                       type="button"
                       disabled={isSpeaking}
                       className={styles.footer}
-                    >Clear Chat History</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    >Clear Chat History</button>&nbsp;&nbsp;&nbsp;&nbsp;
                     <button
                       title="Copy Story"
                       onClick={copyStory}
@@ -1587,14 +1587,14 @@ function Home({ user }: HomeProps) {
                     >Copy Story</button>
                     {authEnabled ? (
                       <>
-                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;
                         <button
                           title="Share Story"
                           onClick={shareStory}
                           type="button"
                           disabled={loading || isSpeaking}
                           className={styles.footer}
-                        >Share Story</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                        >Share Story</button>&nbsp;&nbsp;&nbsp;&nbsp;
                         <Link href="/board/">
                           <a className={styles.footer} onClick={(e) => {
                             if (e.ctrlKey || e.metaKey) {
@@ -1784,14 +1784,14 @@ function Home({ user }: HomeProps) {
                     </div>
                   </div>
                   <div className={styles.cloudform}>
-                    <button className={styles.header} onClick={() => setFeedMode(feedMode === 'episode' ? 'news' : 'episode')}>
+                    <button className={styles.footer} onClick={() => setFeedMode(feedMode === 'episode' ? 'news' : 'episode')}>
                       {feedMode === 'episode' ? 'Episode Mode' : 'News Mode'}
                     </button>
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;&nbsp;
                     <button
                       title="Fetch Feed"
                       onClick={handleFetchButtonClick}
-                      className={`${styles.header} ${isFetching ? styles.listening : ''}`}
+                      className={`${styles.footer} ${isFetching ? styles.listening : ''}`}
                       type="button"
                     >
                       {isFetching ? `Stop ${feedMode} Feed` : `Start ${feedMode} Feed`}
@@ -1845,19 +1845,19 @@ function Home({ user }: HomeProps) {
                         <button className={styles.footer} onClick={() => setModalIsOpen(false)}>Cancel</button>
                       </div>
                     </Modal>
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;&nbsp;
                     {authEnabled ? (
                       <>
                         <button
                           title="Auto Save Stories"
-                          className={`${styles.header} ${autoSave ? styles.listening : ''}`}
+                          className={`${styles.footer} ${autoSave ? styles.listening : ''}`}
                           onClick={handleAutoSaveToggle}
                           type="button"
 
                         >
                           {autoSave ? 'Stop Saving Stories' : 'Save Stories'}
                         </button>
-                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;
                       </>
                     ) : (
                       <></>
@@ -1866,13 +1866,6 @@ function Home({ user }: HomeProps) {
                   </div>
                 </form>
               </div>
-              <div className={styles.footer}>
-                WARNING: Any information given to GAIB is not stored or used for any purpose
-                other than to generate a response. GAIB is not to be trusted for
-                anything serious or important. GAIB is meant for entertainment
-                purposes only. Any use of GAIB that is illegal or harmful in any way
-                is strictly forbidden and will result in account termination.
-                </div>
             </div>
             {error && (
               <div className="border border-red-400 rounded-md p-4">

@@ -47,7 +47,7 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
 
   return (
     <>
-      <button className={styles.header} onClick={() => setShowModal(true)}>Schedule Episodes</button>
+      <button className={styles.footer} onClick={() => setShowModal(true)}>Schedule Episodes</button>
 
       {showModal && (
         <>
@@ -70,7 +70,7 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
               />
             </div>
             <div className={styles.cloudform}>
-              <button className={styles.footer} onClick={handleAddEpisode}>Add</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={handleAddEpisode}>Add</button>&nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => setShowModal(false)}>Cancel</button>
             </div>
           </div>

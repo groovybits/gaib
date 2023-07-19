@@ -147,7 +147,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
 
   useEffect(() => {
     fetchStories();
-  }, [storyId, loadMoreTrigger]);
+  }, [storyId, loadMoreTrigger, fetchStories]);
 
   useEffect(() => {
     if (storyId && storyId !== 'images' && storyId !== 'board' && typeof storyId === 'string') {
@@ -391,7 +391,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                   </div>
                   <div className={`${styles.footer} ${styles.center}`}>
                     <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
                   </div>
                 </div>
@@ -403,12 +403,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                 } else {
                   router.push('/board');
                 }
-              }} className={styles.footer}>Back to Stories</button> &nbsp;&nbsp;|&nbsp;&nbsp;
+              }} className={styles.footer}>Back to Stories</button> &nbsp;&nbsp;&nbsp;&nbsp;
 
               <button className={styles.footer} onClick={() => handleShareClick(storyId)}>Copy Link</button>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
+              &nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
             </div>
           </div>
         </Layout>
@@ -462,7 +461,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                 &nbsp;&nbsp;|&nbsp;&nbsp;
                 <button onClick={() => handleFacebookShareClick(`${storyId?.toString().startsWith('images') ? 'images' + story.id : story.id}`)}>Facebook Post</button>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
-                <a href={storyId === 'images' ? `${baseUrl}/images${story.id}` : storyUrl}>Expand</a>
+                <a href={storyId === 'images' ? `${baseUrl}/images${story.id}` : storyUrl}>Manga Reader</a>
                 {/* Expanded view starts here */}
                 {isExpanded && (
                   <div>

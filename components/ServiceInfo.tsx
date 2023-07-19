@@ -27,6 +27,13 @@ const ServiceInfo = () => {
         tasks. Furthermore, GAIB has an Anime generation theme that creates
         stories based on the data from PDFs stored in the vector database.
       </div>
+      <div className={styles.footer}>
+        WARNING: Any information given to GAIB is not stored or used for any purpose
+        other than to generate a response. GAIB is not to be trusted for
+        anything serious or important. GAIB is meant for entertainment
+        purposes only. Any use of GAIB that is illegal or harmful in any way
+        is strictly forbidden and will result in account termination.
+      </div>
       <div className={`${styles.header} ${styles.center}`}>
         <h1>AI Bot Modes</h1>
       </div>

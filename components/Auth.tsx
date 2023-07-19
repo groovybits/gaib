@@ -180,14 +180,14 @@ function Auth({ }: Props): ReactElement {
     return (
       <>
         <Home user={user} /> {/* Pass user object to Home component */}
-        <div className={`${styles.header} ${styles.center}`}>
-          Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}&nbsp;&nbsp;|&nbsp;&nbsp;
+        <div className={`${styles.center}`}>
+          <>Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</>&nbsp;&nbsp;&nbsp;&nbsp;
           {!userIsPremium ? (
             <>
               {showPremium ? (
                 <>
                   (${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)
-                  &nbsp;&nbsp;<a href="#" onClick={() => createCheckoutSession(user.uid)} className={`${styles.header} ${styles.center}`}>
+                  &nbsp;&nbsp;<a href="#" onClick={() => createCheckoutSession(user.uid)} className={`${styles.footer} ${styles.center}`}>
                   Purchase Premium Subscription
                   </a>
                 </>
@@ -202,8 +202,6 @@ function Auth({ }: Props): ReactElement {
               [PREMIUM]
             </>
           )}
-        </div>
-        <div className={`${styles.header} ${styles.center}`}>
           {userIsPremium ? (
             <div className={`${styles.footer} ${styles.center}`}>
               <a href="#" onClick={cancelSubscription} className={styles.cancelsubbutton}>Cancel Subscription</a>
@@ -224,16 +222,14 @@ function Auth({ }: Props): ReactElement {
           ) : (
             <div></div>
           )}
-        </div>
-        <div className={`${styles.footer} ${styles.center}`}>
-          <a href="https://groovy.org">The Groovy Organization</a>
+          <a className={styles.footer} href="https://groovy.org">The Groovy Organization</a>
           {(process.env.NEXT_PUBLIC_IMAGE_SERVICE == 'pexels') ?
             <span>
-              &nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://www.pexels.com">Photos provided by Pexels</a>
+              &nbsp;&nbsp;|&nbsp;&nbsp;<a className={styles.footer} href="https://www.pexels.com">Photos provided by Pexels</a>
             </span> : <span></span>
           }
-          &nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-          <a href="#" onClick={signOut}>Sign out</a>
+          &nbsp;&nbsp;|&nbsp;&nbsp;<a className={styles.footer} href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+          <a className={styles.footer} href="#" onClick={signOut}>Sign out</a>
         </div>
       </>
     );
