@@ -18,7 +18,7 @@
     "format": "prettier --ignore-path .gitignore \"**/*.+(ts|js|tsx)\" --write",
     "ingest": "tsx -r dotenv/config scripts/ingest-data.ts",
     "docker-build": "docker build . -t gaib",
-    "twitch": "ts-node -r dote scripts/twitchChat.ts"
+    "twitch": "tsx -r dotenv/config scripts/twitchChat.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^6.11.0",
@@ -63,9 +63,11 @@
     "stripe": "^12.2.0",
     "tailwind-merge": "^1.10.0",
     "tls": "^0.0.1",
+    "tmi.js": "^1.8.5",
     "uuid": "^9.0.0",
     "uuidv4": "^6.2.13",
-    "winston": "^3.8.2"
+    "winston": "^3.8.2",
+    "ws": "^8.13.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",
@@ -75,6 +77,7 @@
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
     "@types/react-modal": "^3.16.0",
+    "@types/tmi.js": "^1.8.3",
     "@types/ws": "^8.5.5",
     "@typescript-eslint/parser": "^5.54.0",
     "autoprefixer": "^10.4.13",
