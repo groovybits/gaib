@@ -125,7 +125,8 @@ function Home({ user }: HomeProps) {
   const [authEnabled, setAuthEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true');
   const [channelId, setChannelId] = useState(process.env.NEXT_PUBLIC_TWITCH_CHANNEL_ID || '');
   const [twitchChatEnabled, setTwitchChatEnabled] = useState(false);
-
+  let episodeId = uuidv4();
+  const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
 
   const connectToChannel = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
@@ -221,7 +222,7 @@ function Home({ user }: HomeProps) {
     alert('Story copied to clipboard!');
   };
 
-  const shareStory = async () => {
+  const shareStory = async (storyToShare: any[]) => {
     try {
       if (!user && authEnabled) {
         alert('Please sign in first!');
@@ -230,19 +231,16 @@ function Home({ user }: HomeProps) {
         alert('Cannot share story when user auth is disabled without a firestore db hooked up.')
         return;
       }
-      if (debug) {
-        console.log(`Current story: ${JSON.stringify(currentStory)}`);
-      }
 
-      if (currentStory.length === 0) {
-        console.log(`shareStory: No stories to share`);
+      if (storyToShare.length === 0) {
+        console.log(`shareStory: No stories to share: ${JSON.stringify(storyToShare)}}`);
         if (!autoSave) {
           alert('Please generate a story first!');
         }
         return;
       }
-      const storyText = currentStory.map((item) => item.sentence).join('|');
-      const imageUrls = currentStory.map((item) => item.imageUrl);
+      const storyText = storyToShare.map((item) => item.sentence).join('|');
+      const imageUrls = storyToShare.map((item) => item.imageUrl);
 
       if (debug) {
         console.log('Data being written:', {
@@ -262,15 +260,29 @@ function Home({ user }: HomeProps) {
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
 
-      // Clear the current story
-      setCurrentStory([]);
+      // get stories.id for storyId
+      const storiesRef = await firebase.firestore().collection('stories').where('userId', '==', user.uid).orderBy('timestamp', 'desc').limit(1).get();
+
+      console.log(`Story shared successfully to ${baseUrl}/${storiesRef.docs[0].id}}!`);
 
       if (!autoSave) {
-        alert('Story shared successfully!');
+        alert(`Story shared successfully to ${baseUrl}/${storiesRef.docs[0].id}!`);
+        copy(`${baseUrl}/${storiesRef.docs[0].id}`);
+      }
+
+      if (twitchChatEnabled && authEnabled && channelId !== '') {
+        // Post the story to the Twitch chat
+        await postResponse(channelId, `${baseUrl}/${storiesRef.docs[0].id}`, user.uid);
       }
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
     }
+  };
+
+  const handleShareStory = async (event: { preventDefault: () => void; }) => {
+    event.preventDefault();
+    await shareStory(currentStory);
+    setCurrentStory([]);
   };
 
   const categoryOptions = [
@@ -483,7 +495,7 @@ function Home({ user }: HomeProps) {
     }
 
     // Choose Pexles, DeepAI or local images
-    async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = '', episodeId = '', count = 0): Promise<ImageData | string> {
+    async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
       const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
       const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
 
@@ -607,12 +619,12 @@ function Home({ user }: HomeProps) {
               await fetch('/api/storeImage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${episodeId}_${count}`, imageUUID: imageId }),
+                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
               });
             }
             const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
             if (bucketName !== '' && !duplicateImage) {
-              return `https://storage.googleapis.com/${bucketName}/deepAIimage/${episodeId}_${count}_${imageId}.jpg`;
+              return `https://storage.googleapis.com/${bucketName}/deepAIimage/${localEpisodeId}_${count}_${imageId}.jpg`;
             } else {
               // don't store images in GCS or it is a duplicate image
               return imageUrl;
@@ -675,6 +687,7 @@ function Home({ user }: HomeProps) {
     async function displayImagesAndSubtitles() {
       const idToken = await user?.getIdToken();
       let sentences: string[];
+      let localCurrentStory = currentStory;
       if (isPaused) {
         stopSpeaking();
         return;
@@ -701,7 +714,7 @@ function Home({ user }: HomeProps) {
       }
 
       // Display the images and subtitles
-      const episodeId = uuidv4();
+      episodeId = uuidv4();
       let gaibImage = await generateImageUrl('', false, '', episodeId);
       let lastImage = gaibImage;
       setPexelImageUrls(gaibImage);
@@ -820,11 +833,6 @@ function Home({ user }: HomeProps) {
 
       let sceneIndex = 0;
 
-      // clear current story for save story
-      if (!isFetching && !autoSave) {
-        setCurrentStory([]);
-      }
-
       // Extract all unique speakers for twitch channel chat responses
       if (channelId !== '' && twitchChatEnabled) {
         const uniqueSpeakers = Array.from(new Set(genderMarkedNames.map(item => item.name)));
@@ -857,10 +865,17 @@ function Home({ user }: HomeProps) {
         }
       }
 
+      // clear the previous story
+      if (!isFetching && !autoSave) {
+        setCurrentStory([]);
+      }
+
       let count = 0;
       for (let sentence of sentences) {
         // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
         if (lastMessageDisplayed != lastMessageIndex) {
+          // Set the last message displayed
+          setLastMessageDisplayed(lastMessageIndex);
           if (sentence == '--' || sentence == '' || sentence == '-' || (sentence.startsWith('---') && sentence.endsWith('-'))) {
             continue;
           }
@@ -880,8 +895,8 @@ function Home({ user }: HomeProps) {
             let imageDescription = sentence;
             if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE:')) {
               if (sentence.includes('SCENE:')) {
-                //sentence = sentence.replace('[', '');
-                //sentence = sentence.replace(']', '');
+                sentence = sentence.replace('[', '');
+                sentence = sentence.replace(']', '');
                 sentence = sentence.replace('SCENE:', '');
                 imageDescription = sceneTexts[sceneIndex];
                 sceneIndex++;  // Move to the next scene
@@ -894,14 +909,19 @@ function Home({ user }: HomeProps) {
               setPexelImageUrls(gaibImage);
             }
           }
+          let image: ImageData | string = lastImage;
+          if (typeof image === 'string') {
+            image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+          } else {
+            image = { url: image.url, photographer: image.photographer, photographer_url: image.photographer_url, pexels_url: image.pexels_url };
+          }
+          // save story and images for auto save and/or sharing
           if (messages.length > 1 && lastMessageIndex >= 2) {
-            let image: ImageData | string = lastImage;
-            if (typeof image === 'string') {
-              image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-            } else {
-              image = { url: image.url, photographer: image.photographer, photographer_url: image.photographer_url, pexels_url: image.pexels_url };
+            if (messages[lastMessageIndex].type === 'apiMessage') {
+              console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${sentence}`);
+              setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
             }
-            setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
           }
 
           let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
@@ -1036,12 +1056,14 @@ function Home({ user }: HomeProps) {
               const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
               await new Promise(resolve => setTimeout(resolve, waitTime));
             }
-            // Set the last message displayed
-            setLastMessageDisplayed(lastMessageIndex);
             // Update the last speaker
             lastSpeaker = currentSpeaker;
           }
         }
+      }
+      if (autoSave && messages[lastMessageIndex].type === 'apiMessage') {
+        // save story automatically
+        shareStory(localCurrentStory);
       }
       // Reset the subtitle after all sentences have been spoken
       stopSpeaking();
@@ -1050,11 +1072,6 @@ function Home({ user }: HomeProps) {
       setLoadingOSD('');
       gaibImage = await generateImageUrl('', false, '', episodeId);
       setPexelImageUrls(gaibImage);
-
-      if (autoSave) {
-        // save story automatically
-        shareStory();
-      }
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -1064,7 +1081,7 @@ function Home({ user }: HomeProps) {
       displayImagesAndSubtitles();
       setLastSpokenMessageIndex(lastMessageIndex);
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory, autoSave, currentStory]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -1082,37 +1099,38 @@ function Home({ user }: HomeProps) {
     }
 
     // Check if the message is a story and remove the "!type:" prefix
-    let isQuestion = !isStory;
-    let localPersonality = selectedPersonality;
-    if (question.startsWith('!question: ') || question.startsWith('!episode: ')) {
-      if (question.startsWith('!question: ')) {
-        isQuestion = true;
-      } else if (question.startsWith('!episode: ')) {
-        isQuestion = false;
-      }
-      if (question.includes('[REFRESH]')) {
-        handleClear(); // clear history
-        question = question.replace('[REFRESH]', '').trim();
-      }
-      // Extract the personality from the question
-      if (question.includes('[PERSONALITY]')) {
-        const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]+)(?=\[|$)/i);
-        if (personalityMatch) {
-          localPersonality = personalityMatch[1].trim().toLowerCase();
-          console.log(`handleSubmit: Extracted personality: '${localPersonality}'`);  // Log the extracted personality
-          question = question.replace(personalityMatch[0], '').trim();
-          console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
-        }
-      }
-
-      if (isQuestion) {
-        question = question.replace(/^!(episode|question):?/i, '').trim();
-      }
-
-      // Set the isStory state
-      setIsStory(!isQuestion);
+    let isQuestion = (isStory === false);
+    if (question.startsWith('!question: ')) {
+      isQuestion = true;
+      question = question.replace('!question: ', '').trim();
+    } else if (question.startsWith('!episode: ')) {
+      isQuestion = false;
+      question = question.replace('!episode: ', '').trim();
     }
-    let localIsStory = !isQuestion;
+    let localIsStory = (isQuestion === false);
+    if (question.includes('[REFRESH]')) {
+      // Clear the history
+      setMessageState((state) => {
+        return {
+          ...state,
+          history: [],
+        };
+      });
+      question = question.replace('[REFRESH]', '').trim();
+    }
+    // Extract the personality from the question
+    let localPersonality = selectedPersonality;
+    if (question.includes('[PERSONALITY]')) {
+      const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
+      if (personalityMatch) {
+        localPersonality = personalityMatch[1].trim();
+        console.log(`handleSubmit: Extracted personality: '${localPersonality}'`);  // Log the extracted personality
+        question = question.replace(new RegExp('\\[PERSONALITY\\]\\s*' + personalityMatch[1], 'i'), '').trim();
+        console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
+      } else {
+        console.log(`handleSubmit: No personality found in question: '${question}'`);  // Log the question
+      }
+    }
 
     console.log(`handleSubmit: Submitting question: '${question.slice(0, 16)}...'`);
 
@@ -1147,10 +1165,6 @@ function Home({ user }: HomeProps) {
     setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
 
-    if (!isFetching && !autoSave) {
-      setCurrentStory([]);
-    }
-
     // Send the question to the server
     const ctrl = new AbortController();
     try {
@@ -1167,7 +1181,7 @@ function Home({ user }: HomeProps) {
           userId: user?.uid,
           localPersonality,
           selectedNamespace,
-          localIsStory,
+          isStory: localIsStory,
           customPrompt,
           condensePrompt,
           tokensCount,
@@ -1513,6 +1527,7 @@ function Home({ user }: HomeProps) {
         history: [],
       };
     });
+    alert(`Chat history cleared.`);
   };
 
   // replay episode from history using passthrough REPLAY: <story> submit mock handlesubmit
@@ -1762,7 +1777,7 @@ function Home({ user }: HomeProps) {
                         &nbsp;&nbsp;&nbsp;&nbsp;
                         <button
                           title="Share Story"
-                          onClick={shareStory}
+                          onClick={handleShareStory}
                           type="button"
                           disabled={loading || isSpeaking}
                           className={styles.footer}

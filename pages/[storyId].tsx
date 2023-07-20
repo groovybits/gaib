@@ -91,7 +91,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
         const storiesMap: { [key: string]: any } = {};
         let count = 1;
         snapshot.docs.forEach(doc => {
-          const image = doc.data();
+          const image: any = doc.data();
           let imageObject;
           if (typeof image.url === 'string') {
             // If it's not JSON, assume it's a string and create an object with a single property
@@ -230,6 +230,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
 
   const handleShareClick = (storyId: string | string[]) => {
     copy(`${baseUrl}/${storyId}`);
+    alert(`Copied ${baseUrl}/${storyId} to clipboard!`);
   };
 
   const handleFacebookShareClick = (storyId: string | string[]) => {
@@ -340,7 +341,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
           <meta property="og:title" content={storyParts[0].replace(/\|$/g, '')} />
           <meta property="og:description" content={storyParts[1] ? storyParts.slice(1).join(' ').slice(0, 500) : storyParts[0]} />
           <meta property="og:image" content={imageShare} />
-          <meta property="og:url" content={`https://gaib.groovy.org/${storyId}`} />
+          <meta property="og:url" content={`${baseUrl}/${storyId}`} />
         </Head>
         <Layout>
           <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
@@ -418,17 +419,17 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   return (
     <div>
       <Head>
-        <title>GAIBs Groovy Story Board</title>
-        <meta name="description" content="Explore a collection of groovy stories created with GAIB." />
-        <meta property="og:title" content="GAIB's Groovy Story Board" />
-        <meta property="og:description" content="Explore a collection of groovy stories created with GAIB." />
+        <title>GAIBs Groovy AI Story Board</title>
+        <meta name="description" content="Explore a collection of AI stories with images created with GAIB." />
+        <meta property="og:title" content="GAIB's Groovy AI Story Board" />
+        <meta property="og:description" content="Explore a collection of AI stories with images created with GAIB." />
         <meta property="og:image" content={process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE ? process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE : 'favicon.ico'} />
-        <meta property="og:url" content="https://gaib.groovy.org/board" />
+        <meta property="og:url" content={`${baseUrl}/board`} />
       </Head>
       <div className={styles.feed}>
         <div className={styles.header}>
           <Link href="/" className={styles.header}>
-            <a>GAIBs Groovy Story Board</a>
+            <a>GAIB The Groovy AI Story Board</a>
           </Link>
         </div>
 
