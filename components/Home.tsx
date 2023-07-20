@@ -379,7 +379,7 @@ function Home({ user }: HomeProps) {
             const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
             console.log(`Sending ${episode.type} #${index}: ${episode.title}`);
-            
+
             setQuery(currentQuery);
             const mockEvent = {
               preventDefault: () => { },
@@ -484,7 +484,7 @@ function Home({ user }: HomeProps) {
 
     // Choose Pexles, DeepAI or local images
     async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = '', episodeId = '', count = 0): Promise<ImageData | string> {
-      const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai'
+      const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
       const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
 
       // check if enabled
@@ -558,10 +558,31 @@ function Home({ user }: HomeProps) {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
               body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
             });
+          } else if (imageSource === 'getimgai') {
+            const idToken = await user?.getIdToken();
+            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+            response = await fetch('/api/getimgai', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+              },
+              body: JSON.stringify({
+                prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}`,
+                negativePrompt: 'Disfigured, cartoon, blurry',
+                width: 512,
+                height: 512,
+                steps: 25,
+                guidance: 7.5,
+                seed: 42,
+                scheduler: 'dpmsolver++',
+                outputFormat: 'png',
+              }),
+            });
           }
 
           if (!response) {
-            console.error('ImageGeneration: No response received from DeepAI API');
+            console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API`);
             return getGaib();
           }
 
@@ -596,6 +617,12 @@ function Home({ user }: HomeProps) {
               // don't store images in GCS or it is a duplicate image
               return imageUrl;
             }
+          } else if (imageSource === 'getimgai' && data.output_url) {
+            const imageUrl = data.output_url;
+            if (data?.duplicate === true) {
+              duplicateImage = true;
+            }
+            return imageUrl;
           } else {
             console.error('No image found for the given keywords: [', keywords, ']');
           }
@@ -838,7 +865,7 @@ function Home({ user }: HomeProps) {
             continue;
           }
           // get the image for the sentence
-          const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai'
+          const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
           if (!sentence.startsWith('References: ')
             && sentence !== ''
             && (imageSource == 'pexels'

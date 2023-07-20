@@ -22,7 +22,7 @@ Contributions welcome, please send PRs for any improvements you can help make in
 - **Story or Question Mode**: Each personality can operate in either story or question mode.
 - **Multilingual Subtitles**: GAIB provides multilingual subtitles of Anime quality.
 - **Meme Images**: GAIB generates meme images for each subtitle line, enabling visual storytelling via memes.
-- **Image Generation and Fetching**: Enabled by `PEXELS_API_KEY`, `DEEPAI_API_KEY`, `DEEPAI_GRID_SIZE`, `DEEPAI_WIDTH`, and `DEEPAI_HEIGHT`, GAIB can fetch images from Pexels and generate images from text using DeepAI.
+- **Image Generation and Fetching**: Enabled by `PEXELS_API_KEY`, `DEEPAI_API_KEY`, `DEEPAI_GRID_SIZE`, `DEEPAI_WIDTH`, and `DEEPAI_HEIGHT`, GAIB can fetch images from Pexels and generate images from text using DeepAI. Also GAIB supports Dall-E and GetImg.AI too, you can use either of the 3 variations of image generation.
 - **Image Saving**: Enabled by `NEXT_PUBLIC_ENABLE_IMAGE_SAVING` and `GCS_BUCKET_NAME`, GAIB can save generated images to Google Cloud Storage.
 - **Control**: Users can control the number of maxTokens, documents used, and the number of episodes created on a topic.
 - **Transcript View**: Users can copy/paste the markup output.
@@ -34,6 +34,7 @@ Contributions welcome, please send PRs for any improvements you can help make in
 - **OpenAI Model Configuration**: Enabled by `MODEL_NAME`, `GPT_MAX_TOKENS`, `PRESENCE_PENALTY`, `FREQUENCY_PENALTY`, `TEMPERATURE_STORY`, and `TEMPERATURE_QUESTION`, GAIB can configure the behavior of the OpenAI model it uses.
 - **Debug Mode**: Enabled by `DEBUG`, GAIB can run in debug mode for troubleshooting and development purposes.
 - **Docker Cloudrun**: Able to handle setup in cloudrun out of the box with documentation and configuration [Cloudrun setup](CLOUDRUN.md).
+- **Twitch Chatbot**: Connect to a twitch channel IRC based chatbot for twitch channel, taking question/story requests and responding with generated summary and plays it back automatically. Requires Twitch OAuth token and setup, then can run pnpm run twitch that uses scripts/twitchChat.ts to recieve and send messages back and forth. You have to have firebase/firestore for this feature, that is where the chat messages are stored to bridge the client with the twitch server.
 
 ## AI Bot Modes
 
@@ -84,6 +85,7 @@ To set up the GAIB project, follow these steps:
    - Visit [Mediastack](https://mediastack.com/) to retrieve your API key and insert it into your `.env` file as `MEDIASTACK_API_KEY`.
    - Visit [Pexels](https://www.pexels.com/api/) to retrieve your API key and insert it into your `.env` file as `PEXELS_API_KEY`.
    - Visit [DeepAI](https://deepai.org/) to retrieve your API key and insert it into your `.env` file as `DEEPAI_API_KEY`.
+   - Visit [GetImgAI](https://getimg.ai/) to retrieve your API key and insert it into your `.env` file as `GETIMG_API_KEY`.
    - Visit [Google Cloud](https://cloud.google.com/) to enable the Speech-to-Text API and download the JSON key file. Insert the path to this file into your `.env` file as `GOOGLE_APPLICATION_CREDENTIALS` or the contents of the file as `GOOGLE_APPLICATION_CREDENTIALS_JSON`.
    - Visit [Google Cloud](https://cloud.google.com/) to enable the Cloud Translation API and retrieve your API key. Insert this key into your `.env` file as `GOOGLE_TRANSLATE_API_KEY`.
    - Visit [Firebase](https://firebase.google.com/) to set up a project and retrieve your API key, Auth domain, App ID, Storage bucket, Messaging sender ID, and Project ID. Insert these into your `.env` file as `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_APP_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, and `NEXT_PUBLIC_FIREBASE_PROJECT_ID`.
