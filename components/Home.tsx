@@ -263,7 +263,7 @@ function Home({ user }: HomeProps) {
       // get stories.id for storyId
       const storiesRef = await firebase.firestore().collection('stories').where('userId', '==', user.uid).orderBy('timestamp', 'desc').limit(1).get();
 
-      console.log(`Story shared successfully to ${baseUrl}/${storiesRef.docs[0].id}}!`);
+      console.log(`Story ${storyText.slice(0, 30)} shared successfully to ${baseUrl}/${storiesRef.docs[0].id}}!`);
 
       if (!autoSave) {
         alert(`Story shared successfully to ${baseUrl}/${storiesRef.docs[0].id}!`);
@@ -272,7 +272,7 @@ function Home({ user }: HomeProps) {
 
       if (twitchChatEnabled && authEnabled && channelId !== '') {
         // Post the story to the Twitch chat
-        await postResponse(channelId, `${baseUrl}/${storiesRef.docs[0].id}`, user.uid);
+        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storiesRef.docs[0].id} for the story: ${storyText.slice(0, 200)}.`, user.uid);
       }
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
@@ -1113,15 +1113,18 @@ function Home({ user }: HomeProps) {
     if (question.startsWith('!question: ')) {
       isQuestion = true;
       question = question.replace('!question: ', '').trim();
+      console.log(`handleSubmit: Extracted question: with !question: `);
     } else if (question.startsWith('!episode: ')) {
       isQuestion = false;
       question = question.replace('!episode: ', '').trim();
+      console.log(`handleSubmit: Extracted episode: with !episode: `);
     }
     let localIsStory = (isQuestion === false);
     let localHistory: [string, string][] = [...history];
 
     if (question.includes('[REFRESH]')) {
       // Clear the shared history
+      console.log(`handleSubmit: Clearing the shared history`);
       setMessageState((state) => {
         return {
           ...state,
@@ -1131,6 +1134,7 @@ function Home({ user }: HomeProps) {
 
       localHistory = [ ['', ''], [question, ''] ];
       question = question.replace('[REFRESH]', '').trim();
+      console.log(`handleSubmit: Cleared history and Updated question: '${question}' history is ${JSON.stringify(localHistory)}`); 
     }
 
     let localNamespace = selectedNamespace;
@@ -1142,6 +1146,7 @@ function Home({ user }: HomeProps) {
         localNamespace = 'groovypdf';
         question = question.replace('[WISDOM]', '').trim();
       }
+      console.log(`handleSubmit: Extracting namespace from question: as ${localNamespace}`);  // Log the question
     }
 
     // Extract the personality from the question
@@ -1149,6 +1154,13 @@ function Home({ user }: HomeProps) {
     if (question.includes('[PERSONALITY]')) {
       const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
       if (personalityMatch) {
+        if (!PERSONALITY_PROMPTS.hasOwnProperty(personalityMatch)) {
+          console.error(`buildPrompt: Personality ${personalityMatch} does not exist in PERSONALITY_PROMPTS object.`);
+          localPersonality = 'GAIB';
+          if (twitchChatEnabled && channelId !== '') {
+            postResponse(channelId, `Sorry, personality ${personalityMatch} does not exist in my database.`, user?.uid);
+          }
+        }
         localPersonality = personalityMatch[1].trim();
         console.log(`handleSubmit: Extracted personality: '${localPersonality}'`);  // Log the extracted personality
         question = question.replace(new RegExp('\\[PERSONALITY\\]\\s*' + personalityMatch[1], 'i'), '').trim();

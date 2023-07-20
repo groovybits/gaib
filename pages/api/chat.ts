@@ -197,6 +197,11 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       res.status(400).json({ error: 'No history in the request' });
       return;
     }
+    if (selectedNamespace === undefined) {
+      consoleLog('error', 'ChatAPI: No selectedNamespace in the request');
+      res.status(400).json({ error: 'No selectedNamespace in the request' });
+      return;
+    }
 
     //only accept post requests
     if (req.method !== 'POST') {
@@ -217,7 +222,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
     if (question.startsWith('REPLAY:') || localPersonality === 'Passthrough') {
       if (debug) {
-        consoleLog('info', `ChatAPI: REPLAY: ${question}`);
+        consoleLog('info', `ChatAPI Replay: ${question.replace('REPLAY:', '')}`);
       }
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -257,7 +262,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     }
 
     // Find a valid namespace
-    let namespaces = [localPersonality.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
+    let namespaces = [selectedNamespace.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
     if (selectedNamespace && selectedNamespace !== 'none') {
       namespaces = [selectedNamespace]; // If a namespace is provided, override the default namespaces
     } else {
@@ -271,9 +276,17 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       return
     }
 
-    if (debug) {
-      consoleLog('info', 'ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
-    }
+    consoleLog('info', 'ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
+    consoleLog('info', 'ChatAPI: Question:', sanitizedQuestion);
+    consoleLog('info', 'ChatAPI: Requested tokens:', requestedTokens);
+    consoleLog('info', 'ChatAPI: Documents returned:', documentsReturned);
+    consoleLog('info', 'ChatAPI: Episode count:', episodeCount);
+    consoleLog('info', 'ChatAPI: History:', JSON.stringify(chatHistory));
+    consoleLog('info', 'ChatAPI: Local Personality:', localPersonality);
+    consoleLog('info', 'ChatAPI: Custom Prompt:', customPrompt);
+    consoleLog('info', 'ChatAPI: Condense Prompt:', condensePrompt);
+    consoleLog('info', 'ChatAPI: Is Story:', isStory ? 'Yes' : 'No');
+
 
     // Set headers before starting the chain
     res.writeHead(200, {
