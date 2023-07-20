@@ -1108,7 +1108,7 @@ function Home({ user }: HomeProps) {
       question = question.replace('!episode: ', '').trim();
     }
     let localIsStory = (isQuestion === false);
-    let localHistory = [...history]; // Make a copy of the current history
+    let localHistory: [string, string][] = [...history];
 
     if (question.includes('[REFRESH]')) {
       // Clear the shared history
@@ -1202,7 +1202,7 @@ function Home({ user }: HomeProps) {
           tokensCount,
           documentCount,
           episodeCount,
-          localHistory,
+          history: localHistory,
         }),
         signal: ctrl.signal,
         onmessage: (event: { data: string; }) => {
