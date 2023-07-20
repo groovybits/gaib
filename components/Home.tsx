@@ -1081,6 +1081,39 @@ function Home({ user }: HomeProps) {
       return;
     }
 
+    // Check if the message is a story and remove the "!type:" prefix
+    let isQuestion = !isStory;
+    let localPersonality = selectedPersonality;
+    if (question.startsWith('!question: ') || question.startsWith('!episode: ')) {
+      if (question.startsWith('!question: ')) {
+        isQuestion = true;
+      } else if (question.startsWith('!episode: ')) {
+        isQuestion = false;
+      }
+      if (question.includes('[REFRESH]')) {
+        handleClear(); // clear history
+        question = question.replace('[REFRESH]', '').trim();
+      }
+      // Extract the personality from the question
+      if (question.includes('[PERSONALITY]')) {
+        const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]+)(?=\[|$)/i);
+        if (personalityMatch) {
+          localPersonality = personalityMatch[1].trim().toLowerCase();
+          console.log(`handleSubmit: Extracted personality: '${localPersonality}'`);  // Log the extracted personality
+          question = question.replace(personalityMatch[0], '').trim();
+          console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
+        }
+      }
+
+      if (isQuestion) {
+        question = question.replace(/^!(episode|question):?/i, '').trim();
+      }
+
+      // Set the isStory state
+      setIsStory(!isQuestion);
+    }
+    let localIsStory = !isQuestion;
+
     console.log(`handleSubmit: Submitting question: '${question.slice(0, 16)}...'`);
 
     // Clear the timeout
@@ -1096,7 +1129,7 @@ function Home({ user }: HomeProps) {
         ...state.messages,
         {
           type: 'userMessage',
-          selectedPersonality: selectedPersonality,
+          localPersonality: localPersonality,
           message: question,
         },
       ],
@@ -1118,23 +1151,6 @@ function Home({ user }: HomeProps) {
       setCurrentStory([]);
     }
 
-    // Check if the message is a story and remove the "!type:" prefix
-    let isQuestion = !isStory;
-    if (question.startsWith('!question: ') || question.startsWith('!episode: ')) {
-      if (question.startsWith('!question: ')) {
-        isQuestion = true;
-      } else if (question.startsWith('!episode: ')) {
-        isQuestion = false;
-      }
-      if (isQuestion) {
-        question = question.replace(/^!(episode|question):?/i, '').trim();
-      }
-
-      // Set the isStory state
-      setIsStory(!isQuestion);
-    }
-    let localIsStory = !isQuestion;
-
     // Send the question to the server
     const ctrl = new AbortController();
     try {
@@ -1149,7 +1165,7 @@ function Home({ user }: HomeProps) {
         body: JSON.stringify({
           question,
           userId: user?.uid,
-          selectedPersonality,
+          localPersonality,
           selectedNamespace,
           localIsStory,
           customPrompt,

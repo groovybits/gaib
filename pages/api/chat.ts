@@ -144,7 +144,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    const { question, userId, selectedPersonality, selectedNamespace, isStory, customPrompt, condensePrompt, tokensCount, documentCount, episodeCount, history } = req.body;
+    const { question, userId, localPersonality, selectedNamespace, isStory, customPrompt, condensePrompt, tokensCount, documentCount, episodeCount, history } = req.body;
 
 
     //only accept post requests
@@ -164,7 +164,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     };
 
     // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
-    if (question.startsWith('REPLAY:') || selectedPersonality === 'Passthrough') {
+    if (question.startsWith('REPLAY:') || localPersonality === 'Passthrough') {
       if (debug) {
         consoleLog('info', `ChatAPI: REPLAY: ${question}`);
       }
@@ -206,7 +206,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     }
 
     // Find a valid namespace
-    let namespaces = [selectedPersonality.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
+    let namespaces = [localPersonality.toLowerCase(), PINECONE_NAME_SPACE, ...OTHER_PINECONE_NAMESPACES.split(',')];
     if (selectedNamespace && selectedNamespace !== 'none') {
       namespaces = [selectedNamespace]; // If a namespace is provided, override the default namespaces
     } else {
@@ -233,12 +233,12 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     sendData(JSON.stringify({ data: '' }));
 
     // Function to create a single chain
-    async function createChain(i: number, namespaceResult: any, selectedPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
+    async function createChain(i: number, namespaceResult: any, localPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
       let token_count = 0;
       if (debug) {
         consoleLog('info', `createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
       }
-      return await makeChain(namespaceResult.vectorStore, selectedPersonality, requestedTokens, documentCount, userId, isStory, customPrompt, condensePrompt, (token: string) => {
+      return await makeChain(namespaceResult.vectorStore, localPersonality, requestedTokens, documentCount, userId, isStory, customPrompt, condensePrompt, (token: string) => {
         token_count++;
         if (token_count % 100 === 0) {
           if (debug) {
@@ -277,7 +277,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     for (let i = 0; i < episodeCount; i++) {
       try {
         consoleLog('info', `ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
-        const chain = await createChain(i, namespaceResult, selectedPersonality, requestedTokens, documentsReturned, userId, isStory);
+        const chain = await createChain(i, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory);
         let title: string = sanitizedQuestion;
 
         // Check if it's not the first episode and chatHistory is not empty

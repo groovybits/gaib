@@ -1,7 +1,7 @@
 import tmi from 'tmi.js';
 import admin from 'firebase-admin';
 import Filter from 'bad-words';
-
+import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
@@ -84,10 +84,13 @@ client.on('message', (channel: any, tags: {
   }
 
   // Check if the message is a command
-  if (message.includes('help')) {
+  if (message.includes('!help')) {
     client.say(channel, `GAIB Received your help command, ${tags.username}!`);
-    client.say(channel, `GAIB Commands: !episode: <title> - <plotline>\n\n!question: <question>\n\n!help..`);
-  } else if (message.startsWith('!episode') || message.startsWith('!question')) {
+    client.say(channel, `GAIB Commands: !episode: <title> - <plotline>, !question: <question>, !help, [REFRESH], [PERSONALITY] <personalty>.  all lower case, type !personalities for a list of the personalities.`);
+  } else if (message.includes('!personalities')) {
+    // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
+    client.say(channel, `GAIB Received your personalities command, ${tags.username}! here they are: {${Object.keys(PERSONALITY_PROMPTS)}}`);
+  } else if (message.includes('!episode') || message.includes('!question')) {
     // Parse the title and plotline from the command
     let title: any = '';
     let plotline: any = '';
@@ -97,7 +100,7 @@ client.on('message', (channel: any, tags: {
     } else {
       title = message.slice(0,messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
     }
-    const isStory: any = message.startsWith('!episode') ? true : false;
+    const isStory: any = message.includes('!episode') ? true : false;
 
     // make sure nothing odd is in the title or plotline that isn't a story idea and title
     const filter = new Filter();
