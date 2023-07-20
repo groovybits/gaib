@@ -18,7 +18,7 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit = process.env.TWITCH_MESSAGE_LIMIT ? process.env.TWITCH_MESSAGE_LIMIT : 500;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 500;
 
 if (!channelName) {
   console.log('Usage: node twitchChat.js <channelName>');
@@ -51,8 +51,8 @@ client.connect();
 let lastMessageArray: string[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
 
-client.on('message', (channel: any, tags: {
-  id: any; username: any; 
+client.on('message', async (channel: any, tags: {
+  id: any; username: any;
 }, message: any, self: any) => {
   // Ignore messages from the bot itself
   if (self) return;
@@ -84,13 +84,77 @@ client.on('message', (channel: any, tags: {
   }
 
   // Check if the message is a command
-  if (message.includes('!help')) {
-    client.say(channel, `GAIB Received your help command, ${tags.username}!`);
-    client.say(channel, `GAIB Commands: !episode: <title> - <plotline>, !question: <question>, !help, [REFRESH], [PERSONALITY] <personalty>.  all lower case, type !personalities for a list of the personalities.`);
-  } else if (message.includes('!personalities')) {
+  // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
+  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how do i ')) {
+    const prompt: string = `Please answer the following question as GAIB the Groovy AI Bot. Be helpful and kind, try to help them with how to send commands, which are generally these: !episode: <title> - <plot> or !question: <question> with usage of [REFRESH] to clear context, [PERSONALITY] <role> to change the personality, list personalities with !personalities, and [WISDOM] or [SCIENCE] to control context and backing vector store. Mention !help as the command to see all help output options. If they ask for a recommendation or to generate a story, use the syntax to do that as !episode: <title> - <plotline> as a single episode/line output. Do not prefix the output with any Answer: type prefix, especially for !commands: when output for episode recommendation/playback....\n\nQuestion: `;
+    const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
+
+    if (!openApiKey) {
+      console.error('No OpenAI API Key provided');
+      return;
+    }
+
+    let llm = 'text-davinci-002';
+
+    fetch(`https://api.openai.com/v1/engines/${llm}/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openApiKey}`,
+      },
+      body: JSON.stringify({
+        prompt: `${prompt} ${message}`,
+        max_tokens: 60,
+        temperature: 0.9,
+        top_p: 1,
+        n: 1,
+        stream: false,
+      }),
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to generate OpenAI response: ${response.statusText} (${response.status}) - ${response.body}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        const { choices } = data;
+
+        // Send the first OpenAI response to the Twitch chat
+        // Send the first OpenAI response to the Twitch chat
+        if (choices && choices.length > 0) {
+          // output each paragraph or output separately split by the line breaks if any, or if the output is too long
+          const output = choices[0].text;
+          const outputArray = output.split('\n\n'); // split by two line breaks to separate paragraphs
+          outputArray.forEach((outputParagraph: string) => {
+            if (outputParagraph.length > messageLimit) {
+              // send as separate messages
+              const outputParagraphArray = outputParagraph.match(new RegExp('.{1,' + messageLimit + '}', 'g'));
+              if (outputParagraphArray) { // check if outputParagraphArray is not null
+                outputParagraphArray.forEach((outputLine: string) => {
+                  client.say(channel, outputLine);
+                });
+              }
+            } else {
+              client.say(channel, outputParagraph);
+            }
+          });
+        } else {
+          console.error('No choices returned from OpenAI');
+        }
+      })
+      .catch(error => console.error('An error occurred:', error));
+  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help')) {
+    client.say(channel, "!help - get help...\n" +
+    "GAIB Commands: !episode: <title> - <plotline>.   \n" + 
+    "!question: <question>   \n" +
+    "[REFRESH], [PERSONALITY] <personalty>, [WISDOM] or [SCIENCE] for general context of output.   \n" +
+    "All lower case, type !personalities for a list of the personalities.   \n" +
+    "Example: !episode: [PERSONALITY] Anime [REFRESH][WISDOM] buddha is enlightened - the story of the buddha.   Also mentioning my name GAIB will answer other questions, or we can just talk :).\n");
+  } else if (message.toLowerCase().startsWith("!personalities")) {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
     client.say(channel, `GAIB Received your personalities command, ${tags.username}! here they are: {${Object.keys(PERSONALITY_PROMPTS)}}`);
-  } else if (message.includes('!episode') || message.includes('!question')) {
+  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!episode') || message.toLowerCase().replace('answer:', '').trim().startsWith('!question')) {
     // Parse the title and plotline from the command
     let title: any = '';
     let plotline: any = '';
@@ -100,7 +164,7 @@ client.on('message', (channel: any, tags: {
     } else {
       title = message.slice(0,messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
     }
-    const isStory: any = message.includes('!episode') ? true : false;
+    const isStory: any = message.toLowerCase().includes('!episode') ? true : false;
 
     // make sure nothing odd is in the title or plotline that isn't a story idea and title
     const filter = new Filter();

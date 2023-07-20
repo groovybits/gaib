@@ -1108,16 +1108,31 @@ function Home({ user }: HomeProps) {
       question = question.replace('!episode: ', '').trim();
     }
     let localIsStory = (isQuestion === false);
+    let localHistory = [...history]; // Make a copy of the current history
+
     if (question.includes('[REFRESH]')) {
-      // Clear the history
+      // Clear the shared history
       setMessageState((state) => {
         return {
           ...state,
           history: [],
         };
       });
+      localHistory = [];
       question = question.replace('[REFRESH]', '').trim();
     }
+
+    let localNamespace = selectedNamespace;
+    if (question.includes('[SCIENCE]') || question.includes('[WISDOM]')) {
+      if (question.includes('[SCIENCE]')) {
+        localNamespace = 'videoengineer';
+        question.replace('[SCIENCE]', '').trim();
+      } else if (question.includes('WISDOM')) {
+        localNamespace = 'groovypdf';
+        question.replace('[WISDOM]', '').trim();
+      }
+    }
+
     // Extract the personality from the question
     let localPersonality = selectedPersonality;
     if (question.includes('[PERSONALITY]')) {
@@ -1180,14 +1195,14 @@ function Home({ user }: HomeProps) {
           question,
           userId: user?.uid,
           localPersonality,
-          selectedNamespace,
+          selectedNamespace: localNamespace,
           isStory: localIsStory,
           customPrompt,
           condensePrompt,
           tokensCount,
           documentCount,
           episodeCount,
-          history,
+          localHistory,
         }),
         signal: ctrl.signal,
         onmessage: (event: { data: string; }) => {

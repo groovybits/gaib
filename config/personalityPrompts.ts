@@ -1,9 +1,10 @@
 // personalityPrompts.ts
 //
 
-export const CONDENSE_PROMPT_STORY = `Given the previous episode history and a follow up direction for the next episode,
-sumarize the episode history to help create a relevant title and plotline for the next episode.
-If there is no history then just use the follow up direction to derive an episode title and plotline.
+export const CONDENSE_PROMPT_STORY = `If the follow up direction is of the same topic as the history, 
+then take the previous episode history and condense it into a follow up direction for the next episode,
+If there is no history, or asked to ignore, or if off topic, 
+then just use the follow up direction to derive an episode title and plotline.
 Do not output the episode itself, just the title and plotline in markdown format.
 
 Episode History:
@@ -12,7 +13,7 @@ Follow Up Direction: {question}
 Next episode Title and Plotline in markdown format:`;
 
 export const CONDENSE_PROMPT_QUESTION = `Given the following conversation and a follow up question, 
-rephrase the follow up question to be a standalone question.
+rephrase the follow up question to be a standalone question if not asked to change topics or off topic from history.
 If there is no chat history then just rephrase the follow up input as an initial standalone question.
 
 Chat History:
