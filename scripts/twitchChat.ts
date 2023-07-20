@@ -86,7 +86,7 @@ client.on('message', async (channel: any, tags: {
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
   if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how do i ')) {
-    const prompt: string = `Please answer the following question as GAIB the Groovy AI Bot. Be helpful and kind, try to help them with how to send commands, which are generally these: !episode: <title> - <plot> or !question: <question> with usage of [REFRESH] to clear context, [PERSONALITY] <role> to change the personality, list personalities with !personalities, and [WISDOM] or [SCIENCE] to control context and backing vector store. Mention !help as the command to see all help output options. If they ask for a recommendation or to generate a story, use the syntax to do that as !episode: <title> - <plotline> as a single episode/line output. Do not prefix the output with any Answer: type prefix, especially for !commands: when output for episode recommendation/playback....\n\nQuestion: `;
+    const prompt: string = `Please answer the following question as GAIB the Groovy AI Bot. Be helpful and kind, try to help them with how to send commands, which are generally these: !episode: <title> - <plot> or !question: <question> with usage of [REFRESH] to clear context, [PERSONALITY] <role> to change the personality, list personalities with !personalities, and [WISDOM] or [SCIENCE] to control context and backing vector store. [PROMPT] "<custom prompt>" to override and customize the personality completely. Mention !help as the command to see all help output options. If they ask for a recommendation or to generate a story, use the syntax to do that as !episode: <title> - <plotline> as a single episode/line output. Do not prefix the output with any Answer: type prefix, especially for !commands: when output for episode recommendation/playback....\n\nQuestion: `;
     const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 
     if (!openApiKey) {
@@ -149,6 +149,7 @@ client.on('message', async (channel: any, tags: {
     "GAIB Commands: !episode: <title> - <plotline>.   \n" + 
     "!question: <question>   \n" +
     "[REFRESH], [PERSONALITY] <personalty>, [WISDOM] or [SCIENCE] for general context of output.   \n" +
+    "[PROMPT] \"<custom personality prompt>\" to override the personality completely.   \n" +
     "All lower case, type !personalities for a list of the personalities.   \n" +
     "Example: !episode: [PERSONALITY] Anime [REFRESH][WISDOM] buddha is enlightened - the story of the buddha.   Also mentioning my name GAIB will answer other questions, or we can just talk :).\n");
   } else if (message.toLowerCase().startsWith("!personalities")) {
