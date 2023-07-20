@@ -8,7 +8,7 @@ import admin from 'firebase-admin';
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
     if (req.method === 'POST') {
-      const { prompt, negativePrompt, width, height, steps, guidance, seed, scheduler, outputFormat } = req.body;
+      const { model, prompt, negativePrompt, width, height, steps, guidance, seed, scheduler, outputFormat } = req.body;
 
       if (!process.env.GETIMGAI_API_KEY) {
         console.error('getimgaiHandler: GETIMGAI_API_KEY not set');
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'stable-diffusion-v1-5',
+          model: model,
           prompt,
           negativePrompt,
           width,

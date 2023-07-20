@@ -572,7 +572,16 @@ function Home({ user }: HomeProps) {
             });
           } else if (imageSource === 'getimgai') {
             const idToken = await user?.getIdToken();
+            let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v1-5';
+            let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
             let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+            let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 512;
+            let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
+            let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
+            let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
+            let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
+            let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
+            let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'png';
             response = await fetch('/api/getimgai', {
               method: 'POST',
               headers: {
@@ -580,15 +589,16 @@ function Home({ user }: HomeProps) {
                 'Authorization': `Bearer ${idToken}`,
               },
               body: JSON.stringify({
+                model: model,
                 prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}`,
-                negativePrompt: 'Disfigured, cartoon, blurry',
-                width: 512,
-                height: 512,
-                steps: 25,
-                guidance: 7.5,
-                seed: 42,
-                scheduler: 'dpmsolver++',
-                outputFormat: 'png',
+                negativePrompt: negativePrompt,
+                width: width,
+                height: height,
+                steps: steps,
+                guidance: guidance,
+                seed: seed,
+                scheduler: scheduler,
+                outputFormat: outputFormat,
               }),
             });
           }
