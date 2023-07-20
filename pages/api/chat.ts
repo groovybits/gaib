@@ -146,6 +146,57 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     const { question, userId, localPersonality, selectedNamespace, isStory, customPrompt, condensePrompt, tokensCount, documentCount, episodeCount, history } = req.body;
 
+    // check each input to confirm it is valid and not undefined
+    if (question === undefined) {
+      consoleLog('error', 'ChatAPI: No question in the request');
+      res.status(400).json({ error: 'No question in the request' });
+      return;
+    }
+    if (userId === undefined) {
+      consoleLog('error', 'ChatAPI: No userId in the request');
+      res.status(400).json({ error: 'No userId in the request' });
+      return;
+    }
+    if (localPersonality === undefined) {
+      consoleLog('error', 'ChatAPI: No localPersonality in the request');
+      res.status(400).json({ error: 'No localPersonality in the request' });
+      return;
+    }
+    if (isStory === undefined) {
+      consoleLog('error', 'ChatAPI: No isStory in the request');
+      res.status(400).json({ error: 'No isStory in the request' });
+      return;
+    }
+    if (customPrompt === undefined) {
+      consoleLog('error', 'ChatAPI: No customPrompt in the request');
+      res.status(400).json({ error: 'No customPrompt in the request' });
+      return;
+    }
+    if (condensePrompt === undefined) {
+      consoleLog('error', 'ChatAPI: No condensePrompt in the request');
+      res.status(400).json({ error: 'No condensePrompt in the request' });
+      return;
+    }
+    if (tokensCount === undefined) {
+      consoleLog('error', 'ChatAPI: No tokensCount in the request');
+      res.status(400).json({ error: 'No tokensCount in the request' });
+      return;
+    }
+    if (documentCount === undefined) {
+      consoleLog('error', 'ChatAPI: No documentCount in the request');
+      res.status(400).json({ error: 'No documentCount in the request' });
+      return;
+    }
+    if (episodeCount === undefined) {
+      consoleLog('error', 'ChatAPI: No episodeCount in the request');
+      res.status(400).json({ error: 'No episodeCount in the request' });
+      return;
+    }
+    if (history === undefined) {
+      consoleLog('error', 'ChatAPI: No history in the request');
+      res.status(400).json({ error: 'No history in the request' });
+      return;
+    }
 
     //only accept post requests
     if (req.method !== 'POST') {

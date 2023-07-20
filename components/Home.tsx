@@ -1118,7 +1118,8 @@ function Home({ user }: HomeProps) {
           history: [],
         };
       });
-      localHistory = [];
+
+      localHistory = [ ['', ''], [question, ''] ];
       question = question.replace('[REFRESH]', '').trim();
     }
 
@@ -1126,10 +1127,10 @@ function Home({ user }: HomeProps) {
     if (question.includes('[SCIENCE]') || question.includes('[WISDOM]')) {
       if (question.includes('[SCIENCE]')) {
         localNamespace = 'videoengineer';
-        question.replace('[SCIENCE]', '').trim();
+        question = question.replace('[SCIENCE]', '').trim();
       } else if (question.includes('WISDOM')) {
         localNamespace = 'groovypdf';
-        question.replace('[WISDOM]', '').trim();
+        question = question.replace('[WISDOM]', '').trim();
       }
     }
 
@@ -1147,7 +1148,22 @@ function Home({ user }: HomeProps) {
       }
     }
 
-    console.log(`handleSubmit: Submitting question: '${question.slice(0, 16)}...'`);
+    // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
+    let localCustomPrompt = '';
+    if (question.includes('[PROMPT]')) {
+      const customPromptMatch = question.match(/\[PROMPT\]\s*\"([\w\s]*?)(?=\")/i);
+      if (customPromptMatch) {
+        localCustomPrompt = customPromptMatch[1].trim();
+        console.log(`handleSubmit: Extracted customPrompt: '${localCustomPrompt}'`);  // Log the extracted customPrompt
+        // remove prompt from from question with [PROMPT] "<question>" removed
+        question = question.replace(new RegExp('\\[PROMPT\\]\\s*\"' + customPromptMatch[1], 'i'), '').trim();
+        console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
+      } else {
+        console.log(`handleSubmit: No customPrompt found in question: '${question}'`);  // Log the question
+      }
+    }
+
+    console.log(`handleSubmit: Submitting question: '${question.slice(0, 1000)}...'`);
 
     // Clear the timeout
     if (timeoutID) {
@@ -1197,7 +1213,7 @@ function Home({ user }: HomeProps) {
           localPersonality,
           selectedNamespace: localNamespace,
           isStory: localIsStory,
-          customPrompt,
+          customPrompt: localCustomPrompt,
           condensePrompt,
           tokensCount,
           documentCount,
