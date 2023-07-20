@@ -198,9 +198,7 @@ export function buildPrompt(personality: keyof typeof PERSONALITY_PROMPTS, isSto
       break;
   }
 
-  console.log(`buildPrompt: Personality is ${personality}.`);
   prompt = `${PERSONALITY_PROMPTS[personality]} ${isStory ? STORY_PROMPT : ''} ${isStory? GENDER_MARKER : ''} ${ROLE_ENFORCER} ${isStory? SCENE_MARKER : 'To help illustrate and summarize, add in lines of the format "[SCENE:...]" worded for an image generation prompt to illustrate the answer.'}${footer}`;
-  console.log(`buildPrompt: Prompt: [${prompt.replace('\n', ' ')}]`);
   return prompt;
 }
 
