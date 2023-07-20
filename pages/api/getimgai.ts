@@ -16,28 +16,52 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         return;
       }
 
-      const getImgResponse = await fetch('https://api.getimg.ai/v1/stable-diffusion/text-to-image', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.GETIMGAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: model,
-          prompt,
-          negativePrompt,
-          width,
-          height,
-          steps,
-          guidance,
-          seed,
-          scheduler,
-          outputFormat,
-        }),
-      });
+      // print out the variables input to show what settings we have, in one output cmd
+      console.log(`getimgaiHandler: model: ${model}\nprompt: ${prompt}\nnegativePrompt: ${negativePrompt}\nwidth: ${width}\nheight: ${height}\nsteps: ${steps}\nguidance: ${guidance}\nseed: ${seed}\nscheduler: ${scheduler}\noutputFormat: ${outputFormat}`);
 
-      const getImgData = await getImgResponse.json() as { image: string; seed: number };
+      let getImgResponse: any;
+      try {
+        getImgResponse = await fetch('https://api.getimg.ai/v1/stable-diffusion/text-to-image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.GETIMGAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: model,
+            prompt,
+            negative_prompt: negativePrompt,
+            width,
+            height,
+            steps,
+            guidance,
+            seed,
+            scheduler,
+            output_format: outputFormat,
+          }),
+        });
+      } catch (error: any) {
+        console.error(`getimgaiHandler: Error calling getimg.ai API: ${error.message}`);
+        throw new Error(`getimgaiHandler: Error calling getimg.ai API: ${error.message}`);
+      }
 
+      // Get the image data from the response
+      if (getImgResponse === undefined) {
+        console.error(`getimgaiHandler: Error calling getimg.ai API, undefined: ${getImgResponse ? getImgResponse.statusText : 'undefined error'}`);
+        throw new Error(`getimgaiHandler: Error calling getimg.ai API, undefined: ${getImgResponse ? getImgResponse.statusText : 'undefined error'}`);
+      }
+      let getImgData;
+      try {
+        getImgData = await getImgResponse.json() as { image: string; seed: number };
+      } catch (error: any) {
+        console.error(`getimgaiHandler: Error parsing getimg.ai API response, .json(): ${error.message}`);
+        throw new Error(`getimgaiHandler: Error parsing getimg.ai API response, .json(): ${error.message}`);
+      }
+
+      if (!getImgData.image) {
+        console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image: ${getImgData}`);
+        throw new Error(`getimgaiHandler: Error calling getimg.ai API, mising .image: ${getImgData}`);
+      }
       const imageBuffer = Buffer.from(getImgData.image, 'base64');
 
       // Prepare the GCS client
