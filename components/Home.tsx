@@ -661,7 +661,7 @@ function Home({ user }: HomeProps) {
       return '';
     }
 
-    function splitSentence(sentence: any, maxLength = 80) {
+    function splitSentence(sentence: any, maxLength = 300) {
       const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
       try {
         return sentence.match(regex) || [];
@@ -1115,78 +1115,126 @@ function Home({ user }: HomeProps) {
 
     // Check if the message is a story and remove the "!type:" prefix
     let isQuestion = (isStory === false);
-    if (question.startsWith('!question: ')) {
-      isQuestion = true;
-      question = question.replace('!question: ', '').trim();
-      console.log(`handleSubmit: Extracted question: with !question: `);
-    } else if (question.startsWith('!episode: ')) {
-      isQuestion = false;
-      question = question.replace('!episode: ', '').trim();
-      console.log(`handleSubmit: Extracted episode: with !episode: `);
+    try {
+      if (question.startsWith('!question: ')) {
+        isQuestion = true;
+        question = question.replace('!question: ', '').trim();
+        console.log(`handleSubmit: Extracted question: with !question: `);
+      } else if (question.startsWith('!episode: ')) {
+        isQuestion = false;
+        question = question.replace('!episode: ', '').trim();
+        console.log(`handleSubmit: Extracted episode: with !episode: `);
+      }
+    } catch (error) {
+      console.error(`handleSubmit: Error extracting question: '${error}'`);  // Log the question
+      if (!twitchChatEnabled) {
+        alert(`handleSubmit: Error extracting question: '${error}'`);  // Log the question
+      } else if (channelId !== '') {
+        postResponse(channelId, `Sorry, I failed a extracting the !episode: or !question:, please try again.`, user?.uid);
+      }
     }
     let localIsStory = (isQuestion === false);
-    let localHistory: [string, string][] = [...history];
-
-    if (question.includes('[REFRESH]')) {
-      // Clear the shared history
-      console.log(`handleSubmit: Clearing the shared history`);
-      setMessageState((state) => {
-        return {
-          ...state,
-          history: [],
-        };
-      });
-
-      localHistory = [ ['', ''], [question, ''] ];
-      question = question.replace('[REFRESH]', '').trim();
-      console.log(`handleSubmit: Cleared history and Updated question: '${question}' history is ${JSON.stringify(localHistory)}`); 
-    }
 
     let localNamespace = selectedNamespace;
-    if (question.includes('[SCIENCE]') || question.includes('[WISDOM]')) {
-      if (question.includes('[SCIENCE]')) {
-        localNamespace = 'videoengineer';
-        question = question.replace('[SCIENCE]', '').trim();
-      } else if (question.includes('WISDOM')) {
-        localNamespace = 'groovypdf';
-        question = question.replace('[WISDOM]', '').trim();
+    try {
+      if (question.includes('[SCIENCE]') || question.includes('[WISDOM]')) {
+        if (question.includes('[SCIENCE]')) {
+          localNamespace = 'videoengineer';
+          question = question.replace('[SCIENCE]', '').trim();
+        } else if (question.includes('WISDOM')) {
+          localNamespace = 'groovypdf';
+          question = question.replace('[WISDOM]', '').trim();
+        }
+        console.log(`handleSubmit: Extracting namespace from question: as ${localNamespace}`);  // Log the question
       }
-      console.log(`handleSubmit: Extracting namespace from question: as ${localNamespace}`);  // Log the question
+    } catch (error) {
+      console.error(`handleSubmit: Error extracting namespace: '${error}'`);  // Log the question
+      if (!twitchChatEnabled) {
+        alert(`handleSubmit: Error extracting namespace: '${error}'`);  // Log the question
+      } else if (channelId !== '') {
+        postResponse(channelId, `Sorry, I failed a extracting the namespace, please try again.`, user?.uid);
+      }
     }
 
     // Extract the personality from the question
     let localPersonality = selectedPersonality;
-    if (question.includes('[PERSONALITY]')) {
-      const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
-      if (personalityMatch) {
-        if (!PERSONALITY_PROMPTS.hasOwnProperty(personalityMatch)) {
-          console.error(`buildPrompt: Personality ${personalityMatch} does not exist in PERSONALITY_PROMPTS object.`);
-          localPersonality = 'GAIB';
-          if (twitchChatEnabled && channelId !== '') {
-            postResponse(channelId, `Sorry, personality ${personalityMatch} does not exist in my database.`, user?.uid);
+    try {
+      if (question.includes('[PERSONALITY]')) {
+        const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
+        if (personalityMatch) {
+          if (!PERSONALITY_PROMPTS.hasOwnProperty(personalityMatch)) {
+            console.error(`buildPrompt: Personality "${personalityMatch}" does not exist in PERSONALITY_PROMPTS object.`);
+            localPersonality = 'GAIB';
+            if (twitchChatEnabled && channelId !== '') {
+              postResponse(channelId, `Sorry, personality "${personalityMatch}" does not exist in my database.`, user?.uid);
+            }
           }
+          localPersonality = personalityMatch[1].trim();
+          console.log(`handleSubmit: Extracted personality: "${localPersonality}"`);  // Log the extracted personality
+          question = question.replace(new RegExp('\\[PERSONALITY\\]\\s*' + personalityMatch[1], 'i'), '').trim();
+          question = question.replace(new RegExp('\\[PERSONALITY\\]', 'i'), '').trim();
+          console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
+        } else {
+          console.log(`handleSubmit: No personality found in question: '${question}'`);  // Log the question
         }
-        localPersonality = personalityMatch[1].trim();
-        console.log(`handleSubmit: Extracted personality: '${localPersonality}'`);  // Log the extracted personality
-        question = question.replace(new RegExp('\\[PERSONALITY\\]\\s*' + personalityMatch[1], 'i'), '').trim();
-        console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
-      } else {
-        console.log(`handleSubmit: No personality found in question: '${question}'`);  // Log the question
+      }
+    } catch (error) {
+      console.error(`handleSubmit: Error extracting personality: '${error}'`);  // Log the question
+      if (!twitchChatEnabled) {
+        alert(`handleSubmit: Error extracting personality: '${error}'`);  // Log the question
+      } else if (channelId !== '') {
+        postResponse(channelId, `Sorry, I failed a extracting the personality, please try again.`, user?.uid);
       }
     }
 
     // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
     let localCustomPrompt = '';
-    if (question.includes('[PROMPT]')) {
-      const customPromptMatch = question.match(/\[PROMPT\]\s*\"([\w\s]*?)(?=\")/i);
-      if (customPromptMatch) {
-        localCustomPrompt = customPromptMatch[1].trim();
-        console.log(`handleSubmit: Extracted customPrompt: '${localCustomPrompt}'`);  // Log the extracted customPrompt
-        // remove prompt from from question with [PROMPT] "<question>" removed
-        question = question.replace(new RegExp('\\[PROMPT\\]\\s*\"' + customPromptMatch[1], 'i'), '').trim();
-        console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
-      } else {
-        console.log(`handleSubmit: No customPrompt found in question: '${question}'`);  // Log the question
+    try {
+      if (question.includes('[PROMPT]')) {
+        const customPromptMatch = question.match(/\[PROMPT\]\s*\"([\w\s]*?)(?=\")/i);
+        if (customPromptMatch) {
+          localCustomPrompt = customPromptMatch[1].trim();
+          console.log(`handleSubmit: Extracted customPrompt: '${localCustomPrompt}'`);  // Log the extracted customPrompt
+          // remove prompt from from question with [PROMPT] "<question>" removed
+          question = question.replace(new RegExp('\\[PROMPT\\]\\s*\"' + customPromptMatch[1], 'i'), '').trim();
+          console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
+        } else {
+          console.log(`handleSubmit: No customPrompt found in question: '${question}'`);  // Log the question
+        }
+      }
+    } catch (error) {
+      console.error(`handleSubmit: Error extracting customPrompt: '${error}'`);  // Log the question
+      if (!twitchChatEnabled) {
+        alert(`handleSubmit: Error extracting customPrompt: '${error}'`);  // Log the question
+      } else if (channelId !== '') {
+        postResponse(channelId, `Sorry, I failed a extracting the customPrompt, please try again.`, user?.uid);
+      }
+    }
+
+    let localHistory: [string, string][] = [...history];
+
+    if (question.includes('[REFRESH]')) {
+      try {
+        // Clear the shared history
+        console.log(`handleSubmit: Clearing the shared history`);
+        setMessageState((state) => {
+          return {
+            ...state,
+            history: [],
+          };
+        });
+
+        question = question.replace('[REFRESH]', '').trim();
+        localHistory = [['', ''], [question, '']];
+
+        console.log(`handleSubmit: Cleared history and Updated question: '${question}'\nhistory is ${JSON.stringify(localHistory)}`);
+      } catch (error) {
+        console.error(`handleSubmit: Error clearing history: '${error}'`);  // Log the question
+        if (!twitchChatEnabled) {
+          alert(`handleSubmit: Error clearing history: '${error}'`);  // Log the question
+        } else if (channelId !== '') {
+          postResponse(channelId, `Sorry, I failed clearing the history, please try again.`, user?.uid);
+        }
       }
     }
 

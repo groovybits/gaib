@@ -18,7 +18,7 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 500;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 1000;
 
 if (!channelName) {
   console.log('Usage: node twitchChat.js <channelName>');
@@ -72,20 +72,20 @@ client.on('message', async (channel: any, tags: {
     return;
   }
   // remove the oldest message from the array
-  if (lastMessageArray.length > 3) {
+  if (lastMessageArray.length > 30) {
     lastMessageArray.shift();
   }
 
-  console.log(`Received message: ${message} from ${tags.username} in ${channel} with tags: ${JSON.stringify(tags)}`)
+  console.log(`Received message: ${message}\nfrom ${tags.username} in ${channel}\nwith tags: ${JSON.stringify(tags)}\n`)
 
   if (message.length > messageLimit) {
-    console.log(`Message too long, truncating to ${messageLimit} characters`);
-    client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it is too long, truncating to ${messageLimit} characters...`);
+    console.log(`Message too long, truncating to ${messageLimit} characters.\n`);
+    client.say(channel, `GAIB ${tags.username} sorry the message is too long. Truncating it to ${messageLimit} characters.`);
   }
 
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
-  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how do i ')) {
+  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how')) {
     const prompt: string = `Please answer the following question as GAIB the Groovy AI Bot. Be helpful and kind, try to help them with how to send commands, which are generally these: !episode: <title> - <plot> or !question: <question> with usage of [REFRESH] to clear context, [PERSONALITY] <role> to change the personality, list personalities with !personalities, and [WISDOM] or [SCIENCE] to control context and backing vector store. [PROMPT] "<custom prompt>" to override and customize the personality completely. Mention !help as the command to see all help output options. If they ask for a recommendation or to generate a story, use the syntax to do that as !episode: <title> - <plotline> as a single episode/line output. Do not prefix the output with any Answer: type prefix, especially for !commands: when output for episode recommendation/playback....\n\nQuestion: `;
     const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 
@@ -113,7 +113,7 @@ client.on('message', async (channel: any, tags: {
     })
       .then(response => {
         if (!response.ok) {
-          throw new Error(`Failed to generate OpenAI response: ${response.statusText} (${response.status}) - ${response.body}`);
+          throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
         }
         return response.json();
       })
@@ -140,7 +140,7 @@ client.on('message', async (channel: any, tags: {
             }
           });
         } else {
-          console.error('No choices returned from OpenAI');
+          console.error('No choices returned from OpenAI!\n');
         }
       })
       .catch(error => console.error('An error occurred:', error));
@@ -154,7 +154,7 @@ client.on('message', async (channel: any, tags: {
     "Example: !episode: [PERSONALITY] Anime [REFRESH][WISDOM] buddha is enlightened - the story of the buddha.   Also mentioning my name GAIB will answer other questions, or we can just talk :).\n");
   } else if (message.toLowerCase().startsWith("!personalities")) {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
-    client.say(channel, `GAIB Received your personalities command, ${tags.username}! here they are: {${Object.keys(PERSONALITY_PROMPTS)}}`);
+    client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
   } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!episode') || message.toLowerCase().replace('answer:', '').trim().startsWith('!question')) {
     // Parse the title and plotline from the command
     let title: any = '';
@@ -171,23 +171,23 @@ client.on('message', async (channel: any, tags: {
     const filter = new Filter();
 
     if (title && filter.isProfane(title)) {
-      console.log(`Profanity detected in title: ${title}, removing it`);
+      console.log(`Profanity detected in title: ${title}, removing it.\n`);
       client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
       title = filter.clean(title);
     }
 
     if (plotline && filter.isProfane(plotline)) {
-      console.log(`Profanity detected in title: ${plotline}, removing it`);
+      console.log(`Profanity detected in title: ${plotline}, removing it.\n`);
       client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
       plotline = filter.clean(plotline);
     }
 
     if (isStory) {
-      console.log(`Received episode command: ${title} - ${plotline}`);
-      client.say(channel, `GAIB Received your episode command, ${tags.username}! Title: ${title}, Plotline: ${plotline}`);
+      console.log(`Switching to Episode Mode for: ${title} - ${plotline}\n`);
+      client.say(channel, `GAIB ${tags.username} Playing Episode Title: ${title}, Plotline: ${plotline}`);
     } else {
-      console.log(`Received question command: ${title}`);
-      client.say(channel, `GAIB Received your question command, ${tags.username}! Question: ${title} ${plotline}`);
+      console.log(`GAIB ${tags.username} Answering the question: ${title} ${plotline}`);
+      client.say(channel, `GAIB ${tags.username} Answering Question: ${title} ${plotline}`);
     }
 
     // Check if both title and plotline are defined
@@ -203,11 +203,11 @@ client.on('message', async (channel: any, tags: {
         timestamp: admin.firestore.FieldValue.serverTimestamp()
       });
     } else {
-      console.log(`Invalid command format. Use: !episode: title - plotline (received: ${message})`);
-      client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it is an Invalid syntax, please use\n\nepisode: <title> - <plotline>\n\nNeeds a dash to get the title and plotline separated`);
+      console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
+      client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
     }
   } else {
-    console.log(`GAIB Unknown command: ${message} from ${tags.username} in ${channel} with tags: ${JSON.stringify(tags)}`);
+    console.log(`GAIB Unknown command: ${message}\nfrom ${tags.username} in ${channel}\nwith tags: ${JSON.stringify(tags)}\n`);
   }
 });
 
@@ -217,16 +217,16 @@ db.collection('responses').onSnapshot((snapshot) => {
     if (change.type === 'added') {
       const docData = change.doc.data();
 
-      console.log(`Received message from GAIB: ${JSON.stringify(docData)}`);
+      console.log(`Received message from GAIB:\n${JSON.stringify(docData)}\n`);
 
       // confirm members exist in docData
       if (!docData.channel || !docData.message) {
-        console.log(`GAIB sent invalid message format. ${JSON.stringify(docData)}`);
+        console.log(`GAIB sent Invalid Messsage Format:\n${JSON.stringify(docData)}\n`);
         return;
       }
 
       if (docData.channel !== channelName) {
-        console.log(`Message not for this channel, ignoring`);
+        console.log(`GAIBs Message not for this channel, ignoring ${docData.channel} != ${channelName}:\n${JSON.stringify(docData)}\n}`);
         return;
       }
 
