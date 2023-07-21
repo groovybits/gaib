@@ -18,8 +18,8 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 500;
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 10;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 400;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 2;
 const llm = 'gpt-4';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
 const maxTokens = 200;
 const temperature = 0.2;
@@ -103,7 +103,12 @@ client.on('message', async (channel: any, tags: {
 
   // remove the oldest message from the array
   if (lastMessageArray.length > chatHistorySize) {
-    lastMessageArray.shift();
+    // don't remove the oldest message if it is a system message, then remove the one after it
+    if (lastMessageArray[0].role === 'system') {
+      lastMessageArray.splice(1, 1);
+    } else {
+      lastMessageArray.shift();
+    }  
   }
 
   console.log(`Received message: ${message}\nfrom ${tags.username} in ${channel}\nwith tags: ${JSON.stringify(tags)}\n`)
