@@ -17,8 +17,15 @@ const ServiceInfo = () => {
             }
           }}>Browse Shared Stories</a>
         </Link>&nbsp;&nbsp;|&nbsp;&nbsp;
-        <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-        <a href="https://github.com/groovybits/gaib">Source Code</a>
+        <div className={styles.footer}>
+          <div className={styles.footerContainer}>
+            <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://twitch.tv/groovyaibot">Create Stories on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://facebook.com/groovyorg">Facebook Page</a>
+          </div>
+        </div>
       </div>
       <div className={styles.footer}>
         GAIB, the Groovy AI Bot, is a chatbot that can understand, speak, and

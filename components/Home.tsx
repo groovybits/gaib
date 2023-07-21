@@ -1749,6 +1749,14 @@ function Home({ user }: HomeProps) {
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
           <main className={styles.main}>
+            <Link href="/board/">
+              <a className={`${styles.header} ${styles.center}`} onClick={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  window.open('/board/', '_blank');
+                }
+              }}>Story Board</a>
+            </Link>
             <div className={styles.cloud}>
               <div ref={messageListRef}
                 className={styles.imageContainer}
@@ -1887,15 +1895,7 @@ function Home({ user }: HomeProps) {
                           type="button"
                           disabled={loading || isSpeaking}
                           className={styles.footer}
-                        >Share Story</button>&nbsp;&nbsp;&nbsp;&nbsp;
-                        <Link href="/board/">
-                          <a className={styles.footer} onClick={(e) => {
-                            if (e.ctrlKey || e.metaKey) {
-                              e.preventDefault();
-                              window.open('/board/', '_blank');
-                            }
-                          }}>Browse Stories</a>
-                        </Link>
+                        >Publish and Share Story</button>
                       </>
                     ) : (
                       <></>

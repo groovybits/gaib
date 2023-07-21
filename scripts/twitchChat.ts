@@ -90,7 +90,7 @@ client.on('message', async (channel: any, tags: {
   id: any; username: any;
 }, message: any, self: any) => {
   // Ignore messages from the bot itself
-  if (self) return;
+  if (self && !message.toLowerCase().startsWIth('!episode:') && !message.toLowerCase().startsWith('!question:')) return;
 
   // Ignore messages that have already been processed
   if (processedMessageIds[tags.id]) {
@@ -110,7 +110,60 @@ client.on('message', async (channel: any, tags: {
 
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
-  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().startsWith('how') || message.toLowerCase().startsWith('what') || message.toLowerCase().startsWith('where') || message.toLowerCase().startsWith('when') || message.toLowerCase().startsWith('why') || message.toLowerCase().startsWith('who')) {
+  if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help')) {
+    client.say(channel, helpMessage);
+  } else if (message.toLowerCase().startsWith("!personalities")) {
+    // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
+    client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
+  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!episode') || message.toLowerCase().replace('answer:', '').trim().startsWith('!question')) {
+    // Parse the title and plotline from the command
+    let title: any = '';
+    let plotline: any = '';
+    let cutStart: number = message.indexOf(':') ? message.indexOf(':') + 1 : 8;
+
+    title = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
+    const isStory: any = message.toLowerCase().includes('!episode') ? true : false;
+
+    // make sure nothing odd is in the title or plotline that isn't a story idea and title
+    const filter = new Filter();
+
+    if (title && filter.isProfane(title)) {
+      console.log(`Profanity detected in title: ${title}, removing it.\n`);
+      client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
+      title = filter.clean(title);
+    }
+
+    if (plotline && filter.isProfane(plotline)) {
+      console.log(`Profanity detected in title: ${plotline}, removing it.\n`);
+      client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
+      plotline = filter.clean(plotline);
+    }
+
+    if (isStory) {
+      console.log(`Switching to Episode Mode for: ${title} ${plotline}\n`);
+      client.say(channel, `GAIB ${tags.username} Playing Episode Title and Plotline: ${title} ${plotline}`);
+    } else {
+      console.log(`GAIB ${tags.username} Answering the question: ${title} ${plotline}`);
+      client.say(channel, `GAIB ${tags.username} Answering Question: ${title} ${plotline}`);
+    }
+
+    // Check if both title and plotline are defined
+    if (title) {
+      // Add the command to Firestore
+      const docRef = db.collection('commands').doc();
+      docRef.set({
+        channelId: channelName,
+        type: isStory ? 'episode' : 'question',
+        title,
+        plotline,
+        username: tags.username, // Add this line to record the username
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
+      client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
+    }
+  } else if (message.toLowerCase().includes('hello') || message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how') || message.toLowerCase().includes('what') || message.toLowerCase().includes('where') || message.toLowerCase().includes('when') || message.toLowerCase().includes('why') || message.toLowerCase().includes('who')) {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
     lastMessageArray.forEach((messageObject: any) => {
@@ -174,61 +227,6 @@ client.on('message', async (channel: any, tags: {
         }
       })
       .catch(error => console.error('An error occurred:', error));
-  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help')) {
-    client.say(channel, helpMessage);
-  } else if (message.toLowerCase().startsWith("!personalities")) {
-    // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
-    client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
-  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!episode') || message.toLowerCase().replace('answer:', '').trim().startsWith('!question')) {
-    // Parse the title and plotline from the command
-    let title: any = '';
-    let plotline: any = '';
-    let cutStart: number = message.indexOf(':') ? message.indexOf(':') + 1 : 8;
-    
-    title = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
-    const isStory: any = message.toLowerCase().includes('!episode') ? true : false;
-
-    // make sure nothing odd is in the title or plotline that isn't a story idea and title
-    const filter = new Filter();
-
-    if (title && filter.isProfane(title)) {
-      console.log(`Profanity detected in title: ${title}, removing it.\n`);
-      client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
-      title = filter.clean(title);
-    }
-
-    if (plotline && filter.isProfane(plotline)) {
-      console.log(`Profanity detected in title: ${plotline}, removing it.\n`);
-      client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
-      plotline = filter.clean(plotline);
-    }
-
-    if (isStory) {
-      console.log(`Switching to Episode Mode for: ${title} ${plotline}\n`);
-      client.say(channel, `GAIB ${tags.username} Playing Episode Title and Plotline: ${title} ${plotline}`);
-    } else {
-      console.log(`GAIB ${tags.username} Answering the question: ${title} ${plotline}`);
-      client.say(channel, `GAIB ${tags.username} Answering Question: ${title} ${plotline}`);
-    }
-
-    // Check if both title and plotline are defined
-    if (title) {
-      // Add the command to Firestore
-      const docRef = db.collection('commands').doc();
-      docRef.set({
-        channelId: channelName,
-        type: isStory ? 'episode' : 'question',
-        title,
-        plotline,
-        username: tags.username, // Add this line to record the username
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
-    } else {
-      console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
-      client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
-    }
-  } else {
-    console.log(`GAIB Unknown command: ${message}\nfrom ${tags.username} in ${channel}\nwith tags: ${JSON.stringify(tags)}\n`);
   }
 });
 

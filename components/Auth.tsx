@@ -222,7 +222,15 @@ function Auth({ }: Props): ReactElement {
           ) : (
             <div></div>
           )}
-          <a className={styles.footer} href="https://groovy.org">The Groovy Organization</a>
+          <div className={styles.footer}>
+            <div className={styles.footerContainer}>
+              <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="https://twitch.tv/groovyaibot">Create Stories on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="https://facebook.com/groovyorg">Facebook Page</a>
+            </div>
+          </div>
           {(process.env.NEXT_PUBLIC_IMAGE_SERVICE == 'pexels') ?
             <span>
               &nbsp;&nbsp;|&nbsp;&nbsp;<a className={styles.footer} href="https://www.pexels.com">Photos provided by Pexels</a>

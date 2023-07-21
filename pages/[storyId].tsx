@@ -411,6 +411,24 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
               <button className={styles.footer} onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
             </div>
           </div>
+          <div className={styles.feedSection}>
+            <div className={styles.feed}>
+              {/*{hasMore && <button onClick={() => setLoadMoreTrigger(loadMoreTrigger + 1)} className={styles.header}>Continue Loading Stories</button>}
+          &nbsp;&nbsp;|&nbsp;&nbsp;*/}
+              <Link href="https://twitch.tv/groovyaibot" className={styles.header}>
+                <a>Create a Story with GAIB on Twitch</a>
+              </Link>
+            </div>
+            <div className={`${styles.footer} ${styles.center}`}>
+              <div className={styles.footerContainer}>
+                <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                <a href="https://twitch.tv/groovyaibot">Create Stories on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                <a href="https://facebook.com/groovyorg">Facebook Page</a>
+              </div>
+            </div>
+          </div>
         </Layout>
       </>
     );
@@ -428,9 +446,18 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
       </Head>
       <div className={styles.feed}>
         <div className={styles.header}>
-          <Link href="/" className={styles.header}>
-            <a>GAIB The Groovy AI Story Board</a>
+          <Link href="https://twitch.tv/groovyaibot" className={styles.header}>
+            <a>Create a Story on Twitch</a>
           </Link>
+        </div>
+        <div className={styles.footer}>
+          <div className={styles.footerContainer}>
+            <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://twitch.tv/groovyaibot">Create Stories on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://facebook.com/groovyorg">Facebook Page</a>
+          </div>
         </div>
 
         <div className={styles.labelContainer}>
@@ -517,14 +544,17 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
         <div className={styles.feed}>
           {/*{hasMore && <button onClick={() => setLoadMoreTrigger(loadMoreTrigger + 1)} className={styles.header}>Continue Loading Stories</button>}
           &nbsp;&nbsp;|&nbsp;&nbsp;*/}
-          <Link href="/" className={styles.header}>
-            <a>Create a Story with GAIB</a>
+          <Link href="https://twitch.tv/groovyaibot" className={styles.header}>
+            <a>Create a Story on Twitch</a>
           </Link>
         </div>
         <div className={styles.footer}>
           <div className={styles.footerContainer}>
             <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>
+            <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://twitch.tv/groovyaibot">Create Episodes on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://facebook.com/groovyorg">Facebook Page</a>
           </div>
         </div>
       </div>
