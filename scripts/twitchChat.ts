@@ -90,7 +90,7 @@ client.on('message', async (channel: any, tags: {
   id: any; username: any;
 }, message: any, self: any) => {
   // Ignore messages from the bot itself
-  if (self && !message.toLowerCase().startsWIth('!episode:') && !message.toLowerCase().startsWith('!question:')) return;
+  if (self && !message.toLowerCase().startsWith('!episode:') && !message.toLowerCase().startsWith('!question:')) return;
 
   // Ignore messages that have already been processed
   if (processedMessageIds[tags.id]) {
