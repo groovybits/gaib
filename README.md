@@ -21,7 +21,7 @@ TWITCH_MESSAGE_LIMIT=500
 
 You can run news stories via mediastack, program episodes with control codes in the prompt to adjust settings per episode.
 
-Sharing the stories via a Manga reader is now possible. Example [Groovy Board](http://localhost:3000/QH2CMQlUgrHDvfTR8yOt) you can run an AI social media site and feed with the main board /board allows you to view all the stories users have shared.
+Sharing the stories via a Manga reader is now possible. Example [Groovy Board](http://gaib.groovy.org/QH2CMQlUgrHDvfTR8yOt) you can run an AI social media site and feed with the main board /board allows you to view all the stories users have shared.
 
 You can mostly run without firebase and other services, yet it is not very fun :). With firebase and Google services GAIB becomes a fully interactive assistant and sensory output capable AI entity.
 
