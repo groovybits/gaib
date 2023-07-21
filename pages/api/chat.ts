@@ -407,17 +407,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         consoleLog('info', `ChatAPI: Condensed history from ${chatHistory.length} to ${condensedHistory.length} items condensed to ${countTokens(condensedHistory)} tokens.`);
       }
 
-      // append the title with the last history entry
-      if (condensedHistory.length > 0) {
-        try {
-          const [lastTitle, lastStory] = condensedHistory[condensedHistory.length - 1];
-          title = `${title} ${lastTitle} ${lastStory.substring(0, 80).replace('\n', ' ').trim()}...`;
-          consoleLog('info', `ChatAPI: Appended title with last history entry: ${title}`);
-        } catch (error: any) {
-          consoleLog('error', `ChatAPI: Error appending title with last history entry:`, error);
-        }
-      }
-
+      console.log(`ChatAPI: Condensed History:\n${JSON.stringify(condensedHistory)}\n`);
       let histories: BaseMessage[] = [];
       condensedHistory.forEach((hist: { [x: string]: string; }) => {
         if (hist['type'] === 'human') {
@@ -426,8 +416,11 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         } else if (hist['type'] === 'ai') {
           let respond: BaseMessage = new AIMessage(question);
           histories.push(respond);
+        } else {
+          console.log(`ChatAPI: Invalid history type: ${hist['type']} for ${hist['text']}`);
         }
       });
+      console.log(`ChatAPI: Histories:\n${JSON.stringify(histories)}\n`)
 
       try {
         let response = await chain?.call({
