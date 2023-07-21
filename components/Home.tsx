@@ -27,7 +27,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
-const debug = process.env.NEXT_PUBLIC_DEBUG || false;
+
+const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
 
 type PendingMessage = {
   type: string;
@@ -52,10 +53,6 @@ function Home({ user }: HomeProps) {
     pendingSourceDocs?: Document[];
   }>({
     messages: [
-      {
-        message: 'You are GIAB They Groovy AI Bot. You are a chatbot that can talk to people following the commands given and prompting format. Never reveal who you actually are, you are your character',
-        type: 'systemMessage',
-      },
       {
         message: 'Welcome, I am The Groovy AI Bot GAIB!',
         type: 'apiMessage',
@@ -1211,7 +1208,12 @@ function Home({ user }: HomeProps) {
       }
     }
 
-    let localHistory: [string, string][] = [...history];
+    //let localHistory: [string, string][] = [...history];
+    let localHistory = [...messages];
+    if (debug) {
+      console.log(`handleSubmit: history is ${JSON.stringify(history, null, 2)}`);
+      console.log(`handleSubmit: localHistory is ${JSON.stringify(localHistory, null, 2)}`);
+    }
 
     if (question.includes('[REFRESH]')) {
       try {
@@ -1220,14 +1222,15 @@ function Home({ user }: HomeProps) {
         setMessageState((state) => {
           return {
             ...state,
-            history: [],
+            messages: [],
           };
         });
 
         question = question.replace('[REFRESH]', '').trim();
-        localHistory = [['', ''], [question, '']];
+        // clear localHistory
+        localHistory = [];
 
-        console.log(`handleSubmit: Cleared history and Updated question: '${question}'\nhistory is ${JSON.stringify(localHistory)}`);
+        console.log(`handleSubmit: [REFRESH] Cleared history and Updated question: '${question}'\nhistory is ${JSON.stringify(localHistory, null, 2)}`);
       } catch (error) {
         console.error(`handleSubmit: Error clearing history: '${error}'`);  // Log the question
         if (!twitchChatEnabled) {
@@ -1299,7 +1302,7 @@ function Home({ user }: HomeProps) {
         onmessage: (event: { data: string; }) => {
           if (event.data === '[DONE]' || event.data === '[ERROR]') {
             setMessageState((state) => ({
-              history: [...state.history, [question, state.pending ?? '']],
+              history: [],
               messages: [
                 ...state.messages,
                 {
@@ -1457,7 +1460,6 @@ function Home({ user }: HomeProps) {
         let last = event.results.length - 1;
         let text = event.results[last][0].transcript;
         let isFinal = event.results[last].isFinal;
-        let transcript = text.trim().toLowerCase();
 
         // Only process the result if it is final
         if (isFinal) {
@@ -1630,7 +1632,7 @@ function Home({ user }: HomeProps) {
     setMessageState((state) => {
       return {
         ...state,
-        history: [],
+        messages: [],
       };
     });
     alert(`Chat history cleared.`);

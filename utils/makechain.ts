@@ -17,7 +17,7 @@ const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process
 const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.0;
 const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.7;
 const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? parseFloat(process.env.TEMPERATURE_QUESTION) : 0.0;
-const debug = process.env.DEBUG !== undefined ? Boolean(process.env.DEBUG) : false;
+const debug = process.env.DEBUG ? Boolean(process.env.DEBUG) : false;
 const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH == 'true' ? true : false;
 
 let firebaseFunctions: any;
@@ -51,9 +51,6 @@ export const makeChain = async (
     prompt = buildPrompt(personality, storyMode);
   }
 
-  console.log("makeChain: Prompt: [", prompt.replace('\n', ' '), "]");
-  console.log("makeChain: Condense Prompt: [", condensePromptString.replace('\n', ' '), "]");
-
   let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
   let logInterval = 100; // Adjust this value to log less or more frequently
@@ -79,7 +76,7 @@ export const makeChain = async (
   }
 
   // Function to create a model with specific parameters
-  async function createModel(params: any, userId: string, userTokenBalance: number, isAdmin: boolean) {
+  async function createModel(params: any) {
     let model: BaseLanguageModel;
     try {
       model = new OpenAI(params);
@@ -146,14 +143,13 @@ export const makeChain = async (
           },
           async handleLLMStart(llm, prompts, runId, parentRunId, extraParams) {
             if (debug) {
-              console.log(`makeChain: llm=${JSON.stringify(llm)} Personality ${personality} prompt: ${JSON.stringify(prompts)} runId ${runId} parentRunId ${parentRunId} extraParams ${JSON.stringify(extraParams)}`);
+              console.log(`makeChain: Start of LLM for llm=${JSON.stringify(llm, null, 2)} \n prompts: ${JSON.stringify(prompts, null, 2)} \n runId: ${runId} parentRunId: ${parentRunId} \n extraParams: ${JSON.stringify(extraParams, null, 2)}`);
             }
           },
           async handleLLMEnd() {
-            console.log('makeChain:', personality, "Body Accumulated: ", accumulatedBodyTokenCount, " tokens and ", accumulatedBodyTokens.length, " characters.");
-            console.log('makeChain:', personality, "Stories Body: [", accumulatedBodyTokens.trim().replace('\n', ' '), "]");
-            console.log(`makeChain: Deducting ${tokenCount} tokens from ${userId}...`);
-            console.log(`makeChain: ${userId} has ${userTokenBalance} tokens left.`);
+            if (debug) {
+              console.log(`makeChain: End of LLM for ${userId} using ${tokenCount}/${accumulatedBodyTokens.length} tokens/characters of ${userTokenBalance} \n with output: ${accumulatedBodyTokens.trim().replace('\n', ' ')}.`);
+            }
           },
           async handleLLMError(error) {
             console.error("makeChain: Error in createModel: ", error);
@@ -161,7 +157,7 @@ export const makeChain = async (
           }
         })
         : undefined,
-    }, userId, userTokenBalance, isAdmin);
+    });
   } catch (error: any) {
     console.error("makeChain: Error in createModel: ", error);
     throw new Error("makeChain: Error in createModel: " + error);

@@ -12,84 +12,42 @@ import {
 import GPT3Tokenizer from 'gpt3-tokenizer';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 import { BaseMessage, HumanMessage, AIMessage } from 'langchain/schema';
+import {
+  buildPrompt,
+  buildCondensePrompt,
+} from '@/config/personalityPrompts';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
-const debug = process.env.DEBUG !== undefined ? Boolean(process.env.DEBUG) : false;
+const debug = process.env.DEBUG ? Boolean(process.env.DEBUG) : false;
 
-const TOKEN_PER_DOCUMENT = 300;
-const TOKEN_PER_STORY = 2000;
-const TOKEN_PER_QUESTION = 500;
-
-function countTokens(textArray: string[]): number {
+function countTokens(textString: string): number {
   let totalTokens = 0;
-  for (const text of textArray) {
-    if (typeof text !== 'string') {
-      // text is an array of strings
-      totalTokens += countTokens(text);
-      continue;
-    }
-    const encoded = tokenizer.encode(text);
-    totalTokens += encoded.bpe.length;
-  }
+  
+  const encoded = tokenizer.encode(textString);
+  totalTokens += encoded.bpe.length;
+  
   return totalTokens;
 }
 
-function truncateStory(story: string, maxTokens: number): string {
-  // Split the story into words
-  const words = story.split(' ');
+async function generateText(userMessage: string, conversationHistory: any[]) {
+  const response = await fetch('/api/openai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: userMessage,
+      conversationHistory: conversationHistory
+    }),
+  });
 
-  // If the story is already shorter than maxTokens, return it as is
-  if (words.length <= maxTokens) {
-    return story;
+  const data = await response.json();
+
+  if (response.ok) {
+    return data;
+  } else {
+    throw new Error(data.error);
   }
-
-  // Otherwise, return the first maxTokens words joined together
-  return words.slice(0, maxTokens).join(' ') + '...';  // Add '...' to indicate that the story has been truncated
-}
-
-function condenseHistory(history: [string, string][], maxTokens: number): [string, string][] {
-  let condensedHistory: [string, string][] = [];
-  let totalTokens = 0;
-
-  for (let i = history.length - 1; i >= 0; i--) {
-    const [title, story] = history[i];
-    const titleTokens = countTokens([title]);
-
-    if ((totalTokens + titleTokens) > maxTokens) {
-      break;
-    }
-
-    totalTokens += titleTokens;
-
-    let summarizedStory = summarize(story);
-    let storyTokens = countTokens([summarizedStory]);
-
-    if ((totalTokens + storyTokens) > maxTokens) {
-      const remainingTokens = maxTokens - totalTokens;
-      summarizedStory = truncateStory(summarizedStory, remainingTokens);
-      storyTokens = countTokens([summarizedStory]);
-      totalTokens += storyTokens;
-      condensedHistory.unshift([title, summarizedStory]);
-      break; // Stop condensing the history
-    } else {
-      totalTokens += storyTokens;
-      condensedHistory.unshift([title, summarizedStory]);
-    }
-  }
-
-  return condensedHistory;
-}
-
-async function consoleLog(level: string, ...args: any[]) {
-  const message = args
-    .map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : arg))
-    .join(' ');
-
-  console.log(message);
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function getValidNamespace(namespaces: any) {
@@ -105,7 +63,7 @@ async function getValidNamespace(namespaces: any) {
     const namespaceStats = indexStatsResponse.namespaces;
 
     if (!namespaceStats) {
-      console.log('getValidNamespace: No namespace stats found from Pinecone from [', namespaces, ']');
+      console.error('getValidNamespace: No namespace stats found from Pinecone from [', namespaces, ']');
       return null;
     }
 
@@ -131,10 +89,10 @@ async function getValidNamespace(namespaces: any) {
       }
     }
   } catch (error) {
-    consoleLog('error', 'Error fetching index statistics from Pinecone:', error);
+    console.error('Error fetching index statistics from Pinecone:', JSON.stringify(error));
   }
 
-  consoleLog('error', 'No valid namespace found from:', namespaces);
+  console.error('No valid namespace found from:', namespaces);
   return null;
 }
 
@@ -148,69 +106,70 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
     // check each input to confirm it is valid and not undefined
     if (question === undefined) {
-      consoleLog('error', 'ChatAPI: No question in the request');
+      console.error('ChatAPI: No question in the request');
       res.status(400).json({ error: 'No question in the request' });
       return;
     }
     if (userId === undefined) {
-      consoleLog('error', 'ChatAPI: No userId in the request');
+      console.error('ChatAPI: No userId in the request');
       res.status(400).json({ error: 'No userId in the request' });
       return;
     }
     if (localPersonality === undefined) {
-      consoleLog('error', 'ChatAPI: No localPersonality in the request');
+      console.error('ChatAPI: No localPersonality in the request');
       res.status(400).json({ error: 'No localPersonality in the request' });
       return;
     }
     if (isStory === undefined) {
-      consoleLog('error', 'ChatAPI: No isStory in the request');
+      console.error('ChatAPI: No isStory in the request');
       res.status(400).json({ error: 'No isStory in the request' });
       return;
     }
     if (customPrompt === undefined) {
-      consoleLog('error', 'ChatAPI: No customPrompt in the request');
+      console.error('ChatAPI: No customPrompt in the request');
       res.status(400).json({ error: 'No customPrompt in the request' });
       return;
     }
     if (condensePrompt === undefined) {
-      consoleLog('error', 'ChatAPI: No condensePrompt in the request');
+      console.error('ChatAPI: No condensePrompt in the request');
       res.status(400).json({ error: 'No condensePrompt in the request' });
       return;
     }
     if (tokensCount === undefined) {
-      consoleLog('error', 'ChatAPI: No tokensCount in the request');
+      console.error('ChatAPI: No tokensCount in the request');
       res.status(400).json({ error: 'No tokensCount in the request' });
       return;
     }
     if (documentCount === undefined) {
-      consoleLog('error', 'ChatAPI: No documentCount in the request');
+      console.error('ChatAPI: No documentCount in the request');
       res.status(400).json({ error: 'No documentCount in the request' });
       return;
     }
     if (episodeCount === undefined) {
-      consoleLog('error', 'ChatAPI: No episodeCount in the request');
+      console.error('ChatAPI: No episodeCount in the request');
       res.status(400).json({ error: 'No episodeCount in the request' });
       return;
     }
     if (history === undefined) {
-      consoleLog('error', 'ChatAPI: No history in the request');
+      console.error('ChatAPI: No history in the request');
       res.status(400).json({ error: 'No history in the request' });
       return;
     }
     if (selectedNamespace === undefined) {
-      consoleLog('error', 'ChatAPI: No selectedNamespace in the request');
+      console.error('ChatAPI: No selectedNamespace in the request');
       res.status(400).json({ error: 'No selectedNamespace in the request' });
       return;
     }
 
     //only accept post requests
     if (req.method !== 'POST') {
+      console.error(`ChatAPI: Method ${req.method} not allowed`);
       res.status(405).json({ error: 'Method not allowed' });
       return;
     }
 
     if (!question) {
-      consoleLog('error', 'No question in the request');
+      console.error('No question in the request');
       res.status(400).json({ error: 'No question in the request' });
       return;
     }
@@ -222,7 +181,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
     if (question.startsWith('REPLAY:') || localPersonality === 'Passthrough') {
       if (debug) {
-        consoleLog('info', `ChatAPI Replay: ${question.replace('REPLAY:', '')}`);
+        console.log(`ChatAPI Replay: ${question.replace('REPLAY:', '')}`);
       }
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -238,26 +197,20 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
     // Tokens count is the number of tokens to generate
     let requestedTokens = tokensCount;
-    let totalTokens = ((requestedTokens <= 0) ? ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION) : requestedTokens) * episodeCount;
     let documentsReturned = documentCount;
 
-    // OpenAI recommends replacing newlines with spaces for best results
-    let sanitizedQuestion = question.trim().replaceAll('\n', ' ');
-
     // Set the default history
-    let currentQuestion = sanitizedQuestion;
-    let chatHistory = history;
     let maxCount: number = 16000; // max tokens for GPT-3-16k
     if (process.env.GPT_MAX_TOKENS) {
       maxCount = parseInt(process.env.GPT_MAX_TOKENS);
       if (isNaN(maxCount)) {
-        consoleLog('error', `ChatAPI: Invalid GPT_MAX_TOKENS value of ${process.env.GPT_MAX_TOKENS}, using default of 16000.`);
+        console.error(`ChatAPI: Invalid GPT_MAX_TOKENS value of ${process.env.GPT_MAX_TOKENS}, using default of 16000.`);
         maxCount = 16000;
       }
     }
 
     if (requestedTokens > maxCount) {
-      consoleLog('info', `ChatAPI: Requested tokens ${requestedTokens} exceeds max tokens ${maxCount}, limiting to ${maxCount} tokens.`);
+      console.info(`ChatAPI: Requested tokens ${requestedTokens} exceeds max tokens ${maxCount}, limiting to ${maxCount} tokens.`);
       requestedTokens = maxCount;
     }
 
@@ -271,22 +224,29 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     const namespaceResult = await getValidNamespace(namespaces);
 
     if (!namespaceResult) {
-      consoleLog('error', 'Pinecone chat: No valid namespace found.');
+      console.error('Pinecone chat: No valid namespace found.');
       res.status(404).end();
       return
     }
 
-    consoleLog('info', 'ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
-    consoleLog('info', 'ChatAPI: Question:', sanitizedQuestion);
-    consoleLog('info', 'ChatAPI: Requested tokens:', requestedTokens);
-    consoleLog('info', 'ChatAPI: Documents returned:', documentsReturned);
-    consoleLog('info', 'ChatAPI: Episode count:', episodeCount);
-    consoleLog('info', 'ChatAPI: History:', JSON.stringify(chatHistory));
-    consoleLog('info', 'ChatAPI: Local Personality:', localPersonality);
-    consoleLog('info', 'ChatAPI: Custom Prompt:', customPrompt);
-    consoleLog('info', 'ChatAPI: Condense Prompt:', condensePrompt);
-    consoleLog('info', 'ChatAPI: Is Story:', isStory ? 'Yes' : 'No');
+    const promptString = (customPrompt == '') ? buildPrompt(localPersonality, isStory) : customPrompt;
+    const condensePromptString = (condensePrompt == '') ? buildCondensePrompt(localPersonality, isStory) : condensePrompt;
 
+    let chatHistory = history;
+    chatHistory = [{ "type": "systemMessage", "message": promptString }, ...chatHistory, { "type": "userMessage", "message": question }];
+
+    console.log('ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
+    console.log('ChatAPI: Question:', question);
+    console.log('ChatAPI: Requested tokens:', requestedTokens);
+    console.log('ChatAPI: Documents returned:', documentsReturned);
+    console.log('ChatAPI: Episode count:', episodeCount);
+    console.log('ChatAPI: History:', JSON.stringify(chatHistory, null, 2));
+    console.log('ChatAPI: Local Personality:', localPersonality);
+    console.log('ChatAPI: Custom Prompt:', customPrompt);
+    console.log('ChatAPI: Condense Prompt:', condensePrompt);
+    console.log('ChatAPI: Is Story:', isStory ? 'Yes' : 'No');
+    console.log('ChatAPI: promptString: ', promptString, ' tokens: ', countTokens(promptString));
+    console.log('ChatAPI: condensePromptString: ', condensePromptString, ' tokens: ', countTokens(condensePromptString));
 
     // Set headers before starting the chain
     res.writeHead(200, {
@@ -300,37 +260,21 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     async function createChain(i: number, namespaceResult: any, localPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
       let token_count = 0;
       if (debug) {
-        consoleLog('info', `createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${currentQuestion}"`);
+        console.log(`createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${question}"`);
       }
       return await makeChain(namespaceResult.vectorStore, localPersonality, requestedTokens, documentCount, userId, isStory, customPrompt, condensePrompt, (token: string) => {
         token_count++;
         if (token_count % 100 === 0) {
           if (debug) {
-            consoleLog('info', `ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);
+            console.log(`ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);
           }
         }
         if (typeof token === 'string') {
           sendData(JSON.stringify({ data: token }));
         } else {
-          consoleLog('warning', `ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Invalid token:`, token ? token : 'null');
+          console.error(`ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Invalid token:`, token ? token : 'null');
         }
       });
-    }
-
-    // calculate tokens for space to accommodate history
-    let spaceLeft = maxCount - (countTokens([sanitizedQuestion]) + (requestedTokens ? requestedTokens : ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION)));
-    spaceLeft = spaceLeft - (documentCount * TOKEN_PER_DOCUMENT); // tokens per document
-    if (spaceLeft < ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION)) { // min tokens for history of a question vs story
-      consoleLog('warning', `ChatAPI: May not have enough tokens to generate a response, only ${spaceLeft} tokens available.`);
-      while (spaceLeft <= ((isStory) ? TOKEN_PER_STORY : TOKEN_PER_QUESTION)) {
-        spaceLeft = spaceLeft + TOKEN_PER_DOCUMENT; // add back tokens for each document we remove
-        if (documentsReturned > 0) {
-          documentsReturned = documentsReturned - 1;
-          consoleLog('warning', `ChatAPI: Reducing documents returned from #${documentsReturned + 1} to #${documentsReturned} to fit into token restriction of ${maxCount} tokens allowing ${spaceLeft} more token space.`);
-        } else {
-          break; // no more documents to reduce
-        }
-      }
     }
 
     // Create an array to hold the chains
@@ -340,9 +284,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Create a chain for each episode
     for (let i = 0; i < episodeCount; i++) {
       try {
-        consoleLog('info', `ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
+        console.log(`ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
         const chain = await createChain(i, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory);
-        let title: string = sanitizedQuestion;
+        let title: string = question;
 
         // Check if it's not the first episode and chatHistory is not empty
         if (i > 0) {
@@ -362,13 +306,14 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
               title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer.`;
             }
           }
+          chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
         }
 
         // Add the chain to the array
         chains.push(chain);
         titles.push(title);
       } catch (error: any) {
-        consoleLog('error', `ChatAPI: Error creating chain ${i} of ${episodeCount} episodes:`, error);
+        console.error(`ChatAPI: Error creating chain ${i} of ${episodeCount} episodes: ${error.message}`);
         sendData(JSON.stringify({ data: 'Error creating chain' }));
         sendData(JSON.stringify({ data: error.message }));
       }
@@ -377,10 +322,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Track the total token count
     let total_token_count = 0;
 
-    if (debug) {
-      consoleLog('info', `=== ChatAPI: Starting ${episodeCount} episodes of ${requestedTokens} tokens each for a total of ${totalTokens} tokens.`);
-    }
-
     // Now, run each chain sequentially per episode
     for (let i = 0; i < chains.length; i++) {
       const chain = chains[i];
@@ -388,39 +329,27 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       const episodeNumber = i + 1;
 
       if (debug) {
-        consoleLog('info', `=== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
+        console.info(`=== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
       }
 
-      // Generate a title for the next episode
-      if (i > 0) {
-        if (isStory) {
-          sendData(JSON.stringify({ data: `\n\n[Episode #${episodeNumber}.]\n\n` }));
-        } else {
-          sendData(JSON.stringify({ data: `\n\n[Answer #${episodeNumber}.]\n\n` }));
-        }
-      }
-
-      // condense history if needed
-      consoleLog('info', `ChatAPI: OpenAI GPT has ${spaceLeft} tokens available for ${chatHistory.length} chat history items costing ${countTokens(chatHistory)} tokens.`);
-      const condensedHistory = (countTokens(chatHistory) > spaceLeft) ? condenseHistory(chatHistory, spaceLeft) : chatHistory;
-      if (condensedHistory.length != chatHistory.length) {
-        consoleLog('info', `ChatAPI: Condensed history from ${chatHistory.length} to ${condensedHistory.length} items condensed to ${countTokens(condensedHistory)} tokens.`);
-      }
-
-      console.log(`ChatAPI: Condensed History:\n${JSON.stringify(condensedHistory)}\n`);
       let histories: BaseMessage[] = [];
-      condensedHistory.forEach((hist: { [x: string]: string; }) => {
-        if (hist['type'] === 'human') {
-          let req: BaseMessage = new HumanMessage(question);
+      chatHistory.forEach((hist: { [x: string]: string; }) => {
+        if (hist.type === 'userMessage') {
+          let req: BaseMessage = new HumanMessage(hist.message);
           histories.push(req);
-        } else if (hist['type'] === 'ai') {
-          let respond: BaseMessage = new AIMessage(question);
+        } else if (hist.type === 'apiMessage') {
+          let respond: BaseMessage = new AIMessage(hist.message);
           histories.push(respond);
+        } else if (hist.type === 'systemMessage') {
+          let sysmsg: BaseMessage = new AIMessage(hist.message);
+          histories.push(sysmsg);
         } else {
-          console.log(`ChatAPI: Invalid history type: ${hist['type']} for ${hist['text']}`);
+          console.error(`ChatAPI: Invalid history type: ${hist.type} for ${hist.message}\nActually is: ${JSON.stringify(hist, null, 2)}\n}`);
         }
       });
-      console.log(`ChatAPI: Histories:\n${JSON.stringify(histories)}\n`)
+      if (debug) {
+        console.log(`ChatAPI: Converted History:\n${JSON.stringify(histories, null, 2)}\n`)
+      }
 
       try {
         let response = await chain?.call({
@@ -428,27 +357,14 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           chat_history: histories,
         });
         if (!response || !response.text || response.text.length === 0 || response.text.startsWith('Error: ')) {
-          consoleLog("error", 'ChatAPI: GPT API Error, Not enough tokens available to generate a response!!!');
+          console.error('ChatAPI: GPT API Error, Not enough tokens available to generate a response!!!');
           sendData(JSON.stringify({ data: 'Out of tokens, please request more.' }));
           if (response && response.text) {
             sendData(JSON.stringify({ data: response.text }));
           }
         }
-        total_token_count = total_token_count + countTokens([response.text]);
-        consoleLog('info', `ChatAPI: Finished Episode #${episodeNumber} of ${episodeCount} episodes.`);
-        consoleLog('info', `ChatAPI: Question: ${title}`);
-        let historyIdx = 0;
-        if (chatHistory.length > 0) {
-          for (const [question, answer] of chatHistory) {
-            historyIdx = historyIdx + 1;
-            if (debug) {
-              consoleLog('info', `ChatAPI: History #${historyIdx}: Input: "${question}"  Output: "${answer.substring(0, 80).replace('\n', ' ').trim()}..."`);
-            }
-          }
-        } else {
-          consoleLog('info', `ChatAPI: Chat History is empty [].`);
-        }
-        consoleLog('info', `ChatAPI: Current Episode #${episodeNumber}: ${response.text.substring(0, 80).replace('\n', ' ').trim()}...`);
+        total_token_count = total_token_count + countTokens(response.text) + countTokens(title) + countTokens(promptString) + countTokens(condensePromptString);
+        
         if (response.sourceDocuments) {
           // Create a new array with only unique objects
           const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; }; }, index: any, self: { metadata: { source: any; }; }[]) =>
@@ -463,23 +379,22 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
               references = references + `[Reference: ${path.basename(reference.metadata.source)}]\n`;
             }
           }
-          consoleLog('info', `ChatAPI: References ${references}.`);
           sendData(JSON.stringify({ data: `\n\nReferences: ${references}\n` }));
         } else {
-          consoleLog('info', `ChatAPI: No reference documents.`);
+          console.error(`ChatAPI: No reference documents.`);
         }
-        consoleLog('info', `ChatAPI: Total Chat Token count: ${total_token_count}`);
-        consoleLog('info', `ChatAPI: Chat History Token count: ${countTokens(chatHistory)}`);
+        console.log(`ChatAPI: Total Chat Token count: ${total_token_count}`);
 
-        //consoleLog('debug', `ChatAPI: Raw Response: ` + JSON.stringify(response) + '\n');
-
-        chatHistory = [...chatHistory, [currentQuestion, response.text]];
+        if (debug) {
+          console.log(`ChatAPI: Raw Response: ` + JSON.stringify(response, null, 2) + '\n');
+        }
+        chatHistory = [...chatHistory, { "type": "apiMessage", "message": response.text }];
       } catch (error: any) {
         if (error.message) {
-          consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error.message);
+          console.error(`ChatAPI: Error generating response for Episode #${episodeNumber}:`, error.message);
           sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error.message}.` }));
         } else {
-          consoleLog('error', `ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
+          console.error(`ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
           sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error}.` }));
         }
       }
@@ -488,10 +403,5 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     sendData('[DONE]');
     res.end();
   });
-}
-
-// TODO: Implement this function with NLP or GPT-3 summarization
-function summarize(story: string): string {
-  return story;
 }
 
