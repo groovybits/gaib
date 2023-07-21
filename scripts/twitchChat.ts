@@ -20,6 +20,43 @@ const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 300;
 const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 10;
+const llm = 'gpt-3.5-turbo';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
+const maxTokens = 200;
+const temperature = 0.5;
+
+const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
+if (!openApiKey) {
+  console.error('No OpenAI API Key provided!!!');
+  process.exit(1);
+}
+
+let lastMessageArray: any[] = [];
+const processedMessageIds: { [id: string]: boolean } = {};
+const prompt: string = `As GAIB, provide useful, personable assistance for sending commands. 
+Discuss like a human, explaining commands such as "!episode: <title> - <plot>", 
+"!question: <question>", [REFRESH], [PERSONALITY] <role>, !personalities, [WISDOM]/[SCIENCE], 
+and [PROMPT] "<custom prompt>". Point to !help for complete guidance. 
+For recommendations or story generation, use "!episode: <title> - <plotline>". 
+Do not talk too much, keep on topic, and keep the output less than 100 tokens.
+`;
+
+const helpMessage: string = `
+Help: - Call for assistance. Use the keyword GAIB to speak with GAIB.
+
+Commands:
+  !episode: <title> - <plotline> - Generate a story or episode.
+  !question: <question> - Ask a question.
+  [REFRESH] - Clear conversation context.
+  [PERSONALITY] <role> - Change bot's persona.
+  [WISDOM] or [SCIENCE] - Set context for conversation.
+  [PROMPT] "<custom personality prompt>" - Override persona.
+  !personalities - Display available personalities.
+
+Example:
+  !episode: Buddha is enlightened - the story of Buddha. [PERSONALITY] Anime [REFRESH][WISDOM] [PROMPT] "You are the Buddha."
+
+Note: Type !episode: and !question:  in lower case. Mention GAIB or ask why/what/where/who/how type questions.
+`;
 
 if (!channelName) {
   console.log('Usage: node twitchChat.js <channelName>');
@@ -49,17 +86,6 @@ const client = new tmi.Client({
 
 client.connect();
 
-let lastMessageArray: any[] = [];
-const processedMessageIds: { [id: string]: boolean } = {};
-const prompt: string = `As GAIB, provide useful, personable assistance. 
-Discuss like a human, explaining commands such as "!episode: <title> - <plot>", 
-"!question: <question>", [REFRESH], [PERSONALITY] <role>, !personalities, [WISDOM]/[SCIENCE], 
-and [PROMPT] "<custom prompt>". Point to !help for complete guidance. 
-For recommendations or story generation, use "!episode: <title> - <plotline>". 
-Avoid 'Answer:' prefix, particularly for !commands.
-`;
-const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
-
 lastMessageArray.push({ "role": "system", "content": prompt });
 
 client.on('message', async (channel: any, tags: {
@@ -86,14 +112,7 @@ client.on('message', async (channel: any, tags: {
 
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
-  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how')) {
-    if (!openApiKey) {
-      console.error('No OpenAI API Key provided');
-      return;
-    }
-
-    let llm = 'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
-
+  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how') || message.toLowerCase().includes('what') || message.toLowerCase().includes('where') || message.toLowerCase().includes('when') || message.toLowerCase().includes('why') || message.toLowerCase().includes('who')) {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
     lastMessageArray.forEach((messageObject: any) => {
@@ -114,8 +133,8 @@ client.on('message', async (channel: any, tags: {
       },
       body: JSON.stringify({
         model: llm,
-        max_tokens: 100,
-        temperature: 0.9,
+        max_tokens: maxTokens,
+        temperature: temperature,
         top_p: 1,
         n: 1,
         stream: false,
@@ -133,7 +152,7 @@ client.on('message', async (channel: any, tags: {
           const aiMessage = data.choices[0].message;
           console.log(`OpenAI response:\n${JSON.stringify(aiMessage)}\n`);
 
-          console.log(`OpenAI usage:\n${JSON.stringify(data.usage)}\nfinish_reason: ${data.finish_reason}\n`);
+          console.log(`OpenAI usage:\n${JSON.stringify(data.usage)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
 
           // output each paragraph or output separately split by the line breaks if any, or if the output is too long
           const outputArray = aiMessage.content.split('\n\n'); // split by two line breaks to separate paragraphs
@@ -154,17 +173,11 @@ client.on('message', async (channel: any, tags: {
         } else {
           console.error('No choices returned from OpenAI!\n');
           console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
-        }     
+        }
       })
       .catch(error => console.error('An error occurred:', error));
   } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help')) {
-    client.say(channel, "!help - get help...\n" +
-    "GAIB Commands: !episode: <title> - <plotline>.   \n" + 
-    "!question: <question>   \n" +
-    "[REFRESH], [PERSONALITY] <personalty>, [WISDOM] or [SCIENCE] for general context of output.   \n" +
-    "[PROMPT] \"<custom personality prompt>\" to override the personality completely.   \n" +
-    "All lower case, type !personalities for a list of the personalities.   \n" +
-    "Example: !episode: [PERSONALITY] Anime [REFRESH][WISDOM] buddha is enlightened - the story of the buddha.   Also mentioning my name GAIB will answer other questions, or we can just talk :).\n");
+    client.say(channel, helpMessage);
   } else if (message.toLowerCase().startsWith("!personalities")) {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
     client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
@@ -174,9 +187,9 @@ client.on('message', async (channel: any, tags: {
     let plotline: any = '';
     let cutStart: number = message.indexOf(':') ? message.indexOf(':') + 1 : 8;
     if (message.includes('-')) {
-      [title, plotline] = message.slice(0,messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ").split('-');
+      [title, plotline] = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ").split('-');
     } else {
-      title = message.slice(0,messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
+      title = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
     }
     const isStory: any = message.toLowerCase().includes('!episode') ? true : false;
 
