@@ -1157,11 +1157,11 @@ function Home({ user }: HomeProps) {
       if (question.includes('[PERSONALITY]')) {
         const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
         if (personalityMatch) {
-          if (!PERSONALITY_PROMPTS.hasOwnProperty(personalityMatch)) {
-            console.error(`buildPrompt: Personality "${personalityMatch}" does not exist in PERSONALITY_PROMPTS object.`);
+          if (!PERSONALITY_PROMPTS.hasOwnProperty(personalityMatch[1])) {
+            console.error(`buildPrompt: Personality "${personalityMatch[1]}" does not exist in PERSONALITY_PROMPTS object.`);
             localPersonality = 'GAIB';
             if (twitchChatEnabled && channelId !== '') {
-              postResponse(channelId, `Sorry, personality "${personalityMatch}" does not exist in my database.`, user?.uid);
+              postResponse(channelId, `Sorry, personality "${personalityMatch[1]}" does not exist in my database.`, user?.uid);
             }
           }
           localPersonality = personalityMatch[1].trim();
