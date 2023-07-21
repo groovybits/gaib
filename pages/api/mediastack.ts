@@ -5,7 +5,7 @@ import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
 const mediastackApiKey = process.env.MEDIASTACK_API_KEY;
 
-const debug = process.env.DEBUG || false;
+const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
 
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {

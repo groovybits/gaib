@@ -5,6 +5,8 @@ import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 import { v4 as uuidv4 } from 'uuid';
 import admin from 'firebase-admin';
 
+const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
+
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
     if (req.method === 'POST') {
@@ -17,7 +19,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       }
 
       // print out the variables input to show what settings we have, in one output cmd
-      console.log(`getimgaiHandler: model: ${model}\nprompt: ${prompt}\nnegativePrompt: ${negativePrompt}\nwidth: ${width}\nheight: ${height}\nsteps: ${steps}\nguidance: ${guidance}\nseed: ${seed}\nscheduler: ${scheduler}\noutputFormat: ${outputFormat}`);
+      if (debug) {
+        console.log(`getimgaiHandler: model: ${model}\nprompt: ${prompt}\nnegativePrompt: ${negativePrompt}\nwidth: ${width}\nheight: ${height}\nsteps: ${steps}\nguidance: ${guidance}\nseed: ${seed}\nscheduler: ${scheduler}\noutputFormat: ${outputFormat}`);
+      }
 
       let getImgResponse: any;
       try {
