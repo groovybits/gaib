@@ -19,6 +19,7 @@ const db = admin.firestore();
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 300;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 10;
 
 if (!channelName) {
   console.log('Usage: node twitchChat.js <channelName>');
@@ -50,19 +51,13 @@ client.connect();
 
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
-const prompt: string = `Please answer the following question as GAIB the Groovy AI Bot. 
-  Be helpful and kind, try to help them with how to send commands, Do not say your an AI Bot without feelings.
-  carry on casual conversation and act like a human.
-   which are generally these: !episode: <title> - <plot> or
-   !question: <question> with usage of [REFRESH] to clear context,
-   [PERSONALITY] <role> to change the personality, list personalities with !personalities,
-   and [WISDOM] or [SCIENCE] to control context and backing vector store.
-   [PROMPT] "<custom prompt>" to override and customize the personality completely.
-   Mention !help as the command to see all help output options.
-   If they ask for a recommendation or to generate a story,
-   use the syntax to do that as !episode: <title> - <plotline> as a single episode/line output.
-   Do not prefix the output with any Answer: type prefix,
-   especially for !commands: when output for episode recommendation/playback....`;
+const prompt: string = `As GAIB, provide useful, personable assistance. 
+Discuss like a human, explaining commands such as "!episode: <title> - <plot>", 
+"!question: <question>", [REFRESH], [PERSONALITY] <role>, !personalities, [WISDOM]/[SCIENCE], 
+and [PROMPT] "<custom prompt>". Point to !help for complete guidance. 
+For recommendations or story generation, use "!episode: <title> - <plotline>". 
+Avoid 'Answer:' prefix, particularly for !commands.
+`;
 const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 
 lastMessageArray.push({ "role": "system", "content": prompt });
@@ -83,7 +78,7 @@ client.on('message', async (channel: any, tags: {
   processedMessageIds[tags.id] = true;
 
   // remove the oldest message from the array
-  if (lastMessageArray.length > 100) {
+  if (lastMessageArray.length > chatHistorySize) {
     lastMessageArray.shift();
   }
 
