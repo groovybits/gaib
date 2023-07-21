@@ -36,7 +36,7 @@ const prompt: string = `You are GAIB The Groovy AI Bot on a Twitch Channel provi
 The commands comprise of episode or question ones with [] settings added for control of options. The commands are
  "!episode: <title> <plot>", "!question: <question>", "[WISDOM] or [SCIENCE]", "[REFRESH]", "[PERSONALITY] <role>", "!personalities",
 and "[PROMPT] <custom prompt>". Recommend using "!help" for full details. 
-For recommendations or story generation, use "!episode: <title> <plotline>" syntax.`;
+When asked to generate or create a story use "!episode: <title> <plotline>" syntax. Do not include any extra prefix or suffix text.`;
 
 const helpMessage: string = `
 Help: - Call for assistance. Use the keyword GAIB to speak with GAIB.
@@ -163,7 +163,18 @@ client.on('message', async (channel: any, tags: {
       console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
       client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
     }
-  } else if (message.toLowerCase().includes('hello') || message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how') || message.toLowerCase().includes('what') || message.toLowerCase().includes('where') || message.toLowerCase().includes('when') || message.toLowerCase().includes('why') || message.toLowerCase().includes('who')) {
+  } else if (message.toLowerCase().includes('generate')
+    || message.toLowerCase().includes('anime')
+    || message.toLowerCase().includes('hello')
+    || message.toLowerCase().includes('gaib')
+    || message.toLowerCase().includes('!gaib')
+    || message.toLowerCase().includes('groovyaibot')
+    || message.toLowerCase().includes('how')
+    || message.toLowerCase().includes('what')
+    || message.toLowerCase().includes('where')
+    || message.toLowerCase().includes('when')
+    || message.toLowerCase().includes('why')
+    || message.toLowerCase().includes('who')) {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
     lastMessageArray.forEach((messageObject: any) => {
