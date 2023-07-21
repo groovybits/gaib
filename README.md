@@ -4,11 +4,26 @@
 
 The Groovy AI Bot (GAIB) is a multilingual chatbot capable of understanding, speaking, and translating any language in both text and audio formats. It can adopt various AI bot modes or personalities, each tailored for specific tasks. GAIB also features an Anime generation theme that crafts stories based on data from PDFs stored in the vector database. You can stream feeds through GAIB to interpret them in various ways through the configuration. GAIB allows full configurability of all aspects of the internals + gives output audio/images subtitles meme/Anime Manga style.
 
-## Twitch stream automated feed 24/7 capability
+## Twitch stream automated feed 24/7 capability with AI Bot to help support and allow chat members to congtrol output of GAIB
 
-Twitch stream of GAIB: [groovyaibot](https://twitch.tv/groovyaibot)
+Twitch stream of GAIB with Chat AI Bot episode playback ability: [groovyaibot](https://twitch.tv/groovyaibot)
 
-This isn't running 24/7, yet. You can run news stories continuously and more feeds will be added to GAIB or you can add them and contribute. 
+There is a Twitch AI Chatbot here [Twitch AI Bot](scripts/twitchChat.ts) That you can run the bot with `npm twitch <yourchannelname>` and talk to GAIB in various ways if setup.
+
+```text
+# Twitch chatbot command control setup
+TWITCH_OAUTH_TOKEN=<twitch oauth token here>
+NEXT_PUBLIC_TWITCH_CHANNEL_ID=
+
+TWITCH_ALLOWED_USER_ID=<your user id user.uid in your firestore>
+TWITCH_MESSAGE_LIMIT=500
+```
+
+You can run news stories via mediastack, program episodes with control codes in the prompt to adjust settings per episode.
+
+Sharing the stories via a Manga reader is now possible. Example [Groovy Board](http://localhost:3000/QH2CMQlUgrHDvfTR8yOt) you can run an AI social media site and feed with the main board /board allows you to view all the stories users have shared.
+
+You can mostly run without firebase and other services, yet it is not very fun :). With firebase and Google services GAIB becomes a fully interactive assistant and sensory output capable AI entity.
 
 Contributions welcome, please send PRs for any improvements you can help make in GAIB. Looking for developers to help push GAIB to become an engine for streaming your stuff, so anyone can share and monetize their art through The AI chatbot GAIB!!! Rebranding it for yourself could be done, contact me if you want customizations beyond open source / public contributions / efforts.
 
