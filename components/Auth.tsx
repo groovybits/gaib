@@ -10,6 +10,7 @@ import 'firebase/functions';
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import Modal from "react-modal";
 import Layout from '@/components/Layout';
+import TermsPopup from "@/components/TermsPopup";
 
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
@@ -289,11 +290,14 @@ function Auth({ }: Props): ReactElement {
                     <button className={styles.signInButton} onClick={handleRegister}>Register</button>
                   </div>
                 ) : (
-                  <></>
+                    <>
+                      <TermsPopup /> {/* Add the TermsPopup component */}
+                    </>
                 )}
                 <div className={styles.cloudform}>
                   {message && <div className={styles.message}>{message}</div>}
                   <ServiceInfo /> {/* Add the ServiceInfo component */}
+                  <TermsPopup /> {/* Add the TermsPopup component */}
                 </div>
               </div>
             </div>
