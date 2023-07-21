@@ -18,11 +18,11 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 300;
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 500;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 10;
 const llm = 'gpt-3.5-turbo';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
 const maxTokens = 200;
-const temperature = 0.5;
+const temperature = 0.2;
 
 const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 if (!openApiKey) {
@@ -32,13 +32,11 @@ if (!openApiKey) {
 
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
-const prompt: string = `As GAIB, provide useful, personable assistance for sending commands. 
-Discuss like a human, explaining commands such as "!episode: <title> - <plot>", 
-"!question: <question>", [REFRESH], [PERSONALITY] <role>, !personalities, [WISDOM]/[SCIENCE], 
-and [PROMPT] "<custom prompt>". Point to !help for complete guidance. 
-For recommendations or story generation, use "!episode: <title> - <plotline>". 
-Do not talk too much, keep on topic, and keep the output less than 100 tokens.
-`;
+const prompt: string = `You are GAIB The Groovy AI Bot on a Twitch Channel providing assistance for sending commands. 
+The commands comprise of episode or question ones with [] settings added for control of options. The commands are
+ "!episode: <title> <plot>", "!question: <question>", "[WISDOM] or [SCIENCE]", "[REFRESH]", "[PERSONALITY] <role>", "!personalities",
+and "[PROMPT] <custom prompt>". Recommend using "!help" for full details. 
+For recommendations or story generation, use "!episode: <title> <plotline>" syntax.`;
 
 const helpMessage: string = `
 Help: - Call for assistance. Use the keyword GAIB to speak with GAIB.
@@ -112,7 +110,7 @@ client.on('message', async (channel: any, tags: {
 
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
-  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how') || message.toLowerCase().includes('what') || message.toLowerCase().includes('where') || message.toLowerCase().includes('when') || message.toLowerCase().includes('why') || message.toLowerCase().includes('who')) {
+  if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().startsWith('how') || message.toLowerCase().startsWith('what') || message.toLowerCase().startsWith('where') || message.toLowerCase().startsWith('when') || message.toLowerCase().startsWith('why') || message.toLowerCase().startsWith('who')) {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
     lastMessageArray.forEach((messageObject: any) => {
@@ -186,11 +184,8 @@ client.on('message', async (channel: any, tags: {
     let title: any = '';
     let plotline: any = '';
     let cutStart: number = message.indexOf(':') ? message.indexOf(':') + 1 : 8;
-    if (message.includes('-')) {
-      [title, plotline] = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ").split('-');
-    } else {
-      title = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
-    }
+    
+    title = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
     const isStory: any = message.toLowerCase().includes('!episode') ? true : false;
 
     // make sure nothing odd is in the title or plotline that isn't a story idea and title
@@ -209,8 +204,8 @@ client.on('message', async (channel: any, tags: {
     }
 
     if (isStory) {
-      console.log(`Switching to Episode Mode for: ${title} - ${plotline}\n`);
-      client.say(channel, `GAIB ${tags.username} Playing Episode Title: ${title}, Plotline: ${plotline}`);
+      console.log(`Switching to Episode Mode for: ${title} ${plotline}\n`);
+      client.say(channel, `GAIB ${tags.username} Playing Episode Title and Plotline: ${title} ${plotline}`);
     } else {
       console.log(`GAIB ${tags.username} Answering the question: ${title} ${plotline}`);
       client.say(channel, `GAIB ${tags.username} Answering Question: ${title} ${plotline}`);

@@ -878,9 +878,7 @@ function Home({ user }: HomeProps) {
       }
 
       // clear the previous story
-      if (!isFetching && !autoSave) {
-        setCurrentStory([]);
-      }
+      setCurrentStory([]);
 
       let count = 0;
       for (let sentence of sentences) {
