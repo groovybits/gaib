@@ -18,7 +18,7 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 1000;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 300;
 
 if (!channelName) {
   console.log('Usage: node twitchChat.js <channelName>');
@@ -48,8 +48,24 @@ const client = new tmi.Client({
 
 client.connect();
 
-let lastMessageArray: string[] = [];
+let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
+const prompt: string = `Please answer the following question as GAIB the Groovy AI Bot. 
+  Be helpful and kind, try to help them with how to send commands, Do not say your an AI Bot without feelings.
+  carry on casual conversation and act like a human.
+   which are generally these: !episode: <title> - <plot> or
+   !question: <question> with usage of [REFRESH] to clear context,
+   [PERSONALITY] <role> to change the personality, list personalities with !personalities,
+   and [WISDOM] or [SCIENCE] to control context and backing vector store.
+   [PROMPT] "<custom prompt>" to override and customize the personality completely.
+   Mention !help as the command to see all help output options.
+   If they ask for a recommendation or to generate a story,
+   use the syntax to do that as !episode: <title> - <plotline> as a single episode/line output.
+   Do not prefix the output with any Answer: type prefix,
+   especially for !commands: when output for episode recommendation/playback....`;
+const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
+
+lastMessageArray.push({ "role": "system", "content": prompt });
 
 client.on('message', async (channel: any, tags: {
   id: any; username: any;
@@ -66,49 +82,49 @@ client.on('message', async (channel: any, tags: {
   // Mark this message as processed
   processedMessageIds[tags.id] = true;
 
-  // check if message is in lastMessageArray, if so ignore it
-  if (lastMessageArray.includes(message)) {
-    console.log(`Message already received, ignoring: ${message}`);
-    return;
-  }
   // remove the oldest message from the array
-  if (lastMessageArray.length > 30) {
+  if (lastMessageArray.length > 100) {
     lastMessageArray.shift();
   }
 
   console.log(`Received message: ${message}\nfrom ${tags.username} in ${channel}\nwith tags: ${JSON.stringify(tags)}\n`)
 
-  if (message.length > messageLimit) {
-    console.log(`Message too long, truncating to ${messageLimit} characters.\n`);
-    client.say(channel, `GAIB ${tags.username} sorry the message is too long. Truncating it to ${messageLimit} characters.`);
-  }
-
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
   if (message.toLowerCase().includes('gaib') || message.toLowerCase().includes('!gaib') || message.toLowerCase().includes('groovyaibot') || message.toLowerCase().includes('how')) {
-    const prompt: string = `Please answer the following question as GAIB the Groovy AI Bot. Be helpful and kind, try to help them with how to send commands, which are generally these: !episode: <title> - <plot> or !question: <question> with usage of [REFRESH] to clear context, [PERSONALITY] <role> to change the personality, list personalities with !personalities, and [WISDOM] or [SCIENCE] to control context and backing vector store. [PROMPT] "<custom prompt>" to override and customize the personality completely. Mention !help as the command to see all help output options. If they ask for a recommendation or to generate a story, use the syntax to do that as !episode: <title> - <plotline> as a single episode/line output. Do not prefix the output with any Answer: type prefix, especially for !commands: when output for episode recommendation/playback....\n\nQuestion: `;
-    const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
-
     if (!openApiKey) {
       console.error('No OpenAI API Key provided');
       return;
     }
 
-    let llm = 'text-davinci-002';
+    let llm = 'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
 
-    fetch(`https://api.openai.com/v1/engines/${llm}/completions`, {
+    let promptArray: any[] = [];
+    // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
+    lastMessageArray.forEach((messageObject: any) => {
+      if (messageObject.role && messageObject.content) {
+        promptArray.push({ "role": messageObject.role, "content": prompt + messageObject.content });
+      }
+    });
+    // add the current message to the promptArray with the final personality prompt
+    promptArray.push({ "role": "user", "content": `Personality: ${prompt}\n\n Question: ${message}\n\nAnswer:` });
+    // save the last message in the array for the next prompt
+    lastMessageArray.push({ "role": "user", "content": `${message}` });
+
+    fetch(`https://api.openai.com/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${openApiKey}`,
       },
       body: JSON.stringify({
-        prompt: `${prompt} ${message}`,
-        max_tokens: 60,
+        model: llm,
+        max_tokens: 100,
         temperature: 0.9,
         top_p: 1,
         n: 1,
         stream: false,
+        messages: promptArray,
       }),
     })
       .then(response => {
@@ -118,14 +134,14 @@ client.on('message', async (channel: any, tags: {
         return response.json();
       })
       .then(data => {
-        const { choices } = data;
+        if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+          const aiMessage = data.choices[0].message;
+          console.log(`OpenAI response:\n${JSON.stringify(aiMessage)}\n`);
 
-        // Send the first OpenAI response to the Twitch chat
-        // Send the first OpenAI response to the Twitch chat
-        if (choices && choices.length > 0) {
+          console.log(`OpenAI usage:\n${JSON.stringify(data.usage)}\nfinish_reason: ${data.finish_reason}\n`);
+
           // output each paragraph or output separately split by the line breaks if any, or if the output is too long
-          const output = choices[0].text;
-          const outputArray = output.split('\n\n'); // split by two line breaks to separate paragraphs
+          const outputArray = aiMessage.content.split('\n\n'); // split by two line breaks to separate paragraphs
           outputArray.forEach((outputParagraph: string) => {
             if (outputParagraph.length > messageLimit) {
               // send as separate messages
@@ -139,9 +155,11 @@ client.on('message', async (channel: any, tags: {
               client.say(channel, outputParagraph);
             }
           });
+          lastMessageArray.push({ aiMessage });
         } else {
           console.error('No choices returned from OpenAI!\n');
-        }
+          console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
+        }     
       })
       .catch(error => console.error('An error occurred:', error));
   } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help')) {
