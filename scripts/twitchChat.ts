@@ -238,7 +238,7 @@ client.on('message', async (channel: any, tags: {
           });
           lastMessageArray.push({ aiMessage });
           // Check if both title and plotline are defined
-          if (aiMessage.content.length > 0 && aiMessage.content.length < messageLimit) {
+          if (aiMessage.content.length > 0 && aiMessage.content.length < 100) {
             // Add the command to Firestore
             const docRef = db.collection('commands').doc();
             docRef.set({
