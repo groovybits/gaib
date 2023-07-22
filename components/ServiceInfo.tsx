@@ -9,14 +9,6 @@ const ServiceInfo = () => {
   return (
     <>
       <div className={`${styles.header} ${styles.center}`}>
-        <Link href="/board/">
-          <a onClick={(e) => {
-            if (e.ctrlKey || e.metaKey) {
-              e.preventDefault();
-              window.open('/board/', '_blank');
-            }
-          }}>Browse Shared Stories</a>
-        </Link>&nbsp;&nbsp;|&nbsp;&nbsp;
         <div className={styles.footer}>
           <div className={styles.footerContainer}>
             <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
