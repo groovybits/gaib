@@ -368,6 +368,8 @@ function Home({ user }: HomeProps) {
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
+      // confirm we don't multiple news articles at the same time or too often, limit to once every 10 seconds
+      await new Promise((resolve) => setTimeout(resolve, 10000));
       if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending) {
         isProcessingRef.current = true;  // Set isProcessing to true when a news article is being processed
         let currentNews = news;
@@ -376,6 +378,8 @@ function Home({ user }: HomeProps) {
         // Check if the user has enabled a twitch chat control feed
         if (channelId !== '' && twitchChatEnabled) {
           fetchEpisodeData(channelId);
+          // sleep and wait for the episodes to be fetched and to reduce usage, only fetch once every 30 seconds
+          await new Promise((resolve) => setTimeout(resolve, 30000));
         }
         // Check if there are any episodes
         if (episodes.length > 0) {
