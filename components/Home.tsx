@@ -379,8 +379,6 @@ function Home({ user }: HomeProps) {
         if (channelId !== '' && twitchChatEnabled) {
           // sleep and wait for the episodes to be fetched and to reduce usage, only fetch once every 30 seconds
           fetchEpisodeData(channelId);
-          await new Promise((resolve) => setTimeout(resolve, 10000));
-
         }
         // Check if there are any episodes
         if (episodes.length > 0) {
@@ -441,6 +439,7 @@ function Home({ user }: HomeProps) {
             setCurrentNewsIndex(index + 1);  // Increment the state variable after processing a news article
           }
         }
+        await new Promise((resolve) => setTimeout(resolve, 10000));
         isProcessingRef.current = false;  // Set isProcessing to false when a news article has been processed
       }
     };
