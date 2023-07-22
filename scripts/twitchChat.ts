@@ -18,8 +18,8 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 400;
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 2;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 100;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 10;
 const llm = 'gpt-4';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
 const maxTokens = 200;
 const temperature = 0.2;
@@ -238,7 +238,7 @@ client.on('message', async (channel: any, tags: {
           });
           lastMessageArray.push({ aiMessage });
           // Check if both title and plotline are defined
-          if (aiMessage.content.length > 0 && aiMessage.content.length < 300) {
+          /*if (aiMessage.content.length > 0 && aiMessage.content.length < 100 && !aiMessage.content.includes('GAIB') && !aiMessage.content.includes('groovyaibot')) {
             // Add the command to Firestore
             const docRef = db.collection('commands').doc();
             docRef.set({
@@ -252,7 +252,7 @@ client.on('message', async (channel: any, tags: {
             });
           } else {
             console.log(`Not speaking ${tags.username} received: ${message}).`);
-          }
+          }*/
         } else {
           console.error('No choices returned from OpenAI!\n');
           console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
