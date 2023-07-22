@@ -80,10 +80,10 @@ async function getUserTokenBalance(userId: string): Promise<number> {
   }
 }
 
-async function getImages(): Promise<any> {
+async function getStories(): Promise<any> {
   try {
     if (firestoreAdmin && authEnabled) {
-      return await firestoreAdmin.collection('images').get();
+      return await firestoreAdmin.collection('stories').get();
     } else {
       return [];
     }
@@ -119,4 +119,4 @@ async function isUserAdmin(userId: string): Promise<boolean> {
   }
 }
 
-export { admin, firestoreAdmin, isUserAdmin, getUserDetails, getUserTokenBalance, updateTokenBalance, getImages };
+export { admin, firestoreAdmin, isUserAdmin, getUserDetails, getUserTokenBalance, updateTokenBalance, getStories };

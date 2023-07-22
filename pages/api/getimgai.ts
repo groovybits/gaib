@@ -3,7 +3,6 @@ import fetch from 'node-fetch';
 import { Storage } from '@google-cloud/storage';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 import { v4 as uuidv4 } from 'uuid';
-import admin from 'firebase-admin';
 
 const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
 
@@ -95,20 +94,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       stream.on('finish', async () => {
         console.log(`getimgaiHandler: Successfully uploaded image to GCS: ${destination}`);
         const outputUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
-
-        /*
-        // Add the image document to Firestore
-        const db = admin.firestore();
-        const imagesRef = db.collection('images');
-        const imageDoc = {
-          imageUrl: outputUrl,
-          prompt: prompt,
-          episodeId: episodeId,
-          timestamp: admin.firestore.Timestamp.now(),
-        };
-        await imagesRef.add(imageDoc);
-        console.log(`getimgaiHandler: Successfully added image document to Firestore`);
-        */
 
         // Include the imageName in the response
         res.status(200).json({ output_url: outputUrl, imageName: imageName });

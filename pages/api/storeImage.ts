@@ -3,7 +3,6 @@ import { Storage } from '@google-cloud/storage';
 import admin, { firestore } from 'firebase-admin';
 import nlp from 'compromise';
 import fetch from 'node-fetch';
-import { v4 as uuidv4 } from 'uuid';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
 // Initialize Firebase
@@ -20,13 +19,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
   await authCheck(req, res, async () => {
     if (req.method === 'POST') {
       const { imageUrl, prompt, episodeId, imageUUID } = req.body;
-
-      // Use the compromise library to extract the most important words from the prompt
-      let doc = nlp(prompt);
-      let keywords = doc.out('array');
-
-      // Limit the keywords array to the first 30 elements
-      keywords = keywords.slice(0, 30);
 
       // Fetch the image
       const response = await fetch(imageUrl);
@@ -67,16 +59,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       });
 
       console.log(`StoreImage: Image ${episodeId}_${imageUUID}.jpg uploaded to ${bucketName}.`);
-
-      // Add the image to the Firestore index
-      const docRef = db.collection('images').doc(`${episodeId}_${imageUUID}.jpg`);
-      await docRef.set({
-        episodeId: episodeId.split('_')[0],
-        count: episodeId.split('_')[1],
-        url: `https://storage.googleapis.com/${bucketName}/deepAIimage/${episodeId}_${imageUUID}.jpg`,
-        keywords: keywords,
-        created: admin.firestore.FieldValue.serverTimestamp(),
-      });
 
       res.status(200).json({ message: 'Image stored successfully' });
     } else {

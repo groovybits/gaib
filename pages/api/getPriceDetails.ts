@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import Stripe from "stripe";
-import * as functions from "firebase-functions";
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

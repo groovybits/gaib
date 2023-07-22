@@ -1,8 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fetch from 'node-fetch';
 import querystring from 'querystring';
-import nlp from 'compromise';
-import Fuse from 'fuse.js';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
 const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
@@ -29,39 +27,6 @@ const deepaiHandler = async (req: NextApiRequestWithUser, res: NextApiResponse) 
       }
 
       const { prompt, imageUrl } = req.body;
-
-      if (authEnabled && firebaseFunctions.firestoreAdmin) {
-        // Use the compromise library to extract the most important words from the prompt
-        let doc: any = nlp(prompt);
-        let keywords = doc.out('array');
-
-        // Limit the keywords array to the first 30 elements
-        keywords = keywords.slice(0, 30);
-
-        // Query Firestore for all images
-        let imagesSnapshot = firebaseFunctions.getImages();
-
-        // Create an array of image documents
-        let images = imagesSnapshot.docs.map((doc: { data: () => any; }) => doc.data());
-
-        // Initialize a Fuse.js instance
-        let fuse = new Fuse(images, {
-          keys: ['keywords'],
-          threshold: 0.3, // Adjust this value to control the fuzziness of the match
-          includeScore: true
-        });
-
-        // Use Fuse.js to find images with matching keywords
-        let results = fuse.search(keywords.join(' '));
-
-        // If a matching document is found, return the existing image
-        if (results.length > 0) {
-          const data: any = results[0].item;
-          console.log('storeImage: Image found in database:', data);
-          res.status(200).json({ ouput_url: data.url, duplicate: true });
-          return;
-        }
-      }
 
       const requestBody: { [key: string]: any } = {
         text: prompt,

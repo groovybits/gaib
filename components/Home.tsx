@@ -233,19 +233,23 @@ function Home({ user }: HomeProps) {
     alert('Story copied to clipboard!');
   };
 
-  const shareStory = async (storyToShare: any[]) => {
+  const shareStory = async (storyToShare: any[], automated: boolean) => {
     try {
       if (!user && authEnabled) {
-        alert('Please sign in first!');
+        if (!automated) {
+          alert('Please sign in first!');
+        }
         return;
       } else if (!user) {
-        alert('Cannot share story when user auth is disabled without a firestore db hooked up.')
+        if (!automated) {
+          alert('Cannot share story when user auth is disabled without a firestore db hooked up.')
+        }
         return;
       }
 
       if (storyToShare.length === 0) {
         console.log(`shareStory: No stories to share: ${JSON.stringify(storyToShare)}}`);
-        if (!autoSave) {
+        if (!automated) {
           alert('Please generate a story first!');
         }
         return;
@@ -278,7 +282,7 @@ function Home({ user }: HomeProps) {
 
       console.log(`Story ${storyText.slice(0, 30)} shared successfully to ${baseUrl}/${storiesRef.docs[0].id}}!`);
 
-      if (!autoSave) {
+      if (!automated || autoSave) {
         alert(`Story shared successfully to ${baseUrl}/${storiesRef.docs[0].id}!`);
         copy(`${baseUrl}/${storiesRef.docs[0].id}`);
       }
@@ -294,7 +298,7 @@ function Home({ user }: HomeProps) {
 
   const handleShareStory = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
-    await shareStory(currentStory);
+    await shareStory(currentStory, false);
   };
 
   const categoryOptions = [
@@ -1108,10 +1112,10 @@ function Home({ user }: HomeProps) {
           }
         }
       }
-      if (autoSave && messages[lastMessageIndex].type === 'apiMessage') {
+      if (messages[lastMessageIndex].type === 'apiMessage') {
         // save story automatically
         if (localCurrentStory.length > 0) {
-          await shareStory(localCurrentStory);
+          await shareStory(localCurrentStory, true);
         }
       }
       // Reset the subtitle after all sentences have been spoken
