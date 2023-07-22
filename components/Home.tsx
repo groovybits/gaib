@@ -369,7 +369,6 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     const processNewsArticle = async () => {
       // confirm we don't multiple news articles at the same time or too often, limit to once every 10 seconds
-      await new Promise((resolve) => setTimeout(resolve, 5000));
       if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending) {
         isProcessingRef.current = true;  // Set isProcessing to true when a news article is being processed
         let currentNews = news;
@@ -379,6 +378,7 @@ function Home({ user }: HomeProps) {
         if (channelId !== '' && twitchChatEnabled) {
           // sleep and wait for the episodes to be fetched and to reduce usage, only fetch once every 30 seconds
           await new Promise((resolve) => setTimeout(resolve, 5000));
+          fetchEpisodeData(channelId);
         }
         // Check if there are any episodes
         if (episodes.length > 0) {
