@@ -18,11 +18,11 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 100;
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 10;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 90;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 30;
 const llm = 'gpt-4';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
-const maxTokens = 200;
-const temperature = 0.2;
+const maxTokens = 100;
+const temperature = 0.9;
 
 const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 if (!openApiKey) {
@@ -32,11 +32,11 @@ if (!openApiKey) {
 
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
-const prompt: string = `You are GAIB The Groovy AI Bot on a Twitch Channel providing assistance for sending commands. 
-The commands comprise of episode or question ones with [] settings added for control of options. The commands are
+const prompt: string = `You are GAIB The Groovy AI Bot on a Twitch Channel providing assistance for sending commands or recommending anime. 
+The commands comprise of ones prefixed with episode or question [] backeted all caps settings added for control of options. The commands are
  "!episode: <title> <plot>", "!question: <question>", "[WISDOM] or [SCIENCE]", "[REFRESH]", "[PERSONALITY] <role>", "!personalities",
 and "[PROMPT] <custom prompt>". Recommend using "!help" for full details. 
-When asked to generate or create a story use "!episode: <title> <plotline>" syntax. Do not include any extra prefix or suffix text.`;
+When asked to generate or create a story use "!episode: <title> <plotline>" syntax. Minimize your answers to 90 characters or less.`;
 
 const helpMessage: string = `
 Help: - Call for assistance. Use the keyword GAIB to speak with GAIB.
@@ -115,19 +115,28 @@ client.on('message', async (channel: any, tags: {
 
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
-  if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help')) {
+  if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help' || message.toLowerCase().replace('answer:', '').trim().startsWith('/help'))) {
     client.say(channel, helpMessage);
-  } else if (message.toLowerCase().startsWith("!personalities")) {
+  //
+  // Personality Prompts list for help with !personalities  
+  } else if (message.toLowerCase().startsWith("!personalities") || message.toLowerCase().startsWith("/personalities")) {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
     client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
-  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!episode') || message.toLowerCase().replace('answer:', '').trim().startsWith('!question')) {
+  //
+  // Question and Answer modes
+  } else if (
+    message.toLowerCase().replace('answer:', '').trim().startsWith('!episode')
+    || message.toLowerCase().replace('answer:', '').trim().startsWith('!question')
+    || message.toLowerCase().replace('answer:', '').trim().startsWith('episode')
+    || message.toLowerCase().replace('answer:', '').trim().startsWith('question')
+  ) {
     // Parse the title and plotline from the command
     let title: any = '';
     let plotline: any = '';
     let cutStart: number = message.indexOf(':') ? message.indexOf(':') + 1 : 8;
 
     title = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
-    const isStory: any = message.toLowerCase().includes('!episode') ? true : false;
+    const isStory: any = message.toLowerCase().includes('episode') ? true : false;
 
     // make sure nothing odd is in the title or plotline that isn't a story idea and title
     const filter = new Filter();
@@ -144,15 +153,16 @@ client.on('message', async (channel: any, tags: {
       plotline = filter.clean(plotline);
     }
 
+    // Story or Episode mode
     if (isStory) {
-      console.log(`Switching to Episode Mode for: ${title} ${plotline}\n`);
+      console.log(`GAIB ${tags.username} Playing Episode Title and Plotline: ${title} ${plotline}\n`);
       client.say(channel, `GAIB ${tags.username} Playing Episode Title and Plotline: ${title} ${plotline}`);
     } else {
       console.log(`GAIB ${tags.username} Answering the question: ${title} ${plotline}`);
-      client.say(channel, `GAIB ${tags.username} Answering Question: ${title} ${plotline}`);
+      client.say(channel, `GAIB ${tags.username} Answering the Question: ${title} ${plotline}`);
     }
 
-    // Check if both title and plotline are defined
+    // if title is defined and not empty, then add the command to Firestore
     if (title) {
       // Add the command to Firestore
       const docRef = db.collection('commands').doc();
@@ -168,7 +178,7 @@ client.on('message', async (channel: any, tags: {
       console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
       client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
     }
-  } else if (message.toLowerCase().includes('generate')
+  } else if (/*message.toLowerCase().includes('generate')
     || message.toLowerCase().includes('anime')
     || message.toLowerCase().includes('hello')
     || message.toLowerCase().includes('gaib')
@@ -179,7 +189,7 @@ client.on('message', async (channel: any, tags: {
     || message.toLowerCase().includes('where')
     || message.toLowerCase().includes('when')
     || message.toLowerCase().includes('why')
-    || message.toLowerCase().includes('who')) {
+    || message.toLowerCase().includes('who')*/true) {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
     lastMessageArray.forEach((messageObject: any) => {
