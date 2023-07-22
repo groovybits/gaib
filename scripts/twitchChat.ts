@@ -238,7 +238,7 @@ client.on('message', async (channel: any, tags: {
           });
           lastMessageArray.push({ aiMessage });
           // Check if both title and plotline are defined
-          if (aiMessage.content.length > 0 && aiMessage.content.length < 100) {
+          if (aiMessage.content.length > 0 && aiMessage.content.length < 300) {
             // Add the command to Firestore
             const docRef = db.collection('commands').doc();
             docRef.set({
@@ -250,8 +250,7 @@ client.on('message', async (channel: any, tags: {
               timestamp: admin.firestore.FieldValue.serverTimestamp()
             });
           } else {
-            console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
-            client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
+            console.log(`Not speaking ${tags.username} received: ${message}).`);
           }
         } else {
           console.error('No choices returned from OpenAI!\n');
