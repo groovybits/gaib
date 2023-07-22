@@ -1225,9 +1225,6 @@ function Home({ user }: HomeProps) {
         });
 
         question = question.replace('[REFRESH]', '').trim();
-        // clear localHistory
-        localHistory = [];
-
         console.log(`handleSubmit: [REFRESH] Cleared history and Updated question: '${question}'\nhistory is ${JSON.stringify(localHistory, null, 2)}`);
       } catch (error) {
         console.error(`handleSubmit: Error clearing history: '${error}'`);  // Log the question
