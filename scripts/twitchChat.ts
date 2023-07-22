@@ -237,13 +237,29 @@ client.on('message', async (channel: any, tags: {
             }
           });
           lastMessageArray.push({ aiMessage });
+          // Check if both title and plotline are defined
+          if (aiMessage.content.length > 0 && aiMessage.content.length < messageLimit) {
+            // Add the command to Firestore
+            const docRef = db.collection('commands').doc();
+            docRef.set({
+              channelId: channelName,
+              type: 'question',
+              title: aiMessage.content,
+              plotline: '',
+              username: tags.username, // Add this line to record the username
+              timestamp: admin.firestore.FieldValue.serverTimestamp()
+            });
+          } else {
+            console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
+            client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
+          }
         } else {
           console.error('No choices returned from OpenAI!\n');
           console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
         }
       })
       .catch(error => console.error('An error occurred:', error));
-  }
+    }
 });
 
 // Listen for new documents in the 'responses' collection
