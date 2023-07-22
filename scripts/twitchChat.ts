@@ -244,7 +244,7 @@ client.on('message', async (channel: any, tags: {
             docRef.set({
               channelId: channelName,
               type: 'question',
-              title: aiMessage.content,
+              title: aiMessage.content + ' [WISDOM] [PERSONALITY] GAIB',
               plotline: '',
               username: tags.username, // Add this line to record the username
               timestamp: admin.firestore.FieldValue.serverTimestamp()
