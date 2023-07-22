@@ -58,18 +58,28 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
       console.log(`Router query: ${storyId}`);
     }
     // Check the current route
-    if (storyId === 'images') {
+    if (storyId === 'board') {
+      // give back nothing
+      return;
+    } else if (storyId === 'images') {
+      return;
       // If the current route is '/images', fetch from the 'images' collection
-      query = firebase.firestore().collection('images').orderBy('count', 'desc').orderBy('created', 'desc');
-      useImages = true;
+      /*query = firebase.firestore().collection('images').orderBy('count', 'desc').orderBy('created', 'desc');
+      useImages = true;*/
     } else if (storyId && typeof storyId === 'string' && storyId.startsWith('images')) {
+      return;
       // If the current route is '/images/episodeId', fetch from the 'images' collection
-      const episodeId = storyId.replace('images', ''); // Extract the episodeId from the route
+      /*const episodeId = storyId.replace('images', ''); // Extract the episodeId from the route
       query = firebase.firestore().collection('images').where('episodeId', '==', episodeId).orderBy('count', 'desc').orderBy('created', 'desc');
-      useImages = true;
+      useImages = true;*/
     } else {
       // Otherwise, fetch from the 'stories' collection
-      query = firebase.firestore().collection('stories').orderBy('timestamp', 'desc');
+      // confirm it erally is a type of story id like /yHXIzjOlE50bOwFmPMSP
+      if (storyId && typeof storyId === 'string' && storyId.length > 0 && storyId.length > 18 && storyId.length < 25 && storyId.match(/^[a-zA-Z0-9]+$/)) {
+        query = firebase.firestore().collection('stories').orderBy('timestamp', 'desc');
+      } else {
+        return;
+      }
     }
 
     if (process.env.NEXT_PUBLIC_CONTINUOUS_SCROLLING === 'true') {
