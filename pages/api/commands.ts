@@ -34,8 +34,18 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       // Get the commands for this channel from Firestore
       const snapshot = await db.collection('commands').where('channelId', '==', channelName).get();
 
+      if (snapshot.empty) {
+        // output with a timestamp and date
+        console.log(`${new Date().toLocaleString()} No commands found for channel ${channelName}`);
+        return res.status(404).json({ error: 'No commands found' });
+      }
+
+      console.log(`Found ${snapshot.size} commands for channel ${channelName}.`);
+
+      // Create an array of commands
       const commands: any[] = [];
       snapshot.forEach(doc => {
+        console.log(`Found command ${doc.id} for channel ${channelName} - ${doc.data().command}`);
         const data = doc.data();
         data.id = doc.id;  // Include the document ID in the data
         commands.push(data);

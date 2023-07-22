@@ -96,6 +96,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         console.log(`getimgaiHandler: Successfully uploaded image to GCS: ${destination}`);
         const outputUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
 
+        /*
         // Add the image document to Firestore
         const db = admin.firestore();
         const imagesRef = db.collection('images');
@@ -107,6 +108,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         };
         await imagesRef.add(imageDoc);
         console.log(`getimgaiHandler: Successfully added image document to Firestore`);
+        */
 
         // Include the imageName in the response
         res.status(200).json({ output_url: outputUrl, imageName: imageName });

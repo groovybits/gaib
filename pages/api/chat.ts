@@ -235,18 +235,22 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     let chatHistory = history;
     chatHistory = [{ "type": "systemMessage", "message": promptString }, ...chatHistory, { "type": "userMessage", "message": question }];
 
-    console.log('ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
-    console.log('ChatAPI: Question:', question);
-    console.log('ChatAPI: Requested tokens:', requestedTokens);
-    console.log('ChatAPI: Documents returned:', documentsReturned);
-    console.log('ChatAPI: Episode count:', episodeCount);
-    console.log('ChatAPI: History:', JSON.stringify(chatHistory, null, 2));
-    console.log('ChatAPI: Local Personality:', localPersonality);
-    console.log('ChatAPI: Custom Prompt:', customPrompt);
-    console.log('ChatAPI: Condense Prompt:', condensePrompt);
-    console.log('ChatAPI: Is Story:', isStory ? 'Yes' : 'No');
-    console.log('ChatAPI: promptString: ', promptString, ' tokens: ', countTokens(promptString));
-    console.log('ChatAPI: condensePromptString: ', condensePromptString, ' tokens: ', countTokens(condensePromptString));
+    if (debug) {
+      console.log('ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
+      console.log('ChatAPI: Question:', question);
+      console.log('ChatAPI: Requested tokens:', requestedTokens);
+      console.log('ChatAPI: Documents returned:', documentsReturned);
+      console.log('ChatAPI: Episode count:', episodeCount);
+      console.log('ChatAPI: History:', JSON.stringify(chatHistory, null, 2));
+      console.log('ChatAPI: Local Personality:', localPersonality);
+      console.log('ChatAPI: Custom Prompt:', customPrompt);
+      console.log('ChatAPI: Condense Prompt:', condensePrompt);
+      console.log('ChatAPI: Is Story:', isStory ? 'Yes' : 'No');
+      console.log('ChatAPI: promptString: ', promptString, ' tokens: ', countTokens(promptString));
+      console.log('ChatAPI: condensePromptString: ', condensePromptString, ' tokens: ', countTokens(condensePromptString));
+    } else {
+      console.log(`ChatAPI: Question [${question.slice(0, 20)}...] ${localPersonality} ${isStory ? 'Story' : 'Answer'} ${requestedTokens} tokens ${documentsReturned} documents ${episodeCount} episodes.`);
+    }
 
     // Set headers before starting the chain
     res.writeHead(200, {

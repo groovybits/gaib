@@ -248,7 +248,7 @@
   padding: 8px;
   bottom: 30%;
   left: 2%;
-  font-size: 48px;
+  font-size: 64px;
   text-align: center;
   border-width: 0px;
   font-weight: bolder;
@@ -269,7 +269,7 @@
   padding: 8px;
   bottom: 30%;
   left: 2%;
-  font-size: 24px;
+  font-size: 48px;
   text-align: center;
   border-width: 0px;
   font-weight: bolder;
@@ -288,10 +288,10 @@
   background: transparent;
   color: white;
   padding: 8px;
-  bottom: 10%;
+  bottom: 90%;
   left: 2%;
-  font-size: 48px;
-  text-align: center;
+  font-size: 42px;
+  text-align: top;
   border-width: 0px;
   font-weight: bolder;
   font-family: 'Trebuchet MS';
@@ -309,10 +309,10 @@
   background: transparent;
   color: white;
   padding: 8px;
-  bottom: 10%;
+  bottom: 90%;
   left: 2%;
-  font-size: 24px;
-  text-align: center;
+  font-size: 18px;
+  text-align: top;
   border-width: 0px;
   font-weight: bolder;
   font-family: 'Trebuchet MS';
@@ -940,8 +940,8 @@
   padding: 20px;
   background-color: #ffffff;
   color: #000000;
-  border-radius: 1px;
-  border: 2px double #000000;
+  border-radius: 10px;
+  border: 0px double #000000;
 }
 
 .story {

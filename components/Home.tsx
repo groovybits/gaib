@@ -24,9 +24,9 @@ import DocumentDropdown from '@/components/DocumentDropdown';
 import EpisodeDropdown from '@/components/EpisodeDropdown';
 import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
-import Link from 'next/link';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
+import { debounce } from 'lodash';
 
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
 
@@ -164,35 +164,49 @@ function Home({ user }: HomeProps) {
 
   async function fetchEpisodeData(channelName: string) {
     const idToken = await user?.getIdToken();
-    const res = await fetch(`/api/commands?channelName=${channelName}&userId=${user?.uid}`,
-      {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+    try {
+      console.log(`Firestore: Fetching documents for channel ${channelName} and user ${user?.uid}...`);
+      const res = await fetch(`/api/commands?channelName=${channelName}&userId=${user?.uid}`,
+        {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+      const data = await res.json();
+
+      if (data.length === 0) {
+        console.log(`Firestore: No documents found for channel ${channelName} and user ${user?.uid}`);
+        return;
+      }
+
+      console.log(`Firestore: Found ${data.length} documents for channel ${channelName} and user ${user?.uid}.`);
+
+      const newEpisodes = data.map((item: any) => ({
+        title: item.title,
+        plotline: item.plotline,
+        // Add any other necessary fields here
+        type: item.type,
+        username: item.username,
+        timestamp: item.timestamp,
+      }));
+
+      // Add the new episodes to the episodes array
+      console.log(`Firestore: Adding ${newEpisodes.length} new episodes to the episodes array...`);
+      setEpisodes([...episodes, ...newEpisodes]);
+
+      // Delete the documents from Firestore
+      data.forEach((item: any) => {
+        console.log(`Firestore: Deleting document with ID ${item.id}...`);
+        fetch(`/api/commands/${item.id}?userId=${user?.uid}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
       });
-    const data = await res.json();
-
-    const newEpisodes = data.map((item: any) => ({
-      title: item.title,
-      plotline: item.plotline,
-      // Add any other necessary fields here
-      type: item.type,
-      username: item.username,
-      timestamp: item.timestamp,
-    }));
-
-    // Add the new episodes to the episodes array
-    setEpisodes([...episodes, ...newEpisodes]);
-
-    // Delete the documents from Firestore
-    data.forEach((item: any) => {
-      fetch(`/api/commands/${item.id}?userId=${user?.uid}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-    });
+    } catch (error) {
+      console.error('Firestore: An error occurred in the fetchEpisodeData function:', error);
+    }
   }
 
   // Declare a new ref for start word detection
@@ -366,53 +380,68 @@ function Home({ user }: HomeProps) {
     setIsFetching(true);
   };
 
+  // Twitch Chat fetching for automating input via a Twitch chat (costs if runs too much, watch out!!!)
+  useEffect(() => {
+    let isProcessing = false;
+
+    const processTwitchChat = async () => {
+      if (isProcessing) return;  // If a fetch is already in progress, do nothing
+      isProcessing = true;  // Set the flag to true to block other fetches
+
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !loading) {
+        isProcessingRef.current = true;
+        await fetchEpisodeData(channelId);
+        isProcessingRef.current = false;
+      }
+      isProcessing = false;  // Reset the flag once the fetch is complete
+    };
+
+    processTwitchChat();  // Run immediately on mount
+
+    // episode feed processing
+    if (episodes.length > 0 && !isSpeaking && !loading) {
+      const episode = episodes.shift();
+      if (episode) {
+        const currentQuery = `${episode.title}\n\n${episode.plotline}`;
+
+        // send query to handlesubmit with a mock event
+        console.log(`TwitchStream: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
+        setQuery(currentQuery);
+        const mockEvent = {
+          preventDefault: () => { },
+          target: {
+            value: `!${episode.type}: ${currentQuery}`,
+          },
+        };
+        isSubmittingRef.current = true;
+        handleSubmit(mockEvent);
+      }
+    }
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
+  }, [channelId, twitchChatEnabled, isFetching, fetchEpisodeData]);
+
+
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      // confirm we don't multiple news articles at the same time or too often, limit to once every 10 seconds
-      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending) {
-        isProcessingRef.current = true;  // Set isProcessing to true when a news article is being processed
+      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !twitchChatEnabled) {
+        isProcessingRef.current = true;
+
         let currentNews = news;
-        let index = currentNewsIndex;  // Use a local variable to keep track of the current news index
+        let index = currentNewsIndex;
 
-        // Check if the user has enabled a twitch chat control feed
-        if (channelId !== '' && twitchChatEnabled) {
-          // sleep and wait for the episodes to be fetched and to reduce usage, only fetch once every 30 seconds
-          fetchEpisodeData(channelId);
-        }
-        // Check if there are any episodes
-        if (episodes.length > 0) {
-          // Use the title and plotline of the next episode as the input
-          const episode = episodes.shift();
-          if (episode) { // Check if episode is defined
-            if (episodes.length === 0) {
-              console.log(`Reached end of episode feed.`);
-            }
-            const currentQuery = `${episode.title}\n\n${episode.plotline}`;
-
-            console.log(`Sending ${episode.type} #${index}: ${episode.title}`);
-
-            setQuery(currentQuery);
-            const mockEvent = {
-              preventDefault: () => { },
-              target: {
-                value: `!${episode.type}: ${currentQuery}`,
-              },
-            };
-            isSubmittingRef.current = true;
-            handleSubmit(mockEvent);
-            setCurrentNewsIndex(index + 1);  // Increment the state variable after processing an episode
-          }
-        } else if (feedMode === 'news' && newsFeedEnabled) {
-          // If there are no episodes, continue with the news feed as before
+        if (feedMode === 'news' && newsFeedEnabled) {
           if (index >= currentNews.length || currentNews.length === 0) {
             console.log(`Reached end of news feed, fetching new news`);
             currentNews = await fetchNews();
             console.log(`Fetching news found ${currentNews.length} news articles`);
             setNews(currentNews);
-            index = 0;  // Reset the local variable to 0 when a new batch of news is fetched
+            index = 0;
           }
-          if (currentNews[index]) {  // Check that currentNews[index] is defined
+          if (currentNews[index]) {
             const headline = currentNews[index].title;
             const body = currentNews[index].description.substring(0, 300);
             let currentQuery = `${headline}\n\n${body}`;
@@ -436,15 +465,19 @@ function Home({ user }: HomeProps) {
             };
             isSubmittingRef.current = true;
             handleSubmit(mockEvent);
-            setCurrentNewsIndex(index + 1);  // Increment the state variable after processing a news article
+            setCurrentNewsIndex(index + 1);
           }
         }
-        await new Promise((resolve) => setTimeout(resolve, 10000));
-        isProcessingRef.current = false;  // Set isProcessing to false when a news article has been processed
+
+        isProcessingRef.current = false;
       }
     };
-    processNewsArticle();
-  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending, query, feedPrompt]);  // Remove isProcessing from the dependencies
+
+    const debouncedProcessNewsArticle = debounce(processNewsArticle, 10000);
+
+    debouncedProcessNewsArticle();
+  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending, query, feedPrompt]);
+
 
   useEffect(() => {
     const lastMessageIndex: number = messages.length - 1;
@@ -1111,6 +1144,16 @@ function Home({ user }: HomeProps) {
     // Don't submit if the query is empty
     if (isSpeaking || !question) {
       console.log(`handleSubmit: Not submitting question: '${question}', isSpeaking: ${isSpeaking}, speechRecognitionComplete: ${speechRecognitionComplete}`);
+      // Queue the question if speech recognition is not complete
+      if (question && question !== '') {
+        let episode: Episode = {
+          title: question,
+          plotline: '',
+          type: question.startsWith('!question') ? 'question' : 'episode',
+          username: 'anonymous',
+        }
+        setEpisodes([...episodes, episode]);
+      }
       return;
     }
 
@@ -1752,7 +1795,7 @@ function Home({ user }: HomeProps) {
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
           <main className={styles.main}>
-            
+
             <div className={styles.cloud}>
               <div ref={messageListRef}
                 className={styles.imageContainer}
@@ -1791,7 +1834,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isFullScreen ? styles.fullScreenOSD : styles.osd
                     }>
-                      {(episodes.length == 0) ? loading ? loadingOSD : '' : ((!isSpeaking || loading) && episodes.length > 0) && (
+                      {(!isSpeaking || loading) ? (
                         <>
                           <h3 className={`${styles.header} ${styles.center}`}>--- Upcoming Episodes ---</h3>
                           <hr></hr>
@@ -1811,7 +1854,7 @@ function Home({ user }: HomeProps) {
                             {loadingOSD}
                           </div>
                         </>
-                      )}
+                      ) : (<></>)}
                     </div>
                     <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
@@ -2078,7 +2121,7 @@ function Home({ user }: HomeProps) {
                     </button>
                     &nbsp;&nbsp;&nbsp;&nbsp;
                     <button
-                      className={`${styles.footer} ${isFetching ? styles.listening : ''}`}
+                      className={`${styles.footer} ${(twitchChatEnabled) ? styles.listening : ''}`}
                       onClick={() => setTwitchChatEnabled(!twitchChatEnabled)}>
                       {twitchChatEnabled ? 'Disable Twitch Chat' : 'Enable Twitch Chat'}
                     </button>
