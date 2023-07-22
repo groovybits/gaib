@@ -1746,14 +1746,7 @@ function Home({ user }: HomeProps) {
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
           <main className={styles.main}>
-            <Link href="/board/">
-              <a className={`${styles.header} ${styles.center}`} onClick={(e) => {
-                if (e.ctrlKey || e.metaKey) {
-                  e.preventDefault();
-                  window.open('/board/', '_blank');
-                }
-              }}>Story Board</a>
-            </Link>
+            
             <div className={styles.cloud}>
               <div ref={messageListRef}
                 className={styles.imageContainer}

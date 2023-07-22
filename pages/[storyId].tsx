@@ -397,15 +397,6 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                   </div>
                 </div>
               </div>
-              <button onClick={() => {
-                setSelectedStory(null);
-                if (storyId.toString().startsWith('images')) {
-                  router.push('/images');
-                } else {
-                  router.push('/board');
-                }
-              }} className={styles.footer}>Back to Stories</button> &nbsp;&nbsp;&nbsp;&nbsp;
-
               <button className={styles.footer} onClick={() => handleShareClick(storyId)}>Copy Link</button>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => handleFacebookShareClick(storyId)}>Facebook Post</button>
