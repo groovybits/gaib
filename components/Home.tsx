@@ -239,6 +239,8 @@ function Home({ user }: HomeProps) {
       const storyText = storyToShare.map((item) => item.sentence).join('|');
       const imageUrls = storyToShare.map((item) => item.imageUrl);
 
+      setCurrentStory([]);
+
       if (debug) {
         console.log('Data being written:', {
           userId: user.uid,
@@ -279,7 +281,6 @@ function Home({ user }: HomeProps) {
   const handleShareStory = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     await shareStory(currentStory);
-    setCurrentStory([]);
   };
 
   const categoryOptions = [
@@ -377,8 +378,9 @@ function Home({ user }: HomeProps) {
         // Check if the user has enabled a twitch chat control feed
         if (channelId !== '' && twitchChatEnabled) {
           // sleep and wait for the episodes to be fetched and to reduce usage, only fetch once every 30 seconds
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-          fetchEpisodeData(channelId);
+          await fetchEpisodeData(channelId);
+          await new Promise((resolve) => setTimeout(resolve, 10000));
+
         }
         // Check if there are any episodes
         if (episodes.length > 0) {
@@ -507,7 +509,7 @@ function Home({ user }: HomeProps) {
       // Check if it has been 5 seconds since we last generated an image
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-      if (deltaTimeInSeconds < 5) {
+      if (deltaTimeInSeconds < 1) {
         if (debug) {
           console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
         }
@@ -702,7 +704,7 @@ function Home({ user }: HomeProps) {
     async function displayImagesAndSubtitles() {
       const idToken = await user?.getIdToken();
       let sentences: string[];
-      let localCurrentStory = currentStory;
+      let localCurrentStory = [] as StoryPart[];
       if (isPaused) {
         stopSpeaking();
         return;
@@ -1076,7 +1078,9 @@ function Home({ user }: HomeProps) {
       }
       if (autoSave && messages[lastMessageIndex].type === 'apiMessage') {
         // save story automatically
-        shareStory(localCurrentStory);
+        if (localCurrentStory.length > 0) {
+          await shareStory(localCurrentStory);
+        }
       }
       // Reset the subtitle after all sentences have been spoken
       stopSpeaking();
