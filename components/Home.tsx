@@ -400,7 +400,7 @@ function Home({ user }: HomeProps) {
 
     // episode feed processing
     if (episodes.length > 0 && !isSpeaking && !loading) {
-      const episode = episodes.shift();
+      const episode = episodes.pop();
       if (episode) {
         const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
