@@ -378,7 +378,7 @@ function Home({ user }: HomeProps) {
         // Check if the user has enabled a twitch chat control feed
         if (channelId !== '' && twitchChatEnabled) {
           // sleep and wait for the episodes to be fetched and to reduce usage, only fetch once every 30 seconds
-          await fetchEpisodeData(channelId);
+          fetchEpisodeData(channelId);
           await new Promise((resolve) => setTimeout(resolve, 10000));
 
         }
