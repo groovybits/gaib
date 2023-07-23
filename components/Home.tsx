@@ -78,7 +78,7 @@ function Home({ user }: HomeProps) {
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
   const [subtitle, setSubtitle] = useState<string>('');
-  const [loadingOSD, setLoadingOSD] = useState<string>('');
+  const [loadingOSD, setLoadingOSD] = useState<string>('Welcome to GAIB! Please ask me questions or enter a prompt to generate a story.');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
@@ -115,6 +115,7 @@ function Home({ user }: HomeProps) {
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
   const [autoSave, setAutoSave] = useState<boolean>(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [playingNow, setPlayingNow] = useState<string>('');
   const [feedMode, setFeedMode] = useState<'episode' | 'news'>('news'); // Add this line
   const [enableSpeaking, setEnableSpeaking] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_SPEAKING === 'true');
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
@@ -124,6 +125,8 @@ function Home({ user }: HomeProps) {
   const [twitchChatEnabled, setTwitchChatEnabled] = useState(false);
   let episodeId = uuidv4();
   const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
+  const [gaibImagePrompt, setGaibImagePrompt] = useState<string>(process.env.NEXT_PUBLIC_GAIB_IMAGE_PROMPT || 'GAIB a Groovy AI Bot who is in the tibetan mountains with blue skys and white fluffy clouds above. technology and tibetan relics with temples prayer flags and bright colors.');
+  const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
 
   const connectToChannel = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
@@ -403,8 +406,8 @@ function Home({ user }: HomeProps) {
     processTwitchChat();  // Run immediately on mount
 
     // episode feed processing
-    if (episodes.length > 0 && !isSpeaking && !loading) {
-      const episode = episodes.pop();
+    if (episodes.length > 0 && !isSpeaking && !loading && isFetching) {
+      const episode = episodes.shift();
       if (episode) {
         const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
@@ -523,17 +526,22 @@ function Home({ user }: HomeProps) {
     async function getGaib() {
       const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
       const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
-      const randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
+      let randomNumber = 0;
+      if (maxNumber > 1) {
+        randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
+      } else {
+        randomNumber = maxNumber;
+      }
 
       let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
-      if (directoryUrl != null && maxNumber > 1 && randomNumber > 0) {
+      if (directoryUrl != null && maxNumber >= 1 && randomNumber >= 0) {
         url = `${directoryUrl}/${randomNumber}.png`;
       }
       return url;
     }
 
     // Choose Pexles, DeepAI or local images
-    async function generateImageUrl(sentence: string, useImageAPI = false, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
+    async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
       const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
       const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
 
@@ -545,10 +553,8 @@ function Home({ user }: HomeProps) {
       // Check if it has been 5 seconds since we last generated an image
       const endTime = new Date();
       const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-      if (deltaTimeInSeconds < 1) {
-        if (debug) {
-          console.log(`Time elapsed: ${deltaTimeInSeconds} seconds`);
-        }
+      if ((deltaTimeInSeconds < 3) || ((!isSpeaking && deltaTimeInSeconds < 5) && messages.length > 0)) {
+        console.log(`generateImageUrl: has only been ${deltaTimeInSeconds} seconds since last image creation, skipping.`);
         return '';
       }
       setStartTime(endTime);
@@ -699,6 +705,54 @@ function Home({ user }: HomeProps) {
       return '';
     }
 
+    // This is the function you want to run every 60 seconds
+    const generateAndSetImage = async () => {
+      try {
+        // Prepare the request body. You may need to adjust this to fit your use case.
+        const requestBody = {
+          message: `Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
+          prompt: `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`,
+          conversationHistory: conversationHistory  // You may need to populate this with previous conversation history, if any.
+        };
+
+        let content: string = 'random image of a robot anime AI';
+        try {
+          const idToken = await user?.getIdToken();
+          // Send a POST request to your local API endpoint.
+          const response = await fetch('/api/gpt', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify(requestBody)
+          });
+
+          // Parse the response.
+          const data = await response.json();
+
+          console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
+
+          // Extract the AI generated message.
+          content = data.aiMessage.content;
+          setConvesationHistory([...conversationHistory, data])
+        } catch (error) {
+          console.error("GPT + Failed to generate a message:", error);
+          let gaibImage = await generateImageUrl(gaibImagePrompt, true, '', episodeId);
+          setPexelImageUrls(gaibImage);
+          return;
+        }
+
+        // Use the AI generated message as the prompt for generating an image URL.
+        console.log(`GPT + Generating an image URL for the following prompt: ${content}`);
+        let gaibImage = await generateImageUrl(content, true, '', episodeId);
+        setPexelImageUrls(gaibImage);
+
+      } catch (error) {
+        console.error("GPT + generateImageUrl Failed to generate an image URL:", error);
+      }
+    };
+
     function splitSentence(sentence: any, maxLength = 300) {
       const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
       try {
@@ -768,9 +822,9 @@ function Home({ user }: HomeProps) {
 
       // Display the images and subtitles
       episodeId = uuidv4();
+      generateAndSetImage();
       let gaibImage = await generateImageUrl('', false, '', episodeId);
       let lastImage = gaibImage;
-      setPexelImageUrls(gaibImage);
       setSubtitle(''); // Clear the subtitle
       setLoadingOSD('');
 
@@ -818,7 +872,6 @@ function Home({ user }: HomeProps) {
       let isContinuingToSpeak = false;
       let isSceneChange = false;
       let lastSpeaker = '';
-
 
       // Extract gender markers from the entire message
       const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
@@ -1122,9 +1175,9 @@ function Home({ user }: HomeProps) {
       stopSpeaking();
       setIsSpeaking(false);
       setSubtitle('');
-      setLoadingOSD('');
-      gaibImage = await generateImageUrl('', false, '', episodeId);
-      setPexelImageUrls(gaibImage);
+      setLoadingOSD('Please enter a topic or question for a story or answer.');
+      setGaibImagePrompt(messages[lastMessageIndex].message.slice(0, 200).replace('\n', ''));
+      generateAndSetImage();
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -1164,14 +1217,14 @@ function Home({ user }: HomeProps) {
     // Check if the message is a story and remove the "!type:" prefix
     let isQuestion = (isStory === false);
     try {
-      if (question.startsWith('!question: ')) {
+      if (question.startsWith('!question:')) {
         isQuestion = true;
-        question = question.replace('!question: ', '').trim();
-        console.log(`handleSubmit: Extracted question: with !question: `);
-      } else if (question.startsWith('!episode: ')) {
+        question = question.replace('!question:', '').trim();
+        console.log(`handleSubmit: Extracted question: with !question:`);
+      } else if (question.startsWith('!episode:')) {
         isQuestion = false;
-        question = question.replace('!episode: ', '').trim();
-        console.log(`handleSubmit: Extracted episode: with !episode: `);
+        question = question.replace('!episode:', '').trim();
+        console.log(`handleSubmit: Extracted episode: with !episode:`);
       }
     } catch (error) {
       console.error(`handleSubmit: Error extracting question: '${error}'`);  // Log the question
@@ -1315,7 +1368,7 @@ function Home({ user }: HomeProps) {
     setError(null);
     setIsPaused(false);
     setLoading(true);
-    setLoadingOSD(`Loading...`);
+    setLoadingOSD(`Loading... ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
     setSubtitle('');
     setIsSpeaking(true);
     setQuery('');
@@ -1397,9 +1450,15 @@ function Home({ user }: HomeProps) {
                 ...state,
                 pending: (state.pending ?? '') + data.data,
               }));
+              // collect data.data with rest of pending state       
+              if (messageState.pending) {
+                const messageLength = messageState.pending.length;
+                const startCut = Math.max(0, messageLength - 75);
+                setLoadingOSD(`Loading... ${latestMessage.message.replace(/\n/g, ' ').slice(startCut, messageLength)}`);
+              }
             }
-            setLoadingOSD(`Loading... ${data.data.slice(0, 80).replace(/\n/g, ' ')}`);
-            setSubtitle('');
+
+            setSubtitle(``);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
@@ -1409,11 +1468,11 @@ function Home({ user }: HomeProps) {
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
     } catch (error: any) {
       setLoading(false);
-      setLoadingOSD(`System Error: ${error.message}}`);
+      setLoadingOSD(`System Error: ${error.message}`);
       setSubtitle('');
       setError('An error occurred while fetching the data. Please try again.');
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-      console.log(error);
+      console.log(`HomeChatMessages: Error: ${error.message}`);
     }
     isSubmittingRef.current = false;
   }
@@ -1840,22 +1899,21 @@ function Home({ user }: HomeProps) {
                     }>
                       {(!isSpeaking || loading) ? (
                         <>
-                          <h3 className={`${styles.header} ${styles.center}`}>--- Upcoming Episodes ---</h3>
-                          <hr></hr>
-                          <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
-                            {[...episodes].reverse().map((episode, index) => (
-                              <tr key={index}>
-                                <td>
-                                  <p className={`${styles.footer} ${styles.episodeList}`}>Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
-                                </td><tr></tr>
-                                <td>
-                                  <p className={`${styles.footer} ${styles.episodeList}`}>{episode.plotline}</p>
-                                </td>
-                              </tr>
-                            ))}
-                          </table>
-                          <div className={isFullScreen ? styles.fullScreenLoadingOSD : styles.loadingOSD}>
-                            {loadingOSD}
+                          <div className={styles.generatedImage}>
+                            <h3 className={`${styles.header} ${styles.center}`}>--- Upcoming Episodes ---</h3>
+                            <hr></hr>
+                            <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
+                              {[...episodes].reverse().map((episode, index) => (
+                                <tr key={index}>
+                                  <td>
+                                    <p className={`${styles.footer} ${styles.episodeList}`}>Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
+                                  </td><tr></tr>
+                                  <td>
+                                    <p className={`${styles.footer} ${styles.episodeListDescription}`}>{episode.plotline}</p>
+                                  </td>
+                                </tr>
+                              ))}
+                            </table>
                           </div>
                         </>
                       ) : (<></>)}
@@ -1863,7 +1921,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle}
+                      {subtitle}{loadingOSD}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
