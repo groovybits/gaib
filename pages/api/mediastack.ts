@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     switch (method) {
       case 'GET':
         try {
-          let url = `http://api.mediastack.com/v1/news?access_key=${mediastackApiKey}&languages=en&offset=${offset}&sort=${sort}&limit=100`;
+          let url = `http://api.mediastack.com/v1/news?access_key=${mediastackApiKey}&languages=en&offset=${offset}&sort=${sort}&limit=30`;
           if (category != '') {
             console.log(`News Feed Categories: ${category}`);
             url += `&categories=${category}`;
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           const response = await fetch(url);
           const data = await response.json();
           if (debug) {
-            console.log(`Mediastack API call for the current news articles... ${JSON.stringify(data)}`)
+            console.log(`Mediastack API call for the current news articles... ${JSON.stringify(data, null, 2)}`)
           }
           res.status(200).json(data);
         } catch (error) {

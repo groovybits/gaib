@@ -13,16 +13,16 @@ const ServiceInfo = () => {
           <div className={styles.footerContainer}>
             <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
             <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href="https://twitch.tv/groovyaibot">Create Stories on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a href="https://facebook.com/groovyorg">Facebook Page</a>
+            <a href="https://twitch.tv/groovyaibot">Create Stories</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="https://facebook.com/groovyorg">Facebook </a>
           </div>
         </div>
       </div>
       <div className={styles.footer}>
-        GAIB, the Groovy AI Bot, is a chatbot that can understand, speak, and
+        GAIB, the Groovy AI Entertainment System, is an assitant that can understand, speak, and
         translate any language in both text and audio formats. It can also take
-        on various AI bot modes or personalities, each designed for specific
+        on various AI Helper modes or personalities, each designed for specific
         tasks. Furthermore, GAIB has an Anime generation theme that creates
         stories based on the data from PDFs stored in the vector database.
       </div>
@@ -34,7 +34,7 @@ const ServiceInfo = () => {
         is strictly forbidden and will result in account termination.
       </div>
       <div className={`${styles.header} ${styles.center}`}>
-        <h1>AI Bot Modes</h1>
+        <h1>AI Assistant Modes</h1>
       </div>
       <div className={styles.cloudform}>
         <table className={styles.personalityTable}>

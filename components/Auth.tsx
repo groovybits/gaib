@@ -181,7 +181,7 @@ function Auth({ }: Props): ReactElement {
     return (
       <>
         <Home user={user} /> {/* Pass user object to Home component */}
-        <div className={`${styles.center}`}>
+        <div className={`${styles.header} ${styles.center}`}>
           <>Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</>&nbsp;&nbsp;&nbsp;&nbsp;
           {!userIsPremium ? (
             <>
@@ -225,20 +225,16 @@ function Auth({ }: Props): ReactElement {
           )}
           <div className={styles.footer}>
             <div className={styles.footerContainer}>
-              <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="https://groovy.org">Groovy.ORG</a>&nbsp;&nbsp;|&nbsp;&nbsp;
               <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://twitch.tv/groovyaibot">Create Stories on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://facebook.com/groovyorg">Facebook Page</a>
+              <a href="https://twitch.tv/groovyaibot">Create Stories</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="https://facebook.com/groovyorg">Facebook</a>
             </div>
           </div>
-          {(process.env.NEXT_PUBLIC_IMAGE_SERVICE == 'pexels') ?
-            <span>
-              &nbsp;&nbsp;|&nbsp;&nbsp;<a className={styles.footer} href="https://www.pexels.com">Photos provided by Pexels</a>
-            </span> : <span></span>
-          }
-          &nbsp;&nbsp;|&nbsp;&nbsp;<a className={styles.footer} href="https://github.com/groovybits/gaib">github.com/groovybits/gaib</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-          <a className={styles.footer} href="#" onClick={signOut}>Sign out</a>
+          <div>
+            <a className={styles.header} href="#" onClick={signOut}>Sign out</a>
+          </div>
         </div>
       </>
     );
@@ -257,7 +253,7 @@ function Auth({ }: Props): ReactElement {
   return (
     <>
       <div className={`${styles.header} ${styles.center}`}>
-        <title>GAIB The Groovy AI Bot</title>
+        <title>GAIB The Groovy AI Entertainment System</title>
       </div>
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
@@ -265,7 +261,7 @@ function Auth({ }: Props): ReactElement {
             <div className={styles.cloud}>
               <div className={styles.cloudform}>
                 <div className={`${styles.header} ${styles.center}`}>
-                  <h1>Groovy AI Bot (GAIB)</h1>
+                  <h1>Groovy AI Entertainment System (GAIB)</h1>
                 </div>
                 <div className={`${styles.header} ${styles.center}`}>
                   <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>

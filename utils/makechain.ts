@@ -20,6 +20,10 @@ const temperatureQuestion = process.env.TEMPERATURE_QUESTION !== undefined ? par
 const debug = process.env.DEBUG ? Boolean(process.env.DEBUG) : false;
 const authEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH == 'true' ? true : false;
 
+// Initialize the token balance
+let newTokenBalance = 0;
+let userTokenBalance = 0;
+
 let firebaseFunctions: any;
 if (authEnabled) {
   firebaseFunctions = await import('@/config/firebaseAdminInit');
@@ -60,7 +64,6 @@ export const makeChain = async (
   }
   const maxTokens = tokensCount;
 
-  let userTokenBalance = 0;
   if (authEnabled) {
     userTokenBalance = await firebaseFunctions.getUserTokenBalance(userId!);
   }
@@ -73,6 +76,24 @@ export const makeChain = async (
     );
     // Send signal that user does not have enough tokens to run this model
     throw new Error(`Not enough tokens, only ${userTokenBalance} left.`);
+  }
+
+  // Update the token balance
+  async function updateTokenBalance(newTokenBalance: number) {
+    try {
+      if (firebaseFunctions.firestoreAdmin && authEnabled) {
+        await firebaseFunctions.updateTokenBalance(userId, newTokenBalance);
+      } else {
+        // Firebase Admin SDK is not initialized. Anonymous mode
+      }
+    } catch (error: any) {
+      if (error.code === 'app/no-app') {
+        // Firebase Admin SDK is not initialized. Anonymous mode
+      } else {
+        // Some other error occurred
+        throw error;
+      }
+    }
   }
 
   // Function to create a model with specific parameters
@@ -118,23 +139,9 @@ export const makeChain = async (
             }
             // Deduct tokens based on the tokenCount
             if (!isAdmin && authEnabled) {
-              const newTokenBalance = userTokenBalance - tokenCount;
-              if (newTokenBalance >= 0) {
-                try {
-                  if (firebaseFunctions.firestoreAdmin && authEnabled) {
-                    await firebaseFunctions.updateTokenBalance(userId, newTokenBalance);
-                  } else {
-                    // Firebase Admin SDK is not initialized. Anonymous mode
-                  }
-                } catch (error: any) {
-                  if (error.code === 'app/no-app') {
-                    // Firebase Admin SDK is not initialized. Anonymous mode
-                  } else {
-                    // Some other error occurred
-                    throw error;
-                  }
-                }
-              } else {
+              newTokenBalance = userTokenBalance - tokenCount;
+              if (newTokenBalance <= 0) {
+                await updateTokenBalance(0);
                 console.log(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
                 // Send signal that user does not have enough tokens to run this model
                 throw new Error(`makeChain: ${userId} does not have enough tokens to run this model [only ${userTokenBalance} of ${tokenCount} needed].`);
@@ -150,9 +157,17 @@ export const makeChain = async (
             if (debug) {
               console.log(`makeChain: End of LLM for ${userId} using ${tokenCount}/${accumulatedBodyTokens.length} tokens/characters of ${userTokenBalance} \n with output: ${accumulatedBodyTokens.trim().replace('\n', ' ')}.`);
             }
+            // Update the token balance
+            if (!isAdmin && authEnabled) {
+              await updateTokenBalance(newTokenBalance);
+            }
           },
           async handleLLMError(error) {
             console.error("makeChain: Error in createModel: ", error);
+            // Update the token balance
+            if (!isAdmin && authEnabled) {
+              await updateTokenBalance(newTokenBalance);
+            }
             throw new Error("makeChain: Error in createModel: " + error);
           }
         })
@@ -160,6 +175,10 @@ export const makeChain = async (
     });
   } catch (error: any) {
     console.error("makeChain: Error in createModel: ", error);
+    // Update the token balance
+    if (!isAdmin && authEnabled) {
+      await updateTokenBalance(newTokenBalance);
+    }
     throw new Error("makeChain: Error in createModel: " + error);
   }
 

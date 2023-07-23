@@ -159,16 +159,16 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
             <div className={styles.feedSection}>
               <div className={styles.feed}>
                 <Link href="https://twitch.tv/groovyaibot" className={styles.header}>
-                  <a>Create a Story with GAIB on Twitch</a>
+                  <a>Create a Story</a>
                 </Link>
               </div>
               <div className={`${styles.footer} ${styles.center}`}>
                 <div className={styles.footerContainer}>
-                  <a href="https://groovy.org">The Groovy Organization</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                  <a href="https://groovy.org">Groovy.ORG</a>&nbsp;&nbsp;|&nbsp;&nbsp;
                   <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-                  <a href="https://twitch.tv/groovyaibot">Create Stories on Twitch</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-                  <a href="https://youtube.com/@groovyaibot">YouTube Channel</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-                  <a href="https://facebook.com/groovyorg">Facebook Page</a>
+                  <a href="https://twitch.tv/groovyaibot">Create Story</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                  <a href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                  <a href="https://facebook.com/groovyorg">Facebook</a>
                 </div>
               </div>
             </div>

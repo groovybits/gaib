@@ -53,10 +53,10 @@ function Home({ user }: HomeProps) {
     pendingSourceDocs?: Document[];
   }>({
     messages: [
-      {
-        message: 'Welcome, I am The Groovy AI Bot GAIB!',
+      /*{
+        message: 'Welcome, I am The Groovy AI Entertainment System, GAIB!',
         type: 'apiMessage',
-      },
+      },*/
     ],
     history: [],
     pendingSourceDocs: [],
@@ -78,7 +78,7 @@ function Home({ user }: HomeProps) {
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
   const [subtitle, setSubtitle] = useState<string>('');
-  const [loadingOSD, setLoadingOSD] = useState<string>('Welcome to GAIB! Please ask me questions or enter a prompt to generate a story.');
+  const [loadingOSD, setLoadingOSD] = useState<string>('I am GAIB, The Groovy AI Entertainment System!\nPlease ask me questions or enter a prompt to generate a story.');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
@@ -116,7 +116,7 @@ function Home({ user }: HomeProps) {
   const [autoSave, setAutoSave] = useState<boolean>(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [playingNow, setPlayingNow] = useState<string>('');
-  const [feedMode, setFeedMode] = useState<'episode' | 'news'>('news'); // Add this line
+  const [feedNewsChannel, setFeedNewsChannel] = useState<boolean>(false);
   const [enableSpeaking, setEnableSpeaking] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_SPEAKING === 'true');
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
   const [newsFeedEnabled, setNewsFeedEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_NEWS_FEED === 'true');
@@ -176,7 +176,7 @@ function Home({ user }: HomeProps) {
             Authorization: `Bearer ${idToken}`,
           },
         });
-      
+
       if (res.status !== 200) {
         console.error(`Firestore: An error occurred in the fetchEpisodeData function: ${res.statusText}`);
         return;
@@ -279,27 +279,27 @@ function Home({ user }: HomeProps) {
       }
 
       // Save the story to Firestore
-      await firebase.firestore().collection('stories').add({
+      const docRef = await firebase.firestore().collection('stories').add({
         userId: user.uid,
         text: storyText,
         imageUrls: imageUrls,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
 
-      // get stories.id for storyId
-      const storiesRef = await firebase.firestore().collection('stories').where('userId', '==', user.uid).orderBy('timestamp', 'desc').limit(1).get();
+      // The ID of the new document
+      const newStoryId = docRef.id;
 
-      console.log(`Story ${storyText.slice(0, 30)} shared successfully to ${baseUrl}/${storiesRef.docs[0].id}}!`);
+      console.log(`Story ${storyText.slice(0, 30)} shared successfully to ${baseUrl}/${newStoryId}!`);
 
       if (!automated || autoSave) {
-        alert(`Story shared successfully to ${baseUrl}/${storiesRef.docs[0].id}!`);
-        copy(`${baseUrl}/${storiesRef.docs[0].id}`);
+        alert(`Story shared successfully to ${baseUrl}/${newStoryId}!`);
+        copy(`${baseUrl}/${newStoryId}`);
       }
-      setLastStory(`${baseUrl}/${storiesRef.docs[0].id}`);
+      setLastStory(`${baseUrl}/${newStoryId}`);
 
       if (twitchChatEnabled && authEnabled && channelId !== '') {
         // Post the story to the Twitch chat
-        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storiesRef.docs[0].id} for the story: ${storyText.slice(0, 200)}.`, user.uid);
+        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${newStoryId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
       }
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
@@ -420,800 +420,813 @@ function Home({ user }: HomeProps) {
 
     processTwitchChat();  // Run immediately on mount
 
-    // episode feed processing
-    if (episodes.length > 0 && !isSpeaking && !loading && isFetching) {
-      const episode = episodes.shift();
-      if (episode) {
-        const currentQuery = `${episode.title}\n\n${episode.plotline}`;
-
-        // send query to handlesubmit with a mock event
-        console.log(`TwitchStream: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
-        setQuery(currentQuery);
-        const mockEvent = {
-          preventDefault: () => { },
-          target: {
-            value: `!${episode.type}: ${currentQuery}`,
-          },
-        };
-        isSubmittingRef.current = true;
-        handleSubmit(mockEvent);
-      }
-    }
     // check if there are any episodes left, if so we don't need to sleep
     const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [channelId, twitchChatEnabled, isFetching, fetchEpisodeData]);
 
+  useEffect(() => {
+    // episode feed processing
+    const processQueue = async () => {
+      if (episodes.length > 0 && !isSpeaking && !loading && isFetching) {
+        const episode = episodes.shift();
+        if (episode) {
+          const currentQuery = `${episode.title}\n\n${episode.plotline}`;
+
+          // send query to handlesubmit with a mock event
+          console.log(`TwitchStream: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
+          setQuery(currentQuery);
+          let prefix = '';
+          if (episode.type != '') {
+            prefix = `!${episode.type}: `;
+          }
+          const mockEvent = {
+            preventDefault: () => { },
+            target: {
+              value: `${prefix}${currentQuery}`,
+            },
+          };
+          isSubmittingRef.current = true;
+          handleSubmit(mockEvent);
+        }
+      }
+    };
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(processQueue, 3000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
+  }, [episodes, isFetching, isSpeaking, loading, setQuery, handleSubmit]);
+
 
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !twitchChatEnabled) {
+      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && feedNewsChannel && newsFeedEnabled) {
         isProcessingRef.current = true;
 
         let currentNews = news;
         let index = currentNewsIndex;
 
-        if (feedMode === 'news' && newsFeedEnabled) {
-          if (index >= currentNews.length || currentNews.length === 0) {
+        // If we have reached the end of the news feed, fetch more news
+        if (index >= currentNews.length || currentNews.length === 0) {
+          if (currentNews.length === 0) {
             console.log(`Reached end of news feed, fetching new news`);
-            currentNews = await fetchNews();
-            console.log(`Fetching news found ${currentNews.length} news articles`);
-            setNews(currentNews);
-            index = 0;
           }
-          if (currentNews[index]) {
-            const headline = currentNews[index].title;
-            const body = currentNews[index].description.substring(0, 300);
-            let currentQuery = `${headline}\n\n${body}`;
+          currentNews = await fetchNews();
+          console.log(`Fetching news: found ${currentNews.length} news articles`);
+          setNews(currentNews);
+          index = 0;
+        }
 
-            if (feedPrompt != '') {
-              currentQuery = `${feedPrompt}\n\n${currentQuery}`;
-            }
+        // If we have news articles, send them to the chat
+        if (currentNews[index]) {
+          const headline = currentNews[index].title;
+          const body = currentNews[index].description.substring(0, 300);
+          let currentQuery = `${headline}\n\n${body}`;
 
-            if (currentQuery === query) {
-              console.log(`Skipping duplicate news headline #${index}: ${headline}`);
-              processNewsArticle();
-            }
-
-            console.log(`Sending News headline #${index}: ${headline}`);
-            setQuery(currentQuery);
-            const mockEvent = {
-              preventDefault: () => { },
-              target: {
-                value: currentQuery,
-              },
-            };
-            isSubmittingRef.current = true;
-            handleSubmit(mockEvent);
-            setCurrentNewsIndex(index + 1);
+          if (feedPrompt != '') {
+            currentQuery = `${feedPrompt}\n\n${currentQuery}`;
           }
+
+          let episode: Episode = {
+            title: headline,
+            plotline: body,
+            type: isStory ? 'episode' : 'question',
+            username: 'news',
+          }
+          console.log(`Queing News headline #${index}: ${headline}`);
+          setEpisodes([...episodes, episode]);
+
+          setCurrentNewsIndex(index + 1);
         }
 
         isProcessingRef.current = false;
       }
     };
 
-    const debouncedProcessNewsArticle = debounce(processNewsArticle, 10000);
+    const debouncedProcessNewsArticle = debounce(processNewsArticle, 3000);
 
     debouncedProcessNewsArticle();
-  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setQuery, setCurrentNewsIndex, fetchNews, pending, query, feedPrompt]);
+  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setCurrentNewsIndex, fetchNews, pending, feedPrompt]);
 
 
   useEffect(() => {
-    const lastMessageIndex: number = messages.length - 1;
+    //const processMessages = async () => {
+      const lastMessageIndex: number = messages.length - 1;
 
-    function extractKeywords(sentence: string, numberOfKeywords = 2) {
-      const doc = nlp(sentence);
+      function extractKeywords(sentence: string, numberOfKeywords = 2) {
+        const doc = nlp(sentence);
 
-      // Extract nouns, verbs, and adjectives
-      const nouns = doc.nouns().out('array');
-      const verbs = doc.verbs().out('array');
-      const adjectives = doc.adjectives().out('array');
+        // Extract nouns, verbs, and adjectives
+        const nouns = doc.nouns().out('array');
+        const verbs = doc.verbs().out('array');
+        const adjectives = doc.adjectives().out('array');
 
-      // Combine the extracted words and shuffle the array
-      const combinedWords = [...nouns, ...verbs, ...adjectives];
-      combinedWords.sort(() => 0.5 - Math.random());
+        // Combine the extracted words and shuffle the array
+        const combinedWords = [...nouns, ...verbs, ...adjectives];
+        combinedWords.sort(() => 0.5 - Math.random());
 
-      // Select the first N words as keywords
-      const keywords = combinedWords.slice(0, numberOfKeywords);
+        // Select the first N words as keywords
+        const keywords = combinedWords.slice(0, numberOfKeywords);
 
-      return keywords;
-    }
+        return keywords;
+      }
 
-    async function setPexelImageUrls(gaibImage: ImageData | string) {
-      if (typeof gaibImage === 'string') {
-        if (gaibImage !== '') {
-          setImageUrl(gaibImage);
+      async function setPexelImageUrls(gaibImage: ImageData | string) {
+        if (typeof gaibImage === 'string') {
+          if (gaibImage !== '') {
+            setImageUrl(gaibImage);
+          }
+          setPhotographer('GAIB');
+          setPhotographerUrl('https://groovy.org');
+          setPexelsUrl('https://gaib.groovy.org');
+        } else {
+          setImageUrl(gaibImage.url);
+          setPhotographer(gaibImage.photographer);
+          setPhotographerUrl(gaibImage.photographer_url);
+          setPexelsUrl(gaibImage.pexels_url);
         }
-        setPhotographer('GAIB');
-        setPhotographerUrl('https://groovy.org');
-        setPexelsUrl('https://gaib.groovy.org');
-      } else {
-        setImageUrl(gaibImage.url);
-        setPhotographer(gaibImage.photographer);
-        setPhotographerUrl(gaibImage.photographer_url);
-        setPexelsUrl(gaibImage.pexels_url);
-      }
-    }
-
-    async function getGaib() {
-      const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
-      const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
-      let randomNumber = 0;
-      if (maxNumber > 1) {
-        randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
-      } else {
-        randomNumber = maxNumber;
       }
 
-      let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
-      if (directoryUrl != null && maxNumber >= 1 && randomNumber >= 0) {
-        url = `${directoryUrl}/${randomNumber}.png`;
+      async function getGaib() {
+        const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
+        const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
+        let randomNumber = 0;
+        if (maxNumber > 1) {
+          randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
+        } else {
+          randomNumber = maxNumber;
+        }
+
+        let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
+        if (directoryUrl != null && maxNumber >= 1 && randomNumber >= 0) {
+          url = `${directoryUrl}/${randomNumber}.png`;
+        }
+        return url;
       }
-      return url;
-    }
 
-    // Choose Pexles, DeepAI or local images
-    async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
-      const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
-      const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
+      // Choose Pexles, DeepAI or local images
+      async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
+        const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
+        const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
 
-      // check if enabled
-      if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
+        // check if enabled
+        if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
+          return '';
+        }
+
+        // Check if it has been 5 seconds since we last generated an image
+        const endTime = new Date();
+        const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+        if ((deltaTimeInSeconds < 3) || ((!isSpeaking && deltaTimeInSeconds < 5) && messages.length > 0)) {
+          console.log(`generateImageUrl: has only been ${deltaTimeInSeconds} seconds since last image creation, skipping.`);
+          return '';
+        }
+        setStartTime(endTime);
+
+        if (sentence === '') {
+          sentence = 'GAIB The AI Robot, quantum computing, and the meaning of life.';
+        }
+
+        let keywords = '';
+
+        // Use local images if requested else use Pexels API to fetch images
+        if (!useImageAPI) {
+          // use local images
+          return await getGaib();
+        } else {
+          try {
+            let response;
+            if (imageSource === 'pexels') {
+              const idToken = await user?.getIdToken();
+              let extracted_keywords = extractKeywords(sentence, 32).join(' ');
+              console.log('Extracted keywords: [', extracted_keywords, ']');
+              keywords = encodeURIComponent(extracted_keywords);
+              response = await fetch('/api/pexels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ keywords }),
+              });
+            } else if (imageSource === 'deepai') {
+              const idToken = await user?.getIdToken();
+              let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+              let exampleImage = '' as ImageData | string;
+              if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+                if (lastImage !== '') {
+                  exampleImage = lastImage;
+                } else {
+                  exampleImage = await getGaib();
+                }
+              }
+              response = await fetch('/api/deepai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
+              });
+            } else if (imageSource === 'openai') {
+              const idToken = await user?.getIdToken();
+              let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+              let exampleImage = '' as ImageData | string;
+              if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+                if (lastImage !== '') {
+                  exampleImage = lastImage;
+                } else {
+                  exampleImage = await getGaib();
+                }
+              }
+              response = await fetch('/api/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
+              });
+            } else if (imageSource === 'getimgai') {
+              const idToken = await user?.getIdToken();
+              let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v1-5';
+              let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
+              let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+              let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 704;
+              let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
+              let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
+              let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
+              let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
+              let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
+              let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
+
+              // Ensure width and height are multiples of 64
+              width = Math.floor(width / 64) * 64;
+              height = Math.floor(height / 64) * 64;
+
+              response = await fetch('/api/getimgai', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({
+                  model: model,
+                  prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}`,
+                  negativePrompt: negativePrompt,
+                  width: width,
+                  height: height,
+                  steps: steps,
+                  guidance: guidance,
+                  seed: seed,
+                  scheduler: scheduler,
+                  outputFormat: outputFormat,
+                }),
+              });
+            }
+
+            if (!response) {
+              console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API`);
+              return await getGaib();
+            }
+
+            const data = await response.json();
+            let imageId = uuidv4();
+            let duplicateImage = false;
+            if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
+              return {
+                url: data.photos[0].src.large2x,
+                photographer: data.photos[0].photographer,
+                photographer_url: data.photos[0].photographer_url,
+                pexels_url: data.photos[0].url,
+              };
+            } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
+              const imageUrl = data.output_url;
+              if (data?.duplicate === true) {
+                duplicateImage = true;
+              }
+              if (saveImages === 'true' && !duplicateImage && authEnabled) {
+                const idToken = await user?.getIdToken();
+                // Store the image and index it
+                await fetch('/api/storeImage', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                  body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
+                });
+              }
+              const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
+              if (bucketName !== '' && !duplicateImage) {
+                return `https://storage.googleapis.com/${bucketName}/deepAIimage/${localEpisodeId}_${count}_${imageId}.jpg`;
+              } else {
+                // don't store images in GCS or it is a duplicate image
+                return imageUrl;
+              }
+            } else if (imageSource === 'getimgai' && data.output_url) {
+              const imageUrl = data.output_url;
+              if (data?.duplicate === true) {
+                duplicateImage = true;
+              }
+              return imageUrl;
+            } else {
+              console.error('No image found for the given keywords: [', keywords, ']');
+            }
+          } catch (error) {
+            console.error('Error fetching image from API:', error);
+          }
+        }
+        // failed to fetch image, leave the image as is
         return '';
       }
 
-      // Check if it has been 5 seconds since we last generated an image
-      const endTime = new Date();
-      const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-      if ((deltaTimeInSeconds < 3) || ((!isSpeaking && deltaTimeInSeconds < 5) && messages.length > 0)) {
-        console.log(`generateImageUrl: has only been ${deltaTimeInSeconds} seconds since last image creation, skipping.`);
-        return '';
-      }
-      setStartTime(endTime);
-
-      if (sentence === '') {
-        sentence = 'GAIB The AI Robot, quantum computing, and the meaning of life.';
-      }
-
-      let keywords = '';
-
-      // Use local images if requested else use Pexels API to fetch images
-      if (!useImageAPI) {
-        // use local images
-        return await getGaib();
-      } else {
+      // This is the function you want to run every 60 seconds
+      const generateAndSetImage = async (imagePrompt: string, personalityPrompt: string, lastImage: ImageData | string, count: number = 0): Promise<string | ImageData> => {
         try {
-          let response;
-          if (imageSource === 'pexels') {
-            const idToken = await user?.getIdToken();
-            let extracted_keywords = extractKeywords(sentence, 32).join(' ');
-            console.log('Extracted keywords: [', extracted_keywords, ']');
-            keywords = encodeURIComponent(extracted_keywords);
-            response = await fetch('/api/pexels', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-              body: JSON.stringify({ keywords }),
-            });
-          } else if (imageSource === 'deepai') {
-            const idToken = await user?.getIdToken();
-            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-            let exampleImage = '' as ImageData | string;
-            if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-              if (lastImage !== '') {
-                exampleImage = lastImage;
-              } else {
-                exampleImage = await getGaib();
-              }
-            }
-            response = await fetch('/api/deepai', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-              body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
-            });
-          } else if (imageSource === 'openai') {
-            const idToken = await user?.getIdToken();
-            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-            let exampleImage = '' as ImageData | string;
-            if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-              if (lastImage !== '') {
-                exampleImage = lastImage;
-              } else {
-                exampleImage = await getGaib();
-              }
-            }
-            response = await fetch('/api/openai', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-              body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
-            });
-          } else if (imageSource === 'getimgai') {
-            const idToken = await user?.getIdToken();
-            let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v1-5';
-            let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
-            let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-            let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 704;
-            let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
-            let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
-            let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
-            let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
-            let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
-            let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
+          // Prepare the request body. You may need to adjust this to fit your use case.
+          const requestBody = {
+            message: imagePrompt,
+            prompt: personalityPrompt,
+            conversationHistory: conversationHistory  // You may need to populate this with previous conversation history, if any.
+          };
 
-            // Ensure width and height are multiples of 64
-            width = Math.floor(width / 64) * 64;
-            height = Math.floor(height / 64) * 64;
-
-            response = await fetch('/api/getimgai', {
+          let content: string = 'random image of a robot anime AI';
+          try {
+            const idToken = await user?.getIdToken();
+            // Send a POST request to your local API endpoint.
+            const response = await fetch('/api/gpt', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
+                'Authorization': `Bearer ${idToken}`
               },
-              body: JSON.stringify({
-                model: model,
-                prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}`,
-                negativePrompt: negativePrompt,
-                width: width,
-                height: height,
-                steps: steps,
-                guidance: guidance,
-                seed: seed,
-                scheduler: scheduler,
-                outputFormat: outputFormat,
-              }),
+              body: JSON.stringify(requestBody)
             });
+
+            // Parse the response.
+            const data = await response.json();
+
+            if (debug) {
+              console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
+            }
+
+            // Extract the AI generated message.
+            content = data.aiMessage.content;
+            setConvesationHistory([...conversationHistory, data])
+          } catch (error) {
+            console.error("GPT + Failed to generate a message:", error);
+            let gaibImage = await generateImageUrl(gaibImagePrompt, true, lastImage, episodeId, count);
+            setPexelImageUrls(gaibImage);
+            return gaibImage;
           }
 
-          if (!response) {
-            console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API`);
-            return await getGaib();
-          }
-
-          const data = await response.json();
-          let imageId = uuidv4();
-          let duplicateImage = false;
-          if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
-            return {
-              url: data.photos[0].src.large2x,
-              photographer: data.photos[0].photographer,
-              photographer_url: data.photos[0].photographer_url,
-              pexels_url: data.photos[0].url,
-            };
-          } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
-            const imageUrl = data.output_url;
-            if (data?.duplicate === true) {
-              duplicateImage = true;
-            }
-            if (saveImages === 'true' && !duplicateImage && authEnabled) {
-              const idToken = await user?.getIdToken();
-              // Store the image and index it
-              await fetch('/api/storeImage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
-              });
-            }
-            const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
-            if (bucketName !== '' && !duplicateImage) {
-              return `https://storage.googleapis.com/${bucketName}/deepAIimage/${localEpisodeId}_${count}_${imageId}.jpg`;
-            } else {
-              // don't store images in GCS or it is a duplicate image
-              return imageUrl;
-            }
-          } else if (imageSource === 'getimgai' && data.output_url) {
-            const imageUrl = data.output_url;
-            if (data?.duplicate === true) {
-              duplicateImage = true;
-            }
-            return imageUrl;
-          } else {
-            console.error('No image found for the given keywords: [', keywords, ']');
-          }
-        } catch (error) {
-          console.error('Error fetching image from API:', error);
-        }
-      }
-      // failed to fetch image, leave the image as is
-      return '';
-    }
-
-    // This is the function you want to run every 60 seconds
-    const generateAndSetImage = async (imagePrompt: string, personalityPrompt: string, lastImage: ImageData | string, count: number = 0): Promise<string | ImageData> => {
-      try {
-        // Prepare the request body. You may need to adjust this to fit your use case.
-        const requestBody = {
-          message: imagePrompt,
-          prompt: personalityPrompt,
-          conversationHistory: conversationHistory  // You may need to populate this with previous conversation history, if any.
-        };
-
-        let content: string = 'random image of a robot anime AI';
-        try {
-          const idToken = await user?.getIdToken();
-          // Send a POST request to your local API endpoint.
-          const response = await fetch('/api/gpt', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${idToken}`
-            },
-            body: JSON.stringify(requestBody)
-          });
-
-          // Parse the response.
-          const data = await response.json();
-
-          if (debug) {
-            console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
-          }
-
-          // Extract the AI generated message.
-          content = data.aiMessage.content;
-          setConvesationHistory([...conversationHistory, data])
-        } catch (error) {
-          console.error("GPT + Failed to generate a message:", error);
-          let gaibImage = await generateImageUrl(gaibImagePrompt, true, lastImage, episodeId, count);
+          // Use the AI generated message as the prompt for generating an image URL.
+          let gaibImage = await generateImageUrl(content, true, lastImage, episodeId, count);
           setPexelImageUrls(gaibImage);
+
           return gaibImage;
-        }
-
-        // Use the AI generated message as the prompt for generating an image URL.
-        let gaibImage = await generateImageUrl(content, true, lastImage, episodeId, count);
-        setPexelImageUrls(gaibImage);
-
-        return gaibImage;
-      } catch (error) {
-        console.error("GPT + generateImageUrl Failed to generate an image URL:", error);
-      }
-      return await getGaib() ? await getGaib() : lastImage;
-    };
-
-    function splitSentence(sentence: any, maxLength = 300) {
-      const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
-      try {
-        return sentence.match(regex) || [];
-      } catch (e) {
-        console.log('Error splitting sentence: ', sentence, ': ', e);
-        return [sentence];
-      }
-    }
-
-    function removeMarkdownAndSpecialSymbols(text: string): string {
-      // Remove markdown formatting
-      const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
-      const cleanedText = text.replace(markdownRegex, '');
-
-      // Remove special symbols (including periods)
-      const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
-      const finalText = cleanedText.replace(specialSymbolsRegex, '');
-
-      return finalText;
-    }
-
-    async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
-      const idToken = await user?.getIdToken();
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify({ text, targetLanguage }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error in translating text, statusText: ' + response.statusText);
-      }
-
-      const data = await response.json();
-      return data.translatedText;
-    }
-
-    async function displayImagesAndSubtitles() {
-      const idToken = await user?.getIdToken();
-      let sentences: string[];
-      let localCurrentStory = [] as StoryPart[];
-      if (isPaused) {
-        stopSpeaking();
-        return;
-      }
-      try {
-        /*const doc = nlp(messages[lastMessageIndex].message);
-        sentences = doc.sentences().out('array');*/
-        // Split the message into paragraphs at each empty line
-        const paragraphs = messages[lastMessageIndex].message.split(/\n\s*\n/);
-        sentences = [];
-        for (const paragraph of paragraphs) {
-          // If the paragraph is too long, split it into sentences
-          if (paragraph.length > 800) { // 10 lines of 80 characters
-            const doc = nlp(paragraph);
-            const paragraphSentences = doc.sentences().out('array');
-            sentences.push(...paragraphSentences);
-          } else {
-            sentences.push(paragraph);
-          }
-        }
-      } catch (e) {
-        console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
-        sentences = [messages[lastMessageIndex].message];
-      }
-
-      // Display the images and subtitles
-      episodeId = uuidv4();      
-      let gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
-        `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, '', 0);
-      let lastImage = gaibImage;
-
-      setSubtitle(''); // Clear the subtitle
-      setLoadingOSD('');
-
-      let maleVoiceModels = {
-        'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
-        'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
-        'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
-        'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
-      };
-
-      let femaleVoiceModels = {
-        'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-        'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
-        'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-        'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-      };
-
-      let neutralVoiceModels = {
-        'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-        'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
-        'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-        'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-      };
-
-      let defaultModels = {
-        'en-US': 'en-US-Wavenet-C',
-        'ja-JP': 'ja-JP-Wavenet-A',
-        'es-US': 'es-US-Wavenet-A',
-        'en-GB': 'en-GB-Wavenet-A'
-      };
-
-      if (gender == `MALE`) {
-        defaultModels = {
-          'en-US': 'en-US-Wavenet-A',
-          'ja-JP': 'ja-JP-Wavenet-C',
-          'es-US': 'es-US-Wavenet-B',
-          'en-GB': 'en-GB-Wavenet-B'
-        };
-      }
-
-      let voiceModels: { [key: string]: string } = {};
-      let genderMarkedNames: any[] = [];
-      let detectedGender: string = gender;
-      let currentSpeaker: string = 'GAIB';
-      let isContinuingToSpeak = false;
-      let isSceneChange = false;
-      let lastSpeaker = '';
-
-      // Extract gender markers from the entire message
-      const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
-      if (genderMarkerMatches) {
-        let name: string;
-        for (const match of genderMarkerMatches) {
-          const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
-          if (match.includes(':')) {
-            name = match.slice(0, match.indexOf(':')).trim().toLowerCase();
-          } else {
-            name = match.slice(0, match.indexOf('[')).trim().toLowerCase();
-          }
-          genderMarkedNames.push({ name, marker });
-
-          // Assign a voice model to the name
-          if (marker === 'm' && !voiceModels[name]) {
-            if (maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].length > 0) {
-              voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
-              maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
-            }
-          } else if ((marker == 'n' || marker === 'f') && !voiceModels[name]) {
-            if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
-              voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
-              femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
-            }
-          } else if (!voiceModels[name]) {
-            if (neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].length > 0) {
-              voiceModels[name] = neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].shift() as string;
-              neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].push(voiceModels[name]);
-            }
-          }
-        }
-      }
-
-      if (debug) {
-        console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
-        console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
-      }
-      let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
-      let model = defaultModel;
-
-      let sceneTexts: string[] = [];
-      let currentSceneText = "";
-      for (const sentence of sentences) {
-        if (sentence.includes('SCENE:')) {
-          // When we encounter a new scene, we push the current scene text to the array
-          // and start a new scene text
-          if (currentSceneText !== "") {
-            sceneTexts.push(currentSceneText.replace('SCENE:', ''));
-          }
-          currentSceneText = sentence;
-        } else {
-          // If it's not a new scene, we append the sentence to the current scene text
-          currentSceneText += " " + sentence;
-        }
-      }
-      // Don't forget to push the last scene text
-      if (currentSceneText !== "") {
-        sceneTexts.push(currentSceneText);
-      }
-
-      if (sceneTexts.length == 0) {
-        sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '')}`);
-      }
-
-      let sceneIndex = 0;
-
-      // Extract all unique speakers for twitch channel chat responses
-      if (channelId !== '' && twitchChatEnabled) {
-        const uniqueSpeakers = Array.from(new Set(genderMarkedNames.map(item => item.name)));
-
-        // Create a list of speakers with their genders
-        const speakerList = uniqueSpeakers.map(speaker => {
-          const speakerGender = genderMarkedNames.find(item => item.name.toLowerCase() === speaker.toLowerCase());
-          return `${speaker} (Gender: ${speakerGender?.marker || 'Unknown'})`;
-        }).join(', ');
-
-        // Create a title for the story from the first sentence
-        const title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
-
-        // Create a brief introduction of the story from the second sentence
-        const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
-
-        // Create the summary
-        let summary: string = '';
-        if (isStory) {
-          summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
-        } else {
-          summary = `Question: ${title}\n\nSpeaker(s) ${speakerList}.\n\nAnswer: ${introduction}...`;
-        }
-
-        // Post the summary to the API endpoint
-        try {
-          await postResponse(channelId, summary, user?.uid);
         } catch (error) {
-          console.error('Failed to post response: ', error);
+          console.error("GPT + generateImageUrl Failed to generate an image URL:", error);
+        }
+        return await getGaib() ? await getGaib() : lastImage;
+      };
+
+      function splitSentence(sentence: any, maxLength = 300) {
+        const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
+        try {
+          return sentence.match(regex) || [];
+        } catch (e) {
+          console.log('Error splitting sentence: ', sentence, ': ', e);
+          return [sentence];
         }
       }
 
-      // clear the previous story
-      setCurrentStory([]);
+      function removeMarkdownAndSpecialSymbols(text: string): string {
+        // Remove markdown formatting
+        const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
+        const cleanedText = text.replace(markdownRegex, '');
 
-      let count = 0;
-      for (let sentence of sentences) {
-        // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
-        if (lastMessageDisplayed != lastMessageIndex) {
-          // Set the last message displayed
-          setLastMessageDisplayed(lastMessageIndex);
-          if (sentence == '--' || sentence == '' || sentence == '-' || (sentence.startsWith('---') && sentence.endsWith('-'))) {
-            continue;
-          }
-          // get the image for the sentence
-          const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
-          if (!sentence.startsWith('References: ')
-            && sentence !== ''
-            && (imageSource == 'pexels'
-              || count == 0 // first sentence
-              || (sentence.includes('SCENE:')
-                || sentence.includes('Title:')
-                || sentence.includes('Question: ')
-                || sentence.includes('Answer: ')
-                || sentence.includes('Begins: ')
-                || sentence.includes('Plotline: ')
-                /*|| (sentence.startsWith('*') && sentence.length > 60)*/))) {
-            let imageDescription = sentence;
-            if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE:')) {
-              if (sentence.includes('SCENE:')) {
-                sentence = sentence.replace('[', '');
-                sentence = sentence.replace(']', '');
-                sentence = sentence.replace('SCENE:', '');
-                imageDescription = sceneTexts[sceneIndex];
-                sceneIndex++;  // Move to the next scene
-              }
-              count += 1;
-              gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${imageDescription}`,
-                `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, 0);
-              if (gaibImage != '') {
-                lastImage = gaibImage;
-              }
-            }
-          }
-          let image: ImageData | string = lastImage;
-          if (typeof image === 'string') {
-            image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-          } else {
-            image = { url: image.url, photographer: image.photographer, photographer_url: image.photographer_url, pexels_url: image.pexels_url };
-          }
-          // save story and images for auto save and/or sharing
-          if (messages.length > 1 && lastMessageIndex >= 2) {
-            if (messages[lastMessageIndex].type === 'apiMessage') {
-              console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${sentence}`);
-              setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
-            }
-          }
+        // Remove special symbols (including periods)
+        const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
+        const finalText = cleanedText.replace(specialSymbolsRegex, '');
 
-          let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
+        return finalText;
+      }
 
-          // go through by sentence so we can preserve the speaker
-          for (const sentence_by_character of sentences_by_character) {
-            // Set the subtitle to the translated text if the text is not in English
-            let translatedText = '';
-            if (subtitleLanguage !== 'en-US' && translateText) {
-              translatedText = await fetchTranslation(sentence_by_character, subtitleLanguage);
-              setSubtitle(splitSentence(translatedText));
+      async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
+        const idToken = await user?.getIdToken();
+        const response = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+          body: JSON.stringify({ text, targetLanguage }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Error in translating text, statusText: ' + response.statusText);
+        }
+
+        const data = await response.json();
+        return data.translatedText;
+      }
+
+      async function displayImagesAndSubtitles() {
+        const idToken = await user?.getIdToken();
+        let sentences: string[];
+        let localCurrentStory = [] as StoryPart[];
+        if (isPaused) {
+          stopSpeaking();
+          return;
+        }
+        try {
+          // Split the message into paragraphs at each empty line
+          const paragraphs = messages[lastMessageIndex].message.split(/\n\s*\n/);
+          sentences = [];
+          for (const paragraph of paragraphs) {
+            // If the paragraph is too long, split it into sentences
+            if (paragraph.length > 800) { // 10 lines of 80 characters
+              const doc = nlp(paragraph);
+              const paragraphSentences = doc.sentences().out('array');
+              sentences.push(...paragraphSentences);
             } else {
-              setSubtitle(splitSentence(sentence_by_character));
+              sentences.push(paragraph);
             }
+          }
+        } catch (e) {
+          console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
+          sentences = [messages[lastMessageIndex].message];
+        }
 
-            let speakerChanged = false;
-            // Check if sentence contains a name from genderMarkedNames
-            for (const { name, marker } of genderMarkedNames) {
-              const lcSentence = sentence_by_character.toLowerCase();
-              let nameFound = false;
+        // Display the images and subtitles
+        episodeId = uuidv4();
+        let gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
+          `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, '', 0);
+        let lastImage = gaibImage;
 
-              const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
-              const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
-              for (const prefix of prefixes) {
-                if (lcSentence.startsWith(name + prefix)) {
-                  nameFound = true;
-                  break;
+        setSubtitle(''); // Clear the subtitle
+        setLoadingOSD('');
+
+        let maleVoiceModels = {
+          'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
+          'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
+          'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
+          'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
+        };
+
+        let femaleVoiceModels = {
+          'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+          'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+          'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+          'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+        };
+
+        let neutralVoiceModels = {
+          'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+          'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+          'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+          'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+        };
+
+        let defaultModels = {
+          'en-US': 'en-US-Wavenet-C',
+          'ja-JP': 'ja-JP-Wavenet-A',
+          'es-US': 'es-US-Wavenet-A',
+          'en-GB': 'en-GB-Wavenet-A'
+        };
+
+        if (gender == `MALE`) {
+          defaultModels = {
+            'en-US': 'en-US-Wavenet-A',
+            'ja-JP': 'ja-JP-Wavenet-C',
+            'es-US': 'es-US-Wavenet-B',
+            'en-GB': 'en-GB-Wavenet-B'
+          };
+        }
+
+        let voiceModels: { [key: string]: string } = {};
+        let genderMarkedNames: any[] = [];
+        let detectedGender: string = gender;
+        let currentSpeaker: string = 'GAIB';
+        let isContinuingToSpeak = false;
+        let isSceneChange = false;
+        let lastSpeaker = '';
+
+        // Extract gender markers from the entire message
+        const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
+        if (genderMarkerMatches) {
+          let name: string;
+          for (const match of genderMarkerMatches) {
+            const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
+            if (match.includes(':')) {
+              name = match.slice(0, match.indexOf(':')).trim().toLowerCase();
+            } else {
+              name = match.slice(0, match.indexOf('[')).trim().toLowerCase();
+            }
+            genderMarkedNames.push({ name, marker });
+
+            // Assign a voice model to the name
+            if (marker === 'm' && !voiceModels[name]) {
+              if (maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].length > 0) {
+                voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
+                maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
+              }
+            } else if ((marker == 'n' || marker === 'f') && !voiceModels[name]) {
+              if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
+                voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
+                femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
+              }
+            } else if (!voiceModels[name]) {
+              if (neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].length > 0) {
+                voiceModels[name] = neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].shift() as string;
+                neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].push(voiceModels[name]);
+              }
+            }
+          }
+        }
+
+        if (debug) {
+          console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
+          console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
+        }
+        let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+        let model = defaultModel;
+
+        let sceneTexts: string[] = [];
+        let currentSceneText = "";
+        for (const sentence of sentences) {
+          if (sentence.includes('SCENE:')) {
+            // When we encounter a new scene, we push the current scene text to the array
+            // and start a new scene text
+            if (currentSceneText !== "") {
+              sceneTexts.push(currentSceneText.replace('SCENE:', ''));
+            }
+            currentSceneText = sentence;
+          } else {
+            // If it's not a new scene, we append the sentence to the current scene text
+            currentSceneText += " " + sentence;
+          }
+        }
+        // Don't forget to push the last scene text
+        if (currentSceneText !== "") {
+          sceneTexts.push(currentSceneText);
+        }
+
+        if (sceneTexts.length == 0) {
+          sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '')}`);
+        }
+
+        let sceneIndex = 0;
+
+        // Extract all unique speakers for twitch channel chat responses
+        if (channelId !== '' && twitchChatEnabled) {
+          const uniqueSpeakers = Array.from(new Set(genderMarkedNames.map(item => item.name)));
+
+          // Create a list of speakers with their genders
+          const speakerList = uniqueSpeakers.map(speaker => {
+            const speakerGender = genderMarkedNames.find(item => item.name.toLowerCase() === speaker.toLowerCase());
+            return `${speaker} (Gender: ${speakerGender?.marker || 'Unknown'})`;
+          }).join(', ');
+
+          // Create a title for the story from the first sentence
+          const title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
+
+          // Create a brief introduction of the story from the second sentence
+          const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
+
+          // Create the summary
+          let summary: string = '';
+          if (isStory) {
+            summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
+          } else {
+            summary = `Question: ${title}\n\nSpeaker(s) ${speakerList}.\n\nAnswer: ${introduction}...`;
+          }
+
+          // Post the summary to the API endpoint
+          try {
+            await postResponse(channelId, summary, user?.uid);
+          } catch (error) {
+            console.error('Failed to post response: ', error);
+          }
+        }
+
+        // clear the previous story
+        setCurrentStory([]);
+
+        let count = 0;
+        for (let sentence of sentences) {
+          // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
+          if (lastMessageDisplayed != lastMessageIndex) {
+            // Set the last message displayed
+            setLastMessageDisplayed(lastMessageIndex);
+            if (sentence == '--' || sentence == '' || sentence == '-' || (sentence.startsWith('---') && sentence.endsWith('-'))) {
+              continue;
+            }
+            // get the image for the sentence
+            const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
+            if (!sentence.startsWith('References: ')
+              && sentence !== ''
+              && (imageSource == 'pexels'
+                || count == 0 // first sentence
+                || (sentence.includes('SCENE:')
+                  || sentence.includes('Title:')
+                  || sentence.includes('Question: ')
+                  || sentence.includes('Answer: ')
+                  || sentence.includes('Begins: ')
+                  || sentence.includes('Plotline: ')
+                /*|| (sentence.startsWith('*') && sentence.length > 60)*/))) {
+              let imageDescription = sentence;
+              if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE:')) {
+                if (sentence.includes('SCENE:')) {
+                  sentence = sentence.replace('[', '');
+                  sentence = sentence.replace(']', '');
+                  sentence = sentence.replace('SCENE:', '');
+                  imageDescription = sceneTexts[sceneIndex];
+                  sceneIndex++;  // Move to the next scene
+                }
+                count += 1;
+                gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${imageDescription}`,
+                  `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, 0);
+                if (gaibImage != '') {
+                  lastImage = gaibImage;
                 }
               }
-              for (const prefix of regprefixes) {
-                if (nameFound) {
-                  break;
-                }
-                if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
-                  nameFound = true;
-                  break;
-                }
-              }
-
-              if (nameFound) {
-                console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
-                if (currentSpeaker !== name) {
-                  lastSpeaker = currentSpeaker;
-                  speakerChanged = true;
-                  currentSpeaker = name;
-                  isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
-                }
-                switch (marker) {
-                  case 'f':
-                    detectedGender = 'FEMALE';
-                    break;
-                  case 'm':
-                    detectedGender = 'MALE';
-                    break;
-                  case 'n':
-                    detectedGender = 'FEMALE';
-                    break;
-                }
-                // Use the voice model for the character if it exists, otherwise use the default voice model
-                model = voiceModels[name] || defaultModel;
-                break;  // Exit the loop as soon as a name is found
+            }
+            let image: ImageData | string = lastImage;
+            if (typeof image === 'string') {
+              image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+            } else {
+              image = { url: image.url, photographer: image.photographer, photographer_url: image.photographer_url, pexels_url: image.pexels_url };
+            }
+            // save story and images for auto save and/or sharing
+            if (messages.length > 1 && lastMessageIndex >= 2) {
+              if (messages[lastMessageIndex].type === 'apiMessage') {
+                console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${sentence}`);
+                setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
               }
             }
 
-            console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+            let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
 
-            // If the speaker has changed or if it's a scene change, switch back to the default voice
-            if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
-              detectedGender = gender;
-              currentSpeaker = 'GAIB';
-              model = defaultModel;
-              console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
-              isSceneChange = true;  // Reset the scene change flag
-            }
-
-            // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
-            if (sentence_by_character.startsWith('(') || (!sentence_by_character.startsWith('*') && !speakerChanged && !isSceneChange)) {
-              isContinuingToSpeak = true;
-            }
-
-            // Speak the sentence if speech output is enabled
-            if (speechOutputEnabled) {
-              // Speak the sentence
-              if (audioLanguage === 'en-US') {
-                // Speak the original text
-                if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
-                }
-                const cleanText = removeMarkdownAndSpecialSymbols(sentence_by_character);
-                if (cleanText !== '' && enableSpeaking) {
-                  await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
-                } else {
-                  // Wait anyways even if speaking fails so that the subtitles are displayed
-                  const sentenceLength = sentence_by_character.length;
-                  const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                  await new Promise(resolve => setTimeout(resolve, waitTime));
-                }
+            // go through by sentence so we can preserve the speaker
+            for (const sentence_by_character of sentences_by_character) {
+              // Set the subtitle to the translated text if the text is not in English
+              let translatedText = '';
+              if (subtitleLanguage !== 'en-US' && translateText) {
+                translatedText = await fetchTranslation(sentence_by_character, subtitleLanguage);
+                setSubtitle(splitSentence(translatedText));
               } else {
-                // Speak the translated text
-                let translationEntry: string = '';
-                if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
-                  // Use the previously translated text
-                  translationEntry = translatedText;
-                } else {
-                  // Translate the text
-                  translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
+                setSubtitle(splitSentence(sentence_by_character));
+              }
+
+              let speakerChanged = false;
+              // Check if sentence contains a name from genderMarkedNames
+              for (const { name, marker } of genderMarkedNames) {
+                const lcSentence = sentence_by_character.toLowerCase();
+                let nameFound = false;
+
+                const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
+                const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
+                for (const prefix of prefixes) {
+                  if (lcSentence.startsWith(name + prefix)) {
+                    nameFound = true;
+                    break;
+                  }
                 }
-                if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", translationEntry);
+                for (const prefix of regprefixes) {
+                  if (nameFound) {
+                    break;
+                  }
+                  if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
+                    nameFound = true;
+                    break;
+                  }
                 }
-                try {
-                  const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
+
+                if (nameFound) {
+                  console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
+                  if (currentSpeaker !== name) {
+                    lastSpeaker = currentSpeaker;
+                    speakerChanged = true;
+                    currentSpeaker = name;
+                    isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
+                  }
+                  switch (marker) {
+                    case 'f':
+                      detectedGender = 'FEMALE';
+                      break;
+                    case 'm':
+                      detectedGender = 'MALE';
+                      break;
+                    case 'n':
+                      detectedGender = 'FEMALE';
+                      break;
+                  }
+                  // Use the voice model for the character if it exists, otherwise use the default voice model
+                  model = voiceModels[name] || defaultModel;
+                  break;  // Exit the loop as soon as a name is found
+                }
+              }
+
+              console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+
+              // If the speaker has changed or if it's a scene change, switch back to the default voice
+              if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
+                detectedGender = gender;
+                currentSpeaker = 'GAIB';
+                model = defaultModel;
+                console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
+                isSceneChange = true;  // Reset the scene change flag
+              }
+
+              // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
+              if (sentence_by_character.startsWith('(') || (!sentence_by_character.startsWith('*') && !speakerChanged && !isSceneChange)) {
+                isContinuingToSpeak = true;
+              }
+
+              // Speak the sentence if speech output is enabled
+              if (speechOutputEnabled) {
+                // Speak the sentence
+                if (audioLanguage === 'en-US') {
+                  // Speak the original text
+                  if (debug) {
+                    console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
+                  }
+                  const cleanText = removeMarkdownAndSpecialSymbols(sentence_by_character);
                   if (cleanText !== '' && enableSpeaking) {
-                    await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
+                    await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
                   } else {
                     // Wait anyways even if speaking fails so that the subtitles are displayed
                     const sentenceLength = sentence_by_character.length;
                     const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                   }
-                } catch (e) {
-                  console.log('Error speaking text: ', e);
-                  // Wait anyways even if speaking fails so that the subtitles are displayed
-                  const sentenceLength = sentence_by_character.length;
-                  const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                } else {
+                  // Speak the translated text
+                  let translationEntry: string = '';
+                  if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
+                    // Use the previously translated text
+                    translationEntry = translatedText;
+                  } else {
+                    // Translate the text
+                    translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
+                  }
+                  if (debug) {
+                    console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", translationEntry);
+                  }
+                  try {
+                    const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
+                    if (cleanText !== '' && enableSpeaking) {
+                      await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
+                    } else {
+                      // Wait anyways even if speaking fails so that the subtitles are displayed
+                      const sentenceLength = sentence_by_character.length;
+                      const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                      await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                  } catch (e) {
+                    console.log('Error speaking text: ', e);
+                    // Wait anyways even if speaking fails so that the subtitles are displayed
+                    const sentenceLength = sentence_by_character.length;
+                    const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                  }
                 }
+              } else {
+                // Wait for the sentence to be spoken, measure sentence length to know how long to wait for
+                const sentenceLength = sentence_by_character.length;
+                const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
               }
-            } else {
-              // Wait for the sentence to be spoken, measure sentence length to know how long to wait for
-              const sentenceLength = sentence_by_character.length;
-              const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-              await new Promise(resolve => setTimeout(resolve, waitTime));
+              // Update the last speaker
+              lastSpeaker = currentSpeaker;
             }
-            // Update the last speaker
-            lastSpeaker = currentSpeaker;
           }
         }
-      }
-      if (messages[lastMessageIndex].type === 'apiMessage') {
-        // save story automatically
-        if (localCurrentStory.length > 0) {
-          await shareStory(localCurrentStory, true);
+        if (messages[lastMessageIndex].type === 'apiMessage') {
+          // save story automatically
+          if (localCurrentStory.length > 0) {
+            await shareStory(localCurrentStory, true);
+          }
         }
+        // Reset the subtitle after all sentences have been spoken
+        stopSpeaking();
+        setIsSpeaking(false);
+        setSubtitle('');
+        setLoadingOSD('I am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.');
+        setGaibImagePrompt(messages[lastMessageIndex].message.slice(0, 200).replace('\n', ''));
+        await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
+          `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, count);
       }
-      // Reset the subtitle after all sentences have been spoken
-      stopSpeaking();
-      setIsSpeaking(false);
-      setSubtitle('');
-      setLoadingOSD('Please enter a topic or question for a story or answer.');
-      setGaibImagePrompt(messages[lastMessageIndex].message.slice(0, 200).replace('\n', ''));
-      await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
-        `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, count);
-    }
 
-    if (lastMessageIndex > lastSpokenMessageIndex &&
-      messages[lastMessageIndex].type === 'apiMessage'
-    ) {
-      // Multi Modal theme
-      displayImagesAndSubtitles();
-      setLastSpokenMessageIndex(lastMessageIndex);
-    }
+      if (lastMessageIndex > lastSpokenMessageIndex &&
+        messages[lastMessageIndex].type === 'apiMessage'
+      ) {
+        // Multi Modal theme
+        displayImagesAndSubtitles();
+        setLastSpokenMessageIndex(lastMessageIndex);
+      }
+    /*};
+    const debouncedProcessMessages = debounce(processMessages, 3000);
+
+    debouncedProcessMessages();*/
   }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory, autoSave, currentStory]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
 
   // Modify the handleSubmit function
-  async function handleSubmit(e: any, recognitionInstance?: SpeechRecognition) {
+  async function handleSubmit(e: any) {
     e.preventDefault();
 
     let question = e.target?.value ? e.target.value.trim() : query.trim();
@@ -1388,7 +1401,7 @@ function Home({ user }: HomeProps) {
     setError(null);
     setIsPaused(false);
     setLoading(true);
-    setLoadingOSD(`Loading... ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
+    setLoadingOSD(`${isStory ? 'Plotline: ' : 'Question: '}${question.slice(0, 320).replace(/\n/g, ' ')}...`);
     setSubtitle('');
     setIsSpeaking(true);
     setQuery('');
@@ -1436,8 +1449,6 @@ function Home({ user }: HomeProps) {
               pendingSourceDocs: undefined,
             }));
             setLoading(false);
-            setSubtitle('');
-            setLoadingOSD('');
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             ctrl.abort();
           } else if (event.data === '[OUT_OF_TOKENS]') {
@@ -1455,7 +1466,6 @@ function Home({ user }: HomeProps) {
             }));
             setLoading(false);
             setLoadingOSD('System Error... Please try again.');
-            setSubtitle('');
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             ctrl.abort();
           } else {
@@ -1469,18 +1479,9 @@ function Home({ user }: HomeProps) {
               setMessageState((state) => ({
                 ...state,
                 pending: (state.pending ?? '') + data.data,
-              }));             
+              }));
             }
-
-            if (false && latestMessage && latestMessage.message && latestMessage.message.length > 0) {
-              const messageLength = latestMessage.message.length;
-              const startCut = Math.max(0, messageLength - 75);
-              console.log(`handleSubmit: Loading... ${latestMessage.message.replace(/\n/g, ' ').slice(startCut, messageLength)}`);
-              setLoadingOSD(`Loading... ${latestMessage.message.replace(/\n/g, ' ').slice(startCut, messageLength)}`);
-            } else {
-              setLoadingOSD(`Loading... ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
-            }
-            setSubtitle(``);
+            setLoadingOSD(`Loading... [${data.data.replace(/\n/g, '').slice(0,16)}] `);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
@@ -1676,24 +1677,27 @@ function Home({ user }: HomeProps) {
   // Add a useEffect hook to call handleSubmit whenever the query state changes
   useEffect(() => {
     if (voiceQuery && speechRecognitionComplete && timeoutDetected.current && !stopWordDetected.current && !isSpeaking) {
-      const mockEvent = {
-        preventDefault: () => { },
-        target: {
-          value: voiceQuery,
-        },
-      };
-      console.log(`useEffect: Calling handleSubmit, voiceQuery: '${voiceQuery.slice(0, 16)}...'`);
-      handleSubmit(mockEvent, recognition);
+      console.log(`useEffect: Queing voiceQuery: '${voiceQuery.slice(0, 80)}...'`);
+      let episode: Episode = {
+        title: voiceQuery,
+        plotline: '',
+        type: isStory ? 'episode' : 'question',
+        username: 'voice',
+      }
+      if (debug) {
+        console.log(`Queing episode: ${JSON.stringify(episode, null, 2)}`);
+      }
+      setEpisodes([...episodes, episode]);
       setVoiceQuery('');
       timeoutDetected.current = false;
       startWordDetected.current = false;
       stopWordDetected.current = false;
       if (!stoppedManually) {
-        console.log(`useEffect: Starting speech recognition after handleSubmit, stoppedManually: ${stoppedManually}`);
+        console.log(`useEffect: Starting speech recognition after Queing voiceQuery: '${voiceQuery.slice(0, 80)}...'`);
         startSpeechRecognition();
       }
     }
-  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, timeoutDetected.current, stopWordDetected.current]);
+  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, timeoutDetected.current, stopWordDetected.current, isStory, episodes]);
 
   // Add a useEffect hook to start the speech recognition when the component mounts
   useEffect(() => {
@@ -1768,15 +1772,17 @@ function Home({ user }: HomeProps) {
   };
 
   // replay episode from history using passthrough REPLAY: <story> submit mock handlesubmit
-  const handleReplay = () => {
-    // mock handle submit with the lastMessage.message as the question with REPLAY: prepended to it
-    const mockEvent = {
-      preventDefault: () => { },
-      target: {
-        value: `REPLAY: ${latestMessage.message}`,
-      },
-    };
-    handleSubmit(mockEvent);
+  const handleReplay = () => { 
+    let episode: Episode = {
+      title: `REPLAY: ${latestMessage.message}`,
+      plotline: '',
+      type: isStory ? 'episode' : 'question',
+      username: 'voice',
+    }
+    if (debug) {
+      console.log(`Replay is queing episode: ${JSON.stringify(episode, null, 2)}`);
+    }
+    setEpisodes([...episodes, episode]);
   };
 
   // stop speaking
@@ -1922,9 +1928,10 @@ function Home({ user }: HomeProps) {
                       {(!isSpeaking || loading) ? (
                         <>
                           <div className={styles.generatedImage}>
-                            <h3 className={`${styles.header} ${styles.center}`}>--- Upcoming Episodes ---</h3>
-                            <hr></hr>
                             <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
+                              <th>
+                                <p className={`${styles.header} ${styles.episodeList} ${styles.center}`}>--- Upcoming Episodes ---</p>
+                              </th><tr></tr>
                               {[...episodes].reverse().map((episode, index) => (
                                 <tr key={index}>
                                   <td>
@@ -1941,9 +1948,9 @@ function Home({ user }: HomeProps) {
                       ) : (<></>)}
                     </div>
                     <div className={
-                      isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+                      loading ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle}{loadingOSD}
+                      {subtitle}{loadingOSD}{(loading && latestMessage.message.length > 20) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 60).reverse().join('') : ''}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
@@ -2200,23 +2207,27 @@ function Home({ user }: HomeProps) {
                     </div>
                   </div>
                   <div className={styles.cloudform}>
-                    <button className={styles.footer} onClick={() => setFeedMode(feedMode === 'episode' ? 'news' : 'episode')}>
-                      {feedMode === 'episode' ? 'Episode Mode' : 'News Mode'}
+                    <button
+                      title="Toggle News Feed"
+                      className={`${styles.footer} ${(feedNewsChannel) ? styles.listening : ''}`}
+                      onClick={() => setFeedNewsChannel(feedNewsChannel ? false : true)}>
+                      {feedNewsChannel ? 'Fetching News' : 'Fetch News'}
                     </button>
                     &nbsp;&nbsp;&nbsp;&nbsp;
                     <button
+                      title="Toggle Twitch Chat"
                       className={`${styles.footer} ${(twitchChatEnabled) ? styles.listening : ''}`}
                       onClick={() => setTwitchChatEnabled(!twitchChatEnabled)}>
-                      {twitchChatEnabled ? 'Disable Twitch Chat' : 'Enable Twitch Chat'}
+                      {twitchChatEnabled ? 'Twitch OFF' : 'Twitch ON'}
                     </button>
                     &nbsp;&nbsp;&nbsp;&nbsp;
                     <button
-                      title="Fetch Feed"
+                      title="Automate the Fetching of News and Playing of Twitch Chat"
                       onClick={handleFetchButtonClick}
                       className={`${styles.footer} ${isFetching ? styles.listening : ''}`}
                       type="button"
                     >
-                      {isFetching ? `Stop ${feedMode} Feed` : `Start ${feedMode} Feed`}
+                      {isFetching ? `Automation Stop` : `Automation Start`}
                     </button>
                     <Modal
                       isOpen={modalIsOpen}
@@ -2225,7 +2236,7 @@ function Home({ user }: HomeProps) {
                       style={feedModalStyle}
                       contentLabel="News Feed Settings"
                     >
-                      {(feedMode === 'news') ? (
+                      {feedNewsChannel ? (
                         <>
                           <h2 style={{ fontWeight: 'bold' }}>News Feed Settings</h2>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -2262,8 +2273,9 @@ function Home({ user }: HomeProps) {
                       ) : (
                         <></>
                       )}
+                      <h2 style={{ fontWeight: 'bold' }}>Start Automation (Twitch/News/Programming)</h2>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-                        <button className={styles.footer} onClick={handleModalClose}>Start {feedMode === 'news' ? "Fetching" : "Playing"} {feedMode} Feed</button>
+                        <button className={styles.footer} onClick={handleModalClose}>Start Automation</button>
                         <button className={styles.footer} onClick={() => setModalIsOpen(false)}>Cancel</button>
                       </div>
                     </Modal>

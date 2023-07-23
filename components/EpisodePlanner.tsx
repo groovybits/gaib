@@ -53,7 +53,7 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
 
   return (
     <>
-      <button className={styles.footer} onClick={() => setShowModal(true)}>Schedule Episodes</button>
+      <button className={styles.footer} onClick={() => setShowModal(true)}>Automation Schedule</button>
 
       {showModal && (
         <>
