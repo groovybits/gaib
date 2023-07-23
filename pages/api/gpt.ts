@@ -81,7 +81,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
           if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
             const aiMessage = data.choices[0].message;
-            console.log(`OpenAI GPT: message: ${JSON.stringify(aiMessage)} usage: ${JSON.stringify(data.usage)} finish_reason: ${data.choices[0].finish_reason}\n`);
+            if (debug) {
+              console.log(`OpenAI GPT: message: ${JSON.stringify(aiMessage)} usage: ${JSON.stringify(data.usage)} finish_reason: ${data.choices[0].finish_reason}\n`);
+            }
 
             res.status(200).json({ aiMessage });
           } else {

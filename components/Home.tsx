@@ -127,6 +127,7 @@ function Home({ user }: HomeProps) {
   const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
   const [gaibImagePrompt, setGaibImagePrompt] = useState<string>(process.env.NEXT_PUBLIC_GAIB_IMAGE_PROMPT || 'GAIB a Groovy AI Bot who is in the tibetan mountains with blue skys and white fluffy clouds above. technology and tibetan relics with temples prayer flags and bright colors.');
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
+  const [lastStory, setLastStory] = useState<string>('');
 
   const connectToChannel = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
@@ -175,9 +176,14 @@ function Home({ user }: HomeProps) {
             Authorization: `Bearer ${idToken}`,
           },
         });
+      
+      if (res.status !== 200) {
+        console.error(`Firestore: An error occurred in the fetchEpisodeData function: ${res.statusText}`);
+        return;
+      }
       const data = await res.json();
 
-      if (data.length === 0) {
+      if (data.length === 0 || data.error == 'No commands found') {
         console.log(`Firestore: No documents found for channel ${channelName} and user ${user?.uid}`);
         return;
       }
@@ -289,6 +295,7 @@ function Home({ user }: HomeProps) {
         alert(`Story shared successfully to ${baseUrl}/${storiesRef.docs[0].id}!`);
         copy(`${baseUrl}/${storiesRef.docs[0].id}`);
       }
+      setLastStory(`${baseUrl}/${storiesRef.docs[0].id}`);
 
       if (twitchChatEnabled && authEnabled && channelId !== '') {
         // Post the story to the Twitch chat
@@ -301,7 +308,15 @@ function Home({ user }: HomeProps) {
 
   const handleShareStory = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
-    await shareStory(currentStory, false);
+    if (currentStory.length > 0) {
+      await shareStory(currentStory, false);
+    } else {
+      if (lastStory !== '') {
+        alert(`Story shared successfully to ${lastStory}!`);
+      } else {
+        alert('Please generate a story first!');
+      }
+    }
   };
 
   const categoryOptions = [
@@ -568,7 +583,7 @@ function Home({ user }: HomeProps) {
       // Use local images if requested else use Pexels API to fetch images
       if (!useImageAPI) {
         // use local images
-        return getGaib();
+        return await getGaib();
       } else {
         try {
           let response;
@@ -654,7 +669,7 @@ function Home({ user }: HomeProps) {
 
           if (!response) {
             console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API`);
-            return getGaib();
+            return await getGaib();
           }
 
           const data = await response.json();
@@ -706,12 +721,12 @@ function Home({ user }: HomeProps) {
     }
 
     // This is the function you want to run every 60 seconds
-    const generateAndSetImage = async () => {
+    const generateAndSetImage = async (imagePrompt: string, personalityPrompt: string, lastImage: ImageData | string, count: number = 0): Promise<string | ImageData> => {
       try {
         // Prepare the request body. You may need to adjust this to fit your use case.
         const requestBody = {
-          message: `Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
-          prompt: `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`,
+          message: imagePrompt,
+          prompt: personalityPrompt,
           conversationHistory: conversationHistory  // You may need to populate this with previous conversation history, if any.
         };
 
@@ -731,26 +746,29 @@ function Home({ user }: HomeProps) {
           // Parse the response.
           const data = await response.json();
 
-          console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
+          if (debug) {
+            console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
+          }
 
           // Extract the AI generated message.
           content = data.aiMessage.content;
           setConvesationHistory([...conversationHistory, data])
         } catch (error) {
           console.error("GPT + Failed to generate a message:", error);
-          let gaibImage = await generateImageUrl(gaibImagePrompt, true, '', episodeId);
+          let gaibImage = await generateImageUrl(gaibImagePrompt, true, lastImage, episodeId, count);
           setPexelImageUrls(gaibImage);
-          return;
+          return gaibImage;
         }
 
         // Use the AI generated message as the prompt for generating an image URL.
-        console.log(`GPT + Generating an image URL for the following prompt: ${content}`);
-        let gaibImage = await generateImageUrl(content, true, '', episodeId);
+        let gaibImage = await generateImageUrl(content, true, lastImage, episodeId, count);
         setPexelImageUrls(gaibImage);
 
+        return gaibImage;
       } catch (error) {
         console.error("GPT + generateImageUrl Failed to generate an image URL:", error);
       }
+      return await getGaib() ? await getGaib() : lastImage;
     };
 
     function splitSentence(sentence: any, maxLength = 300) {
@@ -821,10 +839,11 @@ function Home({ user }: HomeProps) {
       }
 
       // Display the images and subtitles
-      episodeId = uuidv4();
-      generateAndSetImage();
-      let gaibImage = await generateImageUrl('', false, '', episodeId);
+      episodeId = uuidv4();      
+      let gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
+        `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, '', 0);
       let lastImage = gaibImage;
+
       setSubtitle(''); // Clear the subtitle
       setLoadingOSD('');
 
@@ -1006,11 +1025,11 @@ function Home({ user }: HomeProps) {
                 sceneIndex++;  // Move to the next scene
               }
               count += 1;
-              gaibImage = await generateImageUrl(imageDescription, true, lastImage, episodeId, count);
+              gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${imageDescription}`,
+                `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, 0);
               if (gaibImage != '') {
                 lastImage = gaibImage;
               }
-              setPexelImageUrls(gaibImage);
             }
           }
           let image: ImageData | string = lastImage;
@@ -1177,7 +1196,8 @@ function Home({ user }: HomeProps) {
       setSubtitle('');
       setLoadingOSD('Please enter a topic or question for a story or answer.');
       setGaibImagePrompt(messages[lastMessageIndex].message.slice(0, 200).replace('\n', ''));
-      generateAndSetImage();
+      await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
+        `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, count);
     }
 
     if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -1449,15 +1469,17 @@ function Home({ user }: HomeProps) {
               setMessageState((state) => ({
                 ...state,
                 pending: (state.pending ?? '') + data.data,
-              }));
-              // collect data.data with rest of pending state       
-              if (messageState.pending) {
-                const messageLength = messageState.pending.length;
-                const startCut = Math.max(0, messageLength - 75);
-                setLoadingOSD(`Loading... ${latestMessage.message.replace(/\n/g, ' ').slice(startCut, messageLength)}`);
-              }
+              }));             
             }
 
+            if (false && latestMessage && latestMessage.message && latestMessage.message.length > 0) {
+              const messageLength = latestMessage.message.length;
+              const startCut = Math.max(0, messageLength - 75);
+              console.log(`handleSubmit: Loading... ${latestMessage.message.replace(/\n/g, ' ').slice(startCut, messageLength)}`);
+              setLoadingOSD(`Loading... ${latestMessage.message.replace(/\n/g, ' ').slice(startCut, messageLength)}`);
+            } else {
+              setLoadingOSD(`Loading... ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
+            }
             setSubtitle(``);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }

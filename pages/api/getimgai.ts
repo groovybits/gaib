@@ -92,7 +92,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       });
 
       stream.on('finish', async () => {
-        console.log(`getimgaiHandler: Successfully uploaded image to GCS: ${destination}`);
+        if (debug) {
+          console.log(`getimgaiHandler: Successfully uploaded image to GCS: ${destination}`);
+        }
         const outputUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
 
         // Include the imageName in the response
