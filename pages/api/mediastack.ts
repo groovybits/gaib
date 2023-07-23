@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     switch (method) {
       case 'GET':
         try {
-          let url = `http://api.mediastack.com/v1/news?access_key=${mediastackApiKey}&languages=en&offset=${offset}&sort=${sort}&limit=30`;
+          let url = `http://api.mediastack.com/v1/news?access_key=${mediastackApiKey}&languages=en&offset=${offset}&sort=${sort}&limit=100`;
           if (category != '') {
             console.log(`News Feed Categories: ${category}`);
             url += `&categories=${category}`;

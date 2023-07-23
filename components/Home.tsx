@@ -52,12 +52,7 @@ function Home({ user }: HomeProps) {
     history: [string, string][];
     pendingSourceDocs?: Document[];
   }>({
-    messages: [
-      /*{
-        message: 'Welcome, I am The Groovy AI Entertainment System, GAIB!',
-        type: 'apiMessage',
-      },*/
-    ],
+    messages: [],
     history: [],
     pendingSourceDocs: [],
   });
@@ -410,7 +405,7 @@ function Home({ user }: HomeProps) {
       if (isProcessing) return;  // If a fetch is already in progress, do nothing
       isProcessing = true;  // Set the flag to true to block other fetches
 
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !loading) {
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !loading && episodes.length <= 3) {
         isProcessingRef.current = true;
         await fetchEpisodeData(channelId);
         isProcessingRef.current = false;
@@ -424,12 +419,12 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [channelId, twitchChatEnabled, isFetching, fetchEpisodeData]);
+  }, [channelId, twitchChatEnabled, isFetching, fetchEpisodeData, episodes, isSpeaking, loading]);
 
   useEffect(() => {
     // episode feed processing
     const processQueue = async () => {
-      if (episodes.length > 0 && !isSpeaking && !loading && isFetching) {
+      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening) {
         const episode = episodes.shift();
         if (episode) {
           const currentQuery = `${episode.title}\n\n${episode.plotline}`;
@@ -452,17 +447,20 @@ function Home({ user }: HomeProps) {
         }
       }
     };
+
+    processQueue();  // Run immediately on mount
+
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processQueue, 3000);  // Then every N seconds
+    const intervalId = setInterval(processQueue, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [episodes, isFetching, isSpeaking, loading, setQuery, handleSubmit]);
+  }, [episodes, isFetching, isSpeaking, loading]);
 
 
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && feedNewsChannel && newsFeedEnabled) {
+      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && feedNewsChannel && newsFeedEnabled && episodes.length <= 3) {
         isProcessingRef.current = true;
 
         let currentNews = news;
@@ -505,10 +503,13 @@ function Home({ user }: HomeProps) {
       }
     };
 
-    const debouncedProcessNewsArticle = debounce(processNewsArticle, 3000);
+    processNewsArticle();  // Run immediately on mount
 
-    debouncedProcessNewsArticle();
-  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setCurrentNewsIndex, fetchNews, pending, feedPrompt]);
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(processNewsArticle, 10000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
+  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setCurrentNewsIndex, fetchNews, pending, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled]);
 
 
   useEffect(() => {
