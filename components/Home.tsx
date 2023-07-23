@@ -161,11 +161,11 @@ function Home({ user }: HomeProps) {
     }
   };
 
-  async function fetchEpisodeData(channelName: string) {
+  async function fetchEpisodeData() {
     const idToken = await user?.getIdToken();
     try {
-      console.log(`Firestore: Fetching documents for channel ${channelName} and user ${user?.uid}...`);
-      const res = await fetch(`/api/commands?channelName=${channelName}&userId=${user?.uid}`,
+      console.log(`Firestore: Fetching documents for channel ${channelId} and user ${user?.uid}...`);
+      const res = await fetch(`/api/commands?channelName=${channelId}&userId=${user?.uid}`,
         {
           headers: {
             Authorization: `Bearer ${idToken}`,
@@ -179,11 +179,11 @@ function Home({ user }: HomeProps) {
       const data = await res.json();
 
       if (data.length === 0 || data.error == 'No commands found') {
-        console.log(`Firestore: No documents found for channel ${channelName} and user ${user?.uid}`);
+        console.log(`Firestore: No documents found for channel ${channelId} and user ${user?.uid}`);
         return;
       }
 
-      console.log(`Firestore: Found ${data.length} documents for channel ${channelName} and user ${user?.uid}.`);
+      console.log(`Firestore: Found ${data.length} documents for channel ${channelId} and user ${user?.uid}.`);
 
       const newEpisodes = data.map((item: any) => ({
         title: item.title,
@@ -405,9 +405,9 @@ function Home({ user }: HomeProps) {
       if (isProcessing) return;  // If a fetch is already in progress, do nothing
       isProcessing = true;  // Set the flag to true to block other fetches
 
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !loading && episodes.length <= 3) {
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !loading && episodes.length <= 1) {
         isProcessingRef.current = true;
-        await fetchEpisodeData(channelId);
+        await fetchEpisodeData();
         isProcessingRef.current = false;
       }
       isProcessing = false;  // Reset the flag once the fetch is complete
@@ -460,7 +460,7 @@ function Home({ user }: HomeProps) {
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && feedNewsChannel && newsFeedEnabled && episodes.length <= 3) {
+      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && feedNewsChannel && newsFeedEnabled && episodes.length <= 1) {
         isProcessingRef.current = true;
 
         let currentNews = news;

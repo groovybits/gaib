@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       if (snapshot.empty) {
         // output with a timestamp and date
-        console.log(`${new Date().toLocaleString()} No commands found for channel ${channelName} in snapshot ${snapshot}`);
+        console.log(`${new Date().toLocaleString()} No commands found for channel ${channelName} in snapshot ${JSON.stringify(snapshot, null, 2)}`);
         return res.status(404).json({ error: 'No commands found' });
       }
 
