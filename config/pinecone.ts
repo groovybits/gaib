@@ -4,15 +4,11 @@
 
 if (!process.env.PINECONE_INDEX_NAME) {
   throw new Error('Missing Pinecone index name in .env file');
-} else {
-  console.log('Pinecone using index: ', process.env.PINECONE_INDEX_NAME);
 }
 
 if (!process.env.PINECONE_NAME_SPACE) {
   throw new Error('Missing Pinecone name space in .env file');
-} else {
-  console.log('Pinecone default namespace: ', process.env.PINECONE_NAME_SPACE);
-}
+} 
 
 if (!process.env.GOOGLE_TRANSLATE_API_KEY) {
   throw new Error('Missing Google Text Translation API Key in .env file');

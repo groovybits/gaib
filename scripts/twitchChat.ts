@@ -19,7 +19,7 @@ const db = admin.firestore();
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 90;
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 2;
 const llm = 'gpt-4';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
 const maxTokens = 100;
 const temperature = 0.9;
@@ -192,15 +192,19 @@ client.on('message', async (channel: any, tags: {
     || message.toLowerCase().includes('who')*/true) {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
+    let counter = 0;
     lastMessageArray.forEach((messageObject: any) => {
       if (messageObject.role && messageObject.content) {
-        promptArray.push({ "role": messageObject.role, "content": prompt + messageObject.content });
+        promptArray.push({ "role": messageObject.role, "content": messageObject.content });
       }
+      counter++;
     });
     // add the current message to the promptArray with the final personality prompt
     promptArray.push({ "role": "user", "content": `Personality: ${prompt}\n\n Question: ${message}\n\nAnswer:` });
     // save the last message in the array for the next prompt
     lastMessageArray.push({ "role": "user", "content": `${message}` });
+
+    console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
 
     fetch(`https://api.openai.com/v1/chat/completions`, {
       method: 'POST',
@@ -227,9 +231,9 @@ client.on('message', async (channel: any, tags: {
       .then(data => {
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
           const aiMessage = data.choices[0].message;
-          console.log(`OpenAI response:\n${JSON.stringify(aiMessage)}\n`);
+          console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
 
-          console.log(`OpenAI usage:\n${JSON.stringify(data.usage)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
+          console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
 
           // output each paragraph or output separately split by the line breaks if any, or if the output is too long
           const outputArray = aiMessage.content.split('\n\n'); // split by two line breaks to separate paragraphs

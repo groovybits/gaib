@@ -4,7 +4,7 @@
 
 The Groovy AI Bot (GAIB) is a multilingual chatbot capable of understanding, speaking, and translating any language in both text and audio formats. It can adopt various AI bot modes or personalities, each tailored for specific tasks. GAIB also features an Anime generation theme that crafts stories based on data from PDFs stored in the vector database. You can stream feeds through GAIB to interpret them in various ways through the configuration. GAIB allows full configurability of all aspects of the internals + gives output audio/images subtitles meme/Anime Manga style.
 
-## Twitch stream automated feed 24/7 capability with AI Bot to help support and allow chat members to congtrol output of GAIB
+## Twitch stream automated feed 24/7 capability with AI Bot to help support and allow chat members to control output of GAIB
 
 Twitch stream of GAIB with Chat AI Bot episode playback ability: [groovyaibot](https://twitch.tv/groovyaibot)
 
