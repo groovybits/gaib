@@ -194,7 +194,7 @@ function Auth({ }: Props): ReactElement {
                 </>
               ) : (
                 <>
-                  [Currently in Beta.]
+                  [BETA]
                 </>
               )}
             </>
