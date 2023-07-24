@@ -45,25 +45,34 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         });
       } catch (error: any) {
         console.error(`getimgaiHandler: Error calling getimg.ai API: ${error.message}`);
-        throw new Error(`getimgaiHandler: Error calling getimg.ai API: ${error.message}`);
+        res.status(500).json({ error: 'getimgaiHandler: Error calling image from API' });
+        return;
       }
 
       // Get the image data from the response
       if (getImgResponse === undefined) {
         console.error(`getimgaiHandler: Error calling getimg.ai API, undefined: ${getImgResponse ? getImgResponse.statusText : 'undefined error'}`);
-        throw new Error(`getimgaiHandler: Error calling getimg.ai API, undefined: ${getImgResponse ? getImgResponse.statusText : 'undefined error'}`);
+        res.status(500).json({ error: `getimgaiHandler: Error calling getimg.ai API, undefined: ${getImgResponse ? getImgResponse.statusText : 'undefined error'}` });
+        return;
       }
       let getImgData;
       try {
         getImgData = await getImgResponse.json() as { image: string; seed: number };
       } catch (error: any) {
         console.error(`getimgaiHandler: Error parsing getimg.ai API response, .json(): ${error.message}`);
-        throw new Error(`getimgaiHandler: Error parsing getimg.ai API response, .json(): ${error.message}`);
+        res.status(500).json({ error: `getimgaiHandler: Error parsing getimg.ai API response: ${error.message}` });
+        return;
       }
 
-      if (!getImgData.image) {
-        console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image: ${getImgData}`);
-        throw new Error(`getimgaiHandler: Error calling getimg.ai API, mising .image: ${getImgData}`);
+      try {
+        if (getImgData && !getImgData.image) {
+          console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image`);
+          throw new Error(`getimgaiHandler: Error calling getimg.ai API, mising .image`);
+        }
+      } catch (error: any) {
+        console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image: ${error.message}`);
+        res.status(500).json({ error: `getimgaiHandler: Error calling getimg.ai API, missing .image: ${error.message}` });
+        return;
       }
       const imageBuffer = Buffer.from(getImgData.image, 'base64');
 

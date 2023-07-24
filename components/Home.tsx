@@ -580,7 +580,7 @@ function Home({ user }: HomeProps) {
         // Check if it has been 5 seconds since we last generated an image
         const endTime = new Date();
         const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-        if ((deltaTimeInSeconds < 3) || ((!isSpeaking && deltaTimeInSeconds < 5) && messages.length > 0)) {
+        if ((deltaTimeInSeconds < 6) || ((!isSpeaking && deltaTimeInSeconds < 6) && messages.length > 0)) {
           console.log(`generateImageUrl: has only been ${deltaTimeInSeconds} seconds since last image creation, skipping.`);
           return '';
         }
@@ -679,8 +679,8 @@ function Home({ user }: HomeProps) {
               });
             }
 
-            if (!response) {
-              console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API`);
+            if (!response || !response.ok || response.status !== 200) {
+              console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API ${response ? response.statusText : ''}`);
               return await getGaib();
             }
 
@@ -766,19 +766,22 @@ function Home({ user }: HomeProps) {
             content = data.aiMessage.content;
             setConvesationHistory([...conversationHistory, data])
           } catch (error) {
-            console.error("GPT + Failed to generate a message:", error);
-            let gaibImage = await generateImageUrl(gaibImagePrompt, true, lastImage, episodeId, count);
-            setPexelImageUrls(gaibImage);
-            return gaibImage;
+            console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
+            content = imagePrompt;
           }
 
-          // Use the AI generated message as the prompt for generating an image URL.
-          let gaibImage = await generateImageUrl(content, true, lastImage, episodeId, count);
-          setPexelImageUrls(gaibImage);
+          try {
+            // Use the AI generated message as the prompt for generating an image URL.
+            let gaibImage = await generateImageUrl(content, true, lastImage, episodeId, count);
+            setPexelImageUrls(gaibImage);
 
-          return gaibImage;
+            return gaibImage;
+          } catch (error) {
+            console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
+            return '';
+          }
         } catch (error) {
-          console.error("GPT + generateImageUrl Failed to generate an image URL:", error);
+          console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
         }
         return await getGaib() ? await getGaib() : lastImage;
       };
