@@ -18,11 +18,11 @@ const db = admin.firestore();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 90;
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 2;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 300;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
 const llm = 'gpt-4';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
 const maxTokens = 100;
-const temperature = 0.9;
+const temperature = 0.8;
 
 const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 if (!openApiKey) {
@@ -34,16 +34,16 @@ let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
 const prompt: string = `You are GAIB The Groovy AI Bot on a Twitch Channel providing assistance for sending commands or recommending anime. 
 The commands comprise of ones prefixed with episode or question [] backeted all caps settings added for control of options. The commands are
- "!episode: <title> <plot>", "!question: <question>", "[WISDOM] or [SCIENCE]", "[REFRESH]", "[PERSONALITY] <role>", "!personalities",
+ "!episode <title> <plot>", "!question <question>", "[WISDOM] or [SCIENCE]", "[REFRESH]", "[PERSONALITY] <role>", "!personalities",
 and "[PROMPT] <custom prompt>". Recommend using "!help" for full details. 
-When asked to generate or create a story use "!episode: <title> <plotline>" syntax. Minimize your answers to 90 characters or less.`;
+When asked to generate or create a story use "!episode <title> <plotline>" syntax. Minimize your answers to 90 characters or less.`;
 
 const helpMessage: string = `
 Help: - Call for assistance. Use the keyword GAIB to speak with GAIB.
 
 Commands:
-  !episode: <title> - <plotline> - Generate a story or episode.
-  !question: <question> - Ask a question.
+  !episode <title> - <plotline> - Generate a story or episode.
+  !question <question> - Ask a question.
   [REFRESH] - Clear conversation context.
   [PERSONALITY] <role> - Change bot's persona.
   [WISDOM] or [SCIENCE] - Set context for conversation.
@@ -133,9 +133,8 @@ client.on('message', async (channel: any, tags: {
     // Parse the title and plotline from the command
     let title: any = '';
     let plotline: any = '';
-    let cutStart: number = message.indexOf(':') ? message.indexOf(':') + 1 : 8;
 
-    title = message.slice(0, messageLimit).slice(cutStart).trim().replace(/(\r\n|\n|\r)/gm, " ");
+    title = message.slice(0, messageLimit).trim().replace(/(\r\n|\n|\r)/gm, " ").replace(/^\!/, '').replace(/^(episode|question):/, '').replace(/^:/, '').trim();
     const isStory: any = message.toLowerCase().includes('episode') ? true : false;
 
     // make sure nothing odd is in the title or plotline that isn't a story idea and title
@@ -143,13 +142,13 @@ client.on('message', async (channel: any, tags: {
 
     if (title && filter.isProfane(title)) {
       console.log(`Profanity detected in title: ${title}, removing it.\n`);
-      client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
+      client.say(channel, `GAIB Received your request, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
       title = filter.clean(title);
     }
 
     if (plotline && filter.isProfane(plotline)) {
       console.log(`Profanity detected in title: ${plotline}, removing it.\n`);
-      client.say(channel, `GAIB Received your episode command, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
+      client.say(channel, `GAIB Received your request, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
       plotline = filter.clean(plotline);
     }
 
@@ -178,18 +177,7 @@ client.on('message', async (channel: any, tags: {
       console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
       client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
     }
-  } else if (/*message.toLowerCase().includes('generate')
-    || message.toLowerCase().includes('anime')
-    || message.toLowerCase().includes('hello')
-    || message.toLowerCase().includes('gaib')
-    || message.toLowerCase().includes('!gaib')
-    || message.toLowerCase().includes('groovyaibot')
-    || message.toLowerCase().includes('how')
-    || message.toLowerCase().includes('what')
-    || message.toLowerCase().includes('where')
-    || message.toLowerCase().includes('when')
-    || message.toLowerCase().includes('why')
-    || message.toLowerCase().includes('who')*/true) {
+  } else  {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
     let counter = 0;
@@ -251,22 +239,6 @@ client.on('message', async (channel: any, tags: {
             }
           });
           lastMessageArray.push({ aiMessage });
-          // Check if both title and plotline are defined
-          /*if (aiMessage.content.length > 0 && aiMessage.content.length < 100 && !aiMessage.content.includes('GAIB') && !aiMessage.content.includes('groovyaibot')) {
-            // Add the command to Firestore
-            const docRef = db.collection('commands').doc();
-            docRef.set({
-              channelId: channelName,
-              type: 'question',
-              title: aiMessage.content +
-                ' [WISDOM] [PERSONALITY] GAIB [PROMPT] Please help the user with the question given about GAIB the AI Bot, you are GAIB. Talk back in a conversational tone.',
-              plotline: '',
-              username: tags.username, // Add this line to record the username
-              timestamp: admin.firestore.FieldValue.serverTimestamp()
-            });
-          } else {
-            console.log(`Not speaking ${tags.username} received: ${message}).`);
-          }*/
         } else {
           console.error('No choices returned from OpenAI!\n');
           console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);

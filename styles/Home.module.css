@@ -80,7 +80,7 @@
 
 .generatedImage {
   position: relative; /* Add this to position the subtitle */
-  overflow-y: scroll; /* Allows vertical scrolling */
+  overflow-y: hidden; /* Allows vertical scrolling */
   width: auto;
   height: 100%;
   min-height: 100%;
@@ -203,7 +203,7 @@
   background: transparent;
   color: white;
   padding: 8px;
-  bottom: 10%;
+  bottom: 15%;
   left: 2%;
   right: 2%;
   font-size: 48px;
@@ -225,7 +225,7 @@
   background: transparent;
   color: white;
   padding: 8px;
-  bottom: 10%;
+  bottom: 15%;
   left: 2%;
   right: 2%;
   font-size: 24px;
@@ -248,7 +248,7 @@
   background: transparent;
   color: white;
   padding: 8px;
-  bottom: 30%;
+  bottom: 40%;
   font-size: 64px;
   text-align: center;
   border-width: 0px;
@@ -269,7 +269,7 @@
   background: transparent;
   color: white;
   padding: 8px;
-  bottom: 30%;
+  bottom: 40%;
   font-size: 48px;
   text-align: center;
   border-width: 0px;
@@ -1056,7 +1056,7 @@
 
 .imageRow {
   display: flex; /* This makes the images align horizontally */
-  overflow-x: auto; /* This allows horizontal scrolling if there are too many images */
+  overflow-x: hidden; /* This allows horizontal scrolling if there are too many images */
   gap: 10px; /* This adds some space between the images */
   padding: 2px;
   margin: 2px;
