@@ -681,7 +681,7 @@ function Home({ user }: HomeProps) {
 
             if (!response || !response.ok || response.status !== 200) {
               console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API ${response ? response.statusText : ''}`);
-              return await getGaib();
+              return '';
             }
 
             const data = await response.json();
@@ -758,6 +758,12 @@ function Home({ user }: HomeProps) {
             // Parse the response.
             const data = await response.json();
 
+            // skip if the response is not 200
+            if (!response.ok || response.status !== 200) {
+              console.error(`Error: GPT + AI generated message: ${data.error}`);
+              throw new Error(`Error: GPT + AI generated message: ${data.error}`);
+            }
+
             if (debug) {
               console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
             }
@@ -783,7 +789,7 @@ function Home({ user }: HomeProps) {
         } catch (error) {
           console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
         }
-        return await getGaib() ? await getGaib() : lastImage;
+        return '';
       };
 
       function splitSentence(sentence: any, maxLength = 300) {

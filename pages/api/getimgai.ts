@@ -5,13 +5,14 @@ import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 import { v4 as uuidv4 } from 'uuid';
 
 const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
+const apiKey = process.env.GETIMGAI_API_KEY ? process.env.GETIMGAI_API_KEY : '';
 
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
     if (req.method === 'POST') {
       const { model, prompt, negativePrompt, width, height, steps, guidance, seed, scheduler, outputFormat } = req.body;
 
-      if (!process.env.GETIMGAI_API_KEY) {
+      if (apiKey === '') {
         console.error('getimgaiHandler: GETIMGAI_API_KEY not set');
         res.status(500).json({ error: 'GETIMGAI_API_KEY not set' });
         return;
@@ -27,8 +28,8 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         getImgResponse = await fetch('https://api.getimg.ai/v1/stable-diffusion/text-to-image', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.GETIMGAI_API_KEY}`,
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
             model: model,
@@ -66,7 +67,8 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       try {
         if (getImgData && !getImgData.image) {
-          console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image`);
+          console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image prompt: ${prompt} negativePrompt: ${negativePrompt} 
+            width: ${width} height: ${height} steps: ${steps} guidance: ${guidance} seed: ${seed} scheduler: ${scheduler} outputFormat: ${outputFormat}`);
           throw new Error(`getimgaiHandler: Error calling getimg.ai API, mising .image`);
         }
       } catch (error: any) {
