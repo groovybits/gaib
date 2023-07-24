@@ -79,7 +79,7 @@
 }
 
 .generatedImage {
-  position: relative; /* Add this to position the subtitle */
+  position: unset; /* Add this to position the subtitle */
   overflow-y: hidden; /* Allows vertical scrolling */
   overflow-x: hidden; /* Allows horizontal scrolling */
   width: auto;
