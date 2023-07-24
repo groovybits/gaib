@@ -666,7 +666,7 @@ function Home({ user }: HomeProps) {
                 },
                 body: JSON.stringify({
                   model: model,
-                  prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}`,
+                  prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
                   negativePrompt: negativePrompt,
                   width: width,
                   height: height,
@@ -857,15 +857,6 @@ function Home({ user }: HomeProps) {
           sentences = [messages[lastMessageIndex].message];
         }
 
-        // Display the images and subtitles
-        episodeId = uuidv4();
-        let gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
-          `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, '', 0);
-        let lastImage = gaibImage;
-
-        setSubtitle(''); // Clear the subtitle
-        setLoadingOSD('');
-
         let maleVoiceModels = {
           'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
           'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
@@ -1012,6 +1003,14 @@ function Home({ user }: HomeProps) {
         // clear the previous story
         setCurrentStory([]);
 
+        // Display the images and subtitles
+        episodeId = uuidv4();
+        setSubtitle(''); // Clear the subtitle
+        setLoadingOSD('');
+
+        let lastImage = await generateAndSetImage(`Generate an opening intro title screen for the following transcript animated show, no not use the history:\n\n${messages[lastMessageIndex].message.slice(0, 2040)}`,
+          `You are an Anime artist who writes manga and draws the image frames. Create scene descriptions for the episode so we can generate images.\n`, '', 0);
+
         let count = 0;
         for (let sentence of sentences) {
           // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
@@ -1026,7 +1025,6 @@ function Home({ user }: HomeProps) {
             if (!sentence.startsWith('References: ')
               && sentence !== ''
               && (imageSource == 'pexels'
-                || count == 0 // first sentence
                 || (sentence.includes('SCENE')
                   || sentence.includes('Title')
                   || sentence.includes('Question] ')
@@ -1044,11 +1042,8 @@ function Home({ user }: HomeProps) {
                   sceneIndex++;  // Move to the next scene
                 }
                 count += 1;
-                gaibImage = await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${imageDescription}`,
-                  `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, 0);
-                if (gaibImage != '') {
-                  lastImage = gaibImage;
-                }
+                lastImage = await generateAndSetImage(`Generate a prompt for ai image generation of the following scene excerpt of a screenplay, the history has previous scenes:\n\n${imageDescription}`,
+                  `You are an Anime artist who writes manga and draws the image frames. Create scene descriptions for the episode so we can generate images.\n`, '', 0);
               }
             }
             let image: ImageData | string = lastImage;
@@ -1215,8 +1210,8 @@ function Home({ user }: HomeProps) {
         setSubtitle('');
         setLoadingOSD('I am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.');
         setGaibImagePrompt(messages[lastMessageIndex].message.slice(0, 200).replace('\n', ''));
-        await generateAndSetImage(`Generate a creative description for an image involving the following sentence:\n\n${gaibImagePrompt}`,
-          `You are GAIB The groovy AI Bots assistant helper. Do as asked please.\n`, lastImage, count);
+        await generateAndSetImage(`Generate a creative description for a title image to an AI Advanced futuristic Groovy Robot involving the following sentence:\n\n${gaibImagePrompt}`,
+          `You are an Anime artist who writes manga and draws the image frames. Create scene descriptions for the episode so we can generate images.\n`, lastImage, count);
       }
 
       if (lastMessageIndex > lastSpokenMessageIndex &&
