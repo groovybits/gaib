@@ -948,11 +948,11 @@ function Home({ user }: HomeProps) {
         let sceneTexts: string[] = [];
         let currentSceneText = "";
         for (const sentence of sentences) {
-          if (sentence.includes('SCENE:')) {
+          if (sentence.includes('SCENE')) {
             // When we encounter a new scene, we push the current scene text to the array
             // and start a new scene text
             if (currentSceneText !== "") {
-              sceneTexts.push(currentSceneText.replace('SCENE:', ''));
+              sceneTexts.push(currentSceneText.replace('SCENE:', '').replace('SCENE', ''));
             }
             currentSceneText = sentence;
           } else {
