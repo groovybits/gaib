@@ -1,9 +1,74 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
+import {Storage} from "@google-cloud/storage";
+import sharp from "sharp";
 
 admin.initializeApp();
+const storage = new Storage();
 const db = admin.firestore();
+
+/**
+ * Firebase Cloud Function that generates thumbnails for new stories.
+ *
+ * @param {functions.firestore.DocumentSnapshot} snapshot -
+ * The snapshot of the Firestore document that was created.
+ * @param {functions.EventContext} context -
+ * The context in which the event occurred.
+ * @returns {Promise<void>}
+ */
+exports.generateThumbnail = functions.firestore
+  .document("stories/{storyId}")
+  .onCreate(async (snapshot, context) => {
+    const story = snapshot.data();
+    const storyId = context.params.storyId;
+
+    // Start the process of
+    // creating thumbnails concurrently
+    await Promise.all(
+      story.imageUrls.map((imageUrl: string,
+        index: number) => createThumbnail(storyId,
+        imageUrl, index)));
+
+    // After all thumbnails have been created,
+    // set a flag in the Firestore document
+    const storyRef = db.collection("stories").doc(storyId);
+    await storyRef.update({
+      thumbnailsGenerated: true,
+    });
+  });
+
+/**
+ * Creates a thumbnail for an image in a story.
+ *
+ * @param { string } storyId - The ID of the story.
+ * @param { string } imageUrl - The URL of the image.
+ * @param { number } index - The index of the image in the story.
+ * @return { Promise<void> }
+ */
+async function createThumbnail(storyId: string,
+  imageUrl: string, index: number) {
+  const image = JSON.parse(imageUrl);
+
+  // Download the image from Firestore
+  const file =
+    storage.bucket(
+      functions.config().firebase.storageBucket).file(image.url);
+  const [content] = await file.download();
+
+  // Generate a thumbnail using the Sharp library
+  const resizedImageBuffer = await sharp(content)
+    .resize(200, 200)
+    .jpeg({quality: 90})
+    .toBuffer();
+
+  // Write the thumbnail to a Google Cloud Storage bucket
+  const thumbnailPath = `thumbnails/${storyId}_${index}.jpeg`;
+  const thumbnailFile =
+    storage.bucket(
+      functions.config().firebase.storageBucket).file(thumbnailPath);
+  await thumbnailFile.save(resizedImageBuffer, {contentType: "image/jpeg"});
+}
 
 const stripe = new Stripe(functions.config().stripe.secret, {
   apiVersion: functions.config().stripe.api_version,
