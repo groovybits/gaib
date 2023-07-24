@@ -1021,19 +1021,19 @@ function Home({ user }: HomeProps) {
               && sentence !== ''
               && (imageSource == 'pexels'
                 || count == 0 // first sentence
-                || (sentence.includes('SCENE:')
-                  || sentence.includes('Title:')
-                  || sentence.includes('Question: ')
-                  || sentence.includes('Answer: ')
-                  || sentence.includes('Begins: ')
-                  || sentence.includes('Plotline: ')
+                || (sentence.includes('SCENE')
+                  || sentence.includes('Title')
+                  || sentence.includes('Question] ')
+                  || sentence.includes('Answer ')
+                  || sentence.includes('Begins ')
+                  || sentence.includes('Plotline ')
                 /*|| (sentence.startsWith('*') && sentence.length > 60)*/))) {
               let imageDescription = sentence;
-              if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE:')) {
-                if (sentence.includes('SCENE:')) {
+              if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE')) {
+                if (sentence.includes('SCENE')) {
                   sentence = sentence.replace('[', '');
                   sentence = sentence.replace(']', '');
-                  sentence = sentence.replace('SCENE:', '');
+                  sentence = sentence.replace('SCENE:', '').replace('SCENE', '');
                   imageDescription = sceneTexts[sceneIndex];
                   sceneIndex++;  // Move to the next scene
                 }

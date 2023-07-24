@@ -29,7 +29,7 @@ const deepaiHandler = async (req: NextApiRequestWithUser, res: NextApiResponse) 
       const { prompt, imageUrl } = req.body;
 
       const requestBody: { [key: string]: any } = {
-        text: prompt,
+        text: prompt.slice(0, 300),
         grid_size: gridSize,
         width: width,
         height: height
