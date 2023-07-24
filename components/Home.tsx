@@ -1924,23 +1924,15 @@ function Home({ user }: HomeProps) {
                 </button>
                 {selectedTheme === 'MultiModal' ? (
                   <div className={styles.generatedImage}>
-                    {(imageUrl === '') ? "" : (
-                      <>
-                        <img
-                          src={imageUrl}
-                          alt="GAIB"
-                        />
-                      </>
-                    )}
                     <div className={
                       isFullScreen ? styles.fullScreenOSD : styles.osd
                     }>
-                      {(!isSpeaking || loading) ? (
+                      {(!isSpeaking || loading) && episodes.length > 0 ? (
                         <>
                           <div className={styles.generatedImage}>
                             <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
                               <th>
-                                <p className={`${styles.header} ${styles.episodeList} ${styles.center}`}>--- Upcoming Episodes ---</p>
+                                <div className={`${styles.header} ${styles.episodeList} ${styles.center}`}>--- Upcoming Episodes ---</div>
                               </th><tr></tr>
                               {[...episodes].reverse().map((episode, index) => (
                                 <tr key={index}>
@@ -1957,6 +1949,14 @@ function Home({ user }: HomeProps) {
                         </>
                       ) : (<></>)}
                     </div>
+                    {(imageUrl === '') ? "" : (
+                      <>
+                        <img
+                          src={imageUrl}
+                          alt="GAIB"
+                        />
+                      </>
+                    )}
                     <div className={
                       loading ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
