@@ -69,6 +69,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         if (getImgData && !getImgData.image) {
           console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image prompt: ${prompt} negativePrompt: ${negativePrompt} 
             width: ${width} height: ${height} steps: ${steps} guidance: ${guidance} seed: ${seed} scheduler: ${scheduler} outputFormat: ${outputFormat}`);
+          console.log(`getimgaiHandler: Error calling getimg.ai API, missing .image: ${JSON.stringify(getImgData, null, 2)}`);
           throw new Error(`getimgaiHandler: Error calling getimg.ai API, mising .image`);
         }
       } catch (error: any) {
