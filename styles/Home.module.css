@@ -244,11 +244,11 @@
 
 .fullScreenOSD {
   position: absolute;
-  width: 100%;
+  width: 97%;
   white-space: pre-wrap !important;
   background: transparent;
   color: white;
-  padding: 8px;
+  /*padding: 8px;*/
   bottom: 40%;
   font-size: 64px;
   text-align: center;
@@ -265,12 +265,12 @@
 
 .osd {
   position: absolute;
-  width: 100%;
+  width: 97%;
   white-space: pre-wrap !important;
   background: transparent;
   color: white;
-  padding: 8px;
-  bottom: 40%;
+  /*padding: 8px;*/
+  bottom: 30%;
   font-size: 48px;
   text-align: center;
   border-width: 0px;
@@ -376,8 +376,8 @@
 .episodeScreenTable {
   text-align: left;
   border: 2px double #ffffff;
-  background: rgb(0, 0, 0, 1.0);
-  border-radius: 10px;
+  background: rgb(0, 0, 0, 0.4);
+  border-radius: 6px;
   width: 100%;
   align-items: center;
   justify-content: center;

@@ -1931,19 +1931,25 @@ function Home({ user }: HomeProps) {
                         <>
                           <div className={styles.generatedImage}>
                             <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
-                              <th>
-                                <div className={`${styles.header} ${styles.episodeList} ${styles.center}`}>--- Upcoming Episodes ---</div>
-                              </th><tr></tr>
-                              {[...episodes].reverse().map((episode, index) => (
-                                <tr key={index}>
-                                  <td>
-                                    <p className={`${styles.footer} ${styles.episodeList}`}>Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
-                                  </td><tr></tr>
-                                  <td>
-                                    <p className={`${styles.footer} ${styles.episodeListDescription}`}>{episode.plotline}</p>
-                                  </td>
+                              <thead>
+                                <tr>
+                                  <th colSpan={2}>
+                                    <p className={`${styles.header} ${styles.episodeList} ${styles.center}`}>-*- Programming Schedule -*-</p>
+                                  </th>
                                 </tr>
-                              ))}
+                              </thead>
+                              <tbody>
+                                {[...episodes].reverse().map((episode, index) => (
+                                  <tr key={index}>
+                                    <td>
+                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
+                                    </td>
+                                    <td>
+                                      <p className={`${styles.footer} ${styles.episodeListDescription}`}>{episode.plotline}</p>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
                             </table>
                           </div>
                         </>
