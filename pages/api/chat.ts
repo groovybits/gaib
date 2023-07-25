@@ -288,7 +288,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     // Create a chain for each episode
     for (let i = 0; i < episodeCount; i++) {
       try {
-        console.log(`ChatAPI: Creating Chain for Episode #${i} of ${episodeCount} episodes.`);
+        console.log(`ChatAPI: Creating Chain for Episode #${i+1} of ${episodeCount} episodes.`);
         const chain = await createChain(i, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory);
         let title: string = question;
 
@@ -298,9 +298,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           if (isStory) {
             // If it's the last episode
             if (episodeCount === (i + 1)) {
-              title = `Last episode continuing as episode ${i} of ${episodeCount}.`;
+              title = `Last episode continuing as episode ${i + 1} of ${episodeCount}.`;
             } else {
-              title = `Next episode continuing as episode ${i} of ${episodeCount}`;
+              title = `Next episode continuing as episode ${i + 1} of ${episodeCount}`;
             }
           } else {
             // If it's the last episode
@@ -317,7 +317,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         chains.push(chain);
         titles.push(title);
       } catch (error: any) {
-        console.error(`ChatAPI: Error creating chain ${i} of ${episodeCount} episodes: ${error.message}`);
+        console.error(`ChatAPI: Error creating chain ${i + 1} of ${episodeCount} episodes: ${error.message}`);
         sendData(JSON.stringify({ data: 'Error creating chain' }));
         sendData(JSON.stringify({ data: error.message }));
       }

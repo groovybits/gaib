@@ -26,8 +26,9 @@ import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
-import { debounce } from 'lodash';
+import GPT3Tokenizer from 'gpt3-tokenizer';
 
+const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
 
 type PendingMessage = {
@@ -123,6 +124,15 @@ function Home({ user }: HomeProps) {
   const [gaibImagePrompt, setGaibImagePrompt] = useState<string>(process.env.NEXT_PUBLIC_GAIB_IMAGE_PROMPT || 'GAIB a Groovy AI Bot who is in the tibetan mountains with blue skys and white fluffy clouds above. technology and tibetan relics with temples prayer flags and bright colors.');
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
+
+  function countTokens(textString: string): number {
+    let totalTokens = 0;
+
+    const encoded = tokenizer.encode(textString);
+    totalTokens += encoded.bpe.length;
+
+    return totalTokens;
+  }
 
   const connectToChannel = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
@@ -1413,6 +1423,8 @@ function Home({ user }: HomeProps) {
     setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
 
+    let tokens: number = 0;
+
     // Send the question to the server
     const ctrl = new AbortController();
     try {
@@ -1486,7 +1498,8 @@ function Home({ user }: HomeProps) {
                 pending: (state.pending ?? '') + data.data,
               }));
             }
-            setLoadingOSD(`Loading... [${data.data.replace(/\n/g, '').slice(0,16)}] `);
+            setLoadingOSD(`Loading[${tokens}]... `);
+            tokens = tokens + countTokens(data.data);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
@@ -1961,7 +1974,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       loading ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle}{loadingOSD}{(loading && latestMessage.message.length > 20) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 60).reverse().join('') : ''}
+                      {subtitle}{loadingOSD}{(loading && latestMessage.message.length > 20) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 20).reverse().join('') : ''}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
