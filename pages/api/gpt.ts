@@ -98,24 +98,20 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
             if (data.error && data.error.type && data.error.type === 'server_error') {
               console.error(`OpenAI GPT: Server error: ${data.error.message}`);
               res.status(500).json({ error: `OpenAI GPT: Server error: ${data.error.message}` });
-              return;
             }
             console.error(`OpenAI GPT: No choices returned from OpenAI! data: ${JSON.stringify(data)}`);
             res.status(500).json({ error: 'No choices returned from OpenAI' });
-            return;
           }
-
         } catch (error) {
           console.error('OpenAI GPT: An error occurred:', error);
           res.status(500).json({ error: 'An error occurred while processing your request' });
-          return;
+          res.end();
         }
         break;
 
       default:
         res.setHeader('Allow', ['POST']);
         res.status(405).end(`Method ${method} Not Allowed`);
-        return;
     }
   });
 }

@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
 import GPT3Tokenizer from 'gpt3-tokenizer';
+import { set } from 'lodash';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -74,11 +75,11 @@ function Home({ user }: HomeProps) {
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
   const [subtitle, setSubtitle] = useState<string>('');
-  const [loadingOSD, setLoadingOSD] = useState<string>('I am GAIB, The Groovy AI Entertainment System!\nPlease ask me questions or enter a prompt to generate a story.');
+  const [loadingOSD, setLoadingOSD] = useState<string>('\nI am GAIB, The Groovy AI Entertainment System!\nPlease ask me questions or enter a prompt to generate a story.');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('GAIB');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('gaib');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
@@ -98,6 +99,8 @@ function Home({ user }: HomeProps) {
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [currentNewsIndex, setCurrentNewsIndex] = useState<number>(0);
   const isProcessingRef = useRef<boolean>(false);
+  const isProcessingTwitchRef = useRef<boolean>(false);
+  const isSpeakingRef = useRef<boolean>(false);
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [feedCategory, setFeedCategory] = useState<string>('');
   const [feedKeywords, setFeedKeywords] = useState<string>('');
@@ -111,7 +114,6 @@ function Home({ user }: HomeProps) {
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
   const [autoSave, setAutoSave] = useState<boolean>(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [playingNow, setPlayingNow] = useState<string>('');
   const [feedNewsChannel, setFeedNewsChannel] = useState<boolean>(false);
   const [enableSpeaking, setEnableSpeaking] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_SPEAKING === 'true');
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
@@ -171,58 +173,6 @@ function Home({ user }: HomeProps) {
     }
   };
 
-  async function fetchEpisodeData() {
-    const idToken = await user?.getIdToken();
-    try {
-      console.log(`Firestore: Fetching documents for channel ${channelId} and user ${user?.uid}...`);
-      const res = await fetch(`/api/commands?channelName=${channelId}&userId=${user?.uid}`,
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
-
-      if (res.status !== 200) {
-        console.error(`Firestore: An error occurred in the fetchEpisodeData function: ${res.statusText}`);
-        return;
-      }
-      const data = await res.json();
-
-      if (data.length === 0 || data.error == 'No commands found') {
-        console.log(`Firestore: No documents found for channel ${channelId} and user ${user?.uid}`);
-        return;
-      }
-
-      console.log(`Firestore: Found ${data.length} documents for channel ${channelId} and user ${user?.uid}.`);
-
-      const newEpisodes = data.map((item: any) => ({
-        title: item.title,
-        plotline: item.plotline,
-        // Add any other necessary fields here
-        type: item.type,
-        username: item.username,
-        timestamp: item.timestamp,
-      }));
-
-      // Add the new episodes to the episodes array
-      console.log(`Firestore: Adding ${newEpisodes.length} new episodes to the episodes array...`);
-      setEpisodes([...episodes, ...newEpisodes]);
-
-      // Delete the documents from Firestore
-      data.forEach((item: any) => {
-        console.log(`Firestore: Deleting document with ID ${item.id}...`);
-        fetch(`/api/commands/${item.id}?userId=${user?.uid}`, {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
-      });
-    } catch (error) {
-      console.error('Firestore: An error occurred in the fetchEpisodeData function:', error);
-    }
-  }
-
   // Declare a new ref for start word detection
   const startWordDetected = useRef(false);
 
@@ -247,18 +197,18 @@ function Home({ user }: HomeProps) {
     alert('Story copied to clipboard!');
   };
 
-  const shareStory = async (storyToShare: any[], automated: boolean) => {
+  const shareStory = async (storyToShare: any[], automated: boolean): Promise<string> => {
     try {
       if (!user && authEnabled) {
         if (!automated) {
           alert('Please sign in first!');
         }
-        return;
+        return '';
       } else if (!user) {
         if (!automated) {
           alert('Cannot share story when user auth is disabled without a firestore db hooked up.')
         }
-        return;
+        return '';
       }
 
       if (storyToShare.length === 0) {
@@ -266,12 +216,21 @@ function Home({ user }: HomeProps) {
         if (!automated) {
           alert('Please generate a story first!');
         }
-        return;
+        return '';
       }
       const storyText = storyToShare.map((item) => item.sentence).join('|');
       const imageUrls = storyToShare.map((item) => item.imageUrl);
 
-      setCurrentStory([]);
+      if (storyText.length === 0) {
+        console.log(`shareStory: No story text to share: ${JSON.stringify(storyText)}}`);
+
+        if (!automated) {
+          alert('Please generate a story first!');
+        }
+        return '';
+      } else if (imageUrls.length === 0) {
+        console.log(`shareStory: No image URLs to share: ${JSON.stringify(imageUrls)}}`);
+      }
 
       if (debug) {
         console.log('Data being written:', {
@@ -291,10 +250,18 @@ function Home({ user }: HomeProps) {
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
 
+      if (docRef == null || docRef.id == null || docRef.id === '') {
+        console.log(`shareStory: No document reference returned for story ${storyText.slice(0, 30)}...`);
+        if (!automated) {
+          alert('An error occurred while sharing the story!');
+        }
+        return '';
+      }
+
       // The ID of the new document
       const newStoryId = docRef.id;
 
-      console.log(`Story ${storyText.slice(0, 30)} shared successfully to ${baseUrl}/${newStoryId}!`);
+      console.log(`Story ${storyText.slice(0, 30)}... shared successfully to ${baseUrl}/${newStoryId}!`);
 
       if (!automated || autoSave) {
         alert(`Story shared successfully to ${baseUrl}/${newStoryId}!`);
@@ -309,12 +276,16 @@ function Home({ user }: HomeProps) {
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
     }
+    return `${baseUrl}/${episodeId}`;
   };
 
   const handleShareStory = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     if (currentStory.length > 0) {
       await shareStory(currentStory, false);
+      if (!isSpeaking && !loading) {
+        setCurrentStory([]); // Clear the current story
+      }
     } else {
       if (lastStory !== '') {
         alert(`Story shared successfully to ${lastStory}!`);
@@ -375,24 +346,6 @@ function Home({ user }: HomeProps) {
     setEpisodes(newEpisodes);
   };
 
-  // fetch news from mediastack service and set the news state
-  const fetchNews = async () => {
-    const idToken = await user?.getIdToken();
-    const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
-    }); // offset, sort
-    if (!res.ok) {
-      console.log('Error fetching news: ', res.statusText);
-      return [];
-    }
-    const data = await res.json();
-    // Increment the offset by the limit after each request
-    setCurrentOffset(currentOffset + 100);
-    return data.data;
-  };
-
   const handleFetchButtonClick = () => {
     if (!isFetching) {
       setModalIsOpen(true);
@@ -411,49 +364,121 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     let isProcessing = false;
 
+    async function fetchEpisodeData() {
+      const idToken = await user?.getIdToken();
+      try {
+        console.log(`fetchEpisodeData: Fetching documents for channel ${channelId} and user ${user?.uid}...`);
+        const res = await fetch(`/api/commands?channelName=${channelId}&userId=${user?.uid}`,
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+        if (res.status !== 200) {
+          if (res.status === 401) {
+            console.log(`fetchEpisodeData: User ${user?.uid} is not authorized to access channel ${channelId}.`);
+            return;
+          } else if (res.status === 404) {
+            console.log(`fetchEpisodeData: Channel ${channelId} doesn't have any data.`);
+            return;
+          }
+          console.error(`fetchEpisodeData: An error occurred in the fetchEpisodeData function: ${res.statusText}`);
+          return;
+        }
+        const data = await res.json();
+
+        if (data.length === 0 || data.error == 'No commands found') {
+          console.log(`fetchEpisodeData: No documents found for channel ${channelId} and user ${user?.uid}`);
+          return;
+        }
+
+        console.log(`fetchEpisodeData: Found ${data.length} documents for channel ${channelId} and user ${user?.uid}.`);
+
+        const newEpisodes = data.map((item: any) => ({
+          title: item.title,
+          plotline: item.plotline,
+          // Add any other necessary fields here
+          type: item.type,
+          username: item.username,
+          timestamp: item.timestamp,
+        }));
+
+        // Add the new episodes to the episodes array
+        console.log(`fetchEpisodeData: Adding ${newEpisodes.length} new episodes to the episodes array...`);
+        setEpisodes([...episodes, ...newEpisodes]);
+
+        // Delete the documents from Firestore
+        data.forEach((item: any) => {
+          console.log(`fetchEpisodeData: Deleting document with ID ${item.id}...`);
+          fetch(`/api/commands/${item.id}?userId=${user?.uid}`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+        });
+      } catch (error) {
+        console.error('fetchEpisodeData: An error occurred in the fetchEpisodeData function:', error);
+      }
+    }
+
     const processTwitchChat = async () => {
       if (isProcessing) return;  // If a fetch is already in progress, do nothing
       isProcessing = true;  // Set the flag to true to block other fetches
 
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && !loading && episodes.length <= 1) {
-        isProcessingRef.current = true;
-        await fetchEpisodeData();
-        isProcessingRef.current = false;
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && !isSubmittingRef.current && episodes.length <= 10) {
+        isProcessingTwitchRef.current = true;
+        try {
+          await fetchEpisodeData();
+        } catch (error) {
+          console.error('An error occurred in the fetchEpisodeData function:', error); // Check for any errors
+        }
+        isProcessingTwitchRef.current = false;
       }
       isProcessing = false;  // Reset the flag once the fetch is complete
     };
 
-    processTwitchChat();  // Run immediately on mount
+    try {
+      processTwitchChat();  // Run immediately on mount
+    } catch (error) {
+      console.error('An error occurred in the fetchEpisodeData function:', error); // Check for any errors
+    }
 
     // check if there are any episodes left, if so we don't need to sleep
     const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [channelId, twitchChatEnabled, isFetching, fetchEpisodeData, episodes, isSpeaking, loading]);
+  }, [channelId, twitchChatEnabled, isFetching, episodes, user]);
 
   useEffect(() => {
     // episode feed processing
     const processQueue = async () => {
-      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening) {
+      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening && !isProcessingRef.current && !isSubmittingRef.current) {
         const episode = episodes.shift();
-        if (episode) {
-          const currentQuery = `${episode.title}\n\n${episode.plotline}`;
+        try {
+          if (episode) {
+            const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
-          // send query to handlesubmit with a mock event
-          console.log(`TwitchStream: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
-          setQuery(currentQuery);
-          let prefix = '';
-          if (episode.type != '') {
-            prefix = `!${episode.type}: `;
+            // send query to handlesubmit with a mock event
+            console.log(`TwitchStream: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
+            setQuery(currentQuery);
+            let prefix = '';
+            if (episode.type != '') {
+              prefix = `!${episode.type}: `;
+            }
+            const mockEvent = {
+              preventDefault: () => { },
+              target: {
+                value: `${prefix}${currentQuery}`,
+              },
+            };
+            isSubmittingRef.current = true;
+            handleSubmit(mockEvent);
           }
-          const mockEvent = {
-            preventDefault: () => { },
-            target: {
-              value: `${prefix}${currentQuery}`,
-            },
-          };
-          isSubmittingRef.current = true;
-          handleSubmit(mockEvent);
+        } catch (error) {
+          console.error('An error occurred in the processQueue function:', error); // Check for any errors
+          episode && episodes.unshift(episode); // Put the episode back in the queue
         }
       }
     };
@@ -461,16 +486,34 @@ function Home({ user }: HomeProps) {
     processQueue();  // Run immediately on mount
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processQueue, 1000);  // Then every N seconds
+    const intervalId = setInterval(processQueue, 3000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [episodes, isFetching, isSpeaking, loading]);
+  }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening]);
 
 
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !loading && !isSpeaking && !isProcessingRef.current && !isSubmittingRef.current && !pending && feedNewsChannel && newsFeedEnabled && episodes.length <= 1) {
+      // fetch news from mediastack service and set the news state
+      const fetchNews = async () => {
+        const idToken = await user?.getIdToken();
+        const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        }); // offset, sort
+        if (!res.ok) {
+          console.log('Error fetching news: ', res.statusText);
+          return [];
+        }
+        const data = await res.json();
+        // Increment the offset by the limit after each request
+        setCurrentOffset(currentOffset + 100);
+        return data.data;
+      };
+
+      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= 10) {
         isProcessingRef.current = true;
 
         let currentNews = news;
@@ -481,593 +524,744 @@ function Home({ user }: HomeProps) {
           if (currentNews.length === 0) {
             console.log(`Reached end of news feed, fetching new news`);
           }
-          currentNews = await fetchNews();
-          console.log(`Fetching news: found ${currentNews.length} news articles`);
-          setNews(currentNews);
-          index = 0;
+          try {
+            currentNews = await fetchNews();
+            console.log(`Fetching news: found ${currentNews.length} news articles`);
+            setNews(currentNews);
+            index = 0;
+          } catch (error) {
+            console.error('An error occurred in the fetchNews function:', error); // Check for any errors
+          }
         }
 
         // If we have news articles, send them to the chat
-        if (currentNews[index]) {
-          const headline = currentNews[index].title;
-          const body = currentNews[index].description.substring(0, 300);
-          let currentQuery = `${headline}\n\n${body}`;
+        try {
+          if (currentNews[index]) {
+            const headline = currentNews[index].title;
+            const body = currentNews[index].description.substring(0, 300);
+            let currentQuery = `${headline}\n\n${body}`;
 
-          if (feedPrompt != '') {
-            currentQuery = `${feedPrompt}\n\n${currentQuery}`;
+            if (feedPrompt != '') {
+              currentQuery = `${feedPrompt}\n\n${currentQuery}`;
+            }
+
+            let episode: Episode = {
+              title: headline,
+              plotline: body,
+              type: isStory ? 'episode' : 'question',
+              username: 'news',
+            }
+            console.log(`Queing News headline #${index}: ${headline}`);
+            setEpisodes([...episodes, episode]);
+
+            setCurrentNewsIndex(index + 1);
           }
-
-          let episode: Episode = {
-            title: headline,
-            plotline: body,
-            type: isStory ? 'episode' : 'question',
-            username: 'news',
-          }
-          console.log(`Queing News headline #${index}: ${headline}`);
-          setEpisodes([...episodes, episode]);
-
-          setCurrentNewsIndex(index + 1);
+        } catch (error) {
+          console.error('An error occurred in the processNewsArticle function:', error); // Check for any errors
         }
 
         isProcessingRef.current = false;
       }
     };
 
-    processNewsArticle();  // Run immediately on mount
+    try {
+      processNewsArticle();  // Run immediately on mount
+    } catch (error) {
+      console.error('An error occurred in the processNewsArticle function:', error); // Check for any errors
+    }
 
     // check if there are any episodes left, if so we don't need to sleep
     const intervalId = setInterval(processNewsArticle, 10000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [isFetching, loading, isSpeaking, currentNewsIndex, news, setCurrentNewsIndex, fetchNews, pending, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled]);
+  }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled]);
 
 
   useEffect(() => {
-    //const processMessages = async () => {
-      const lastMessageIndex: number = messages.length - 1;
+    const lastMessageIndex: number = messages.length - 1;
+    let shareUrl = '';
+    if (lastMessageDisplayed != lastMessageIndex) {
+      // Set the last message displayed
+      setLastMessageDisplayed(lastMessageIndex);
+    } else {
+      // sleep for 1 second
+      setTimeout(() => {
+        console.log('SpeakingDisplay: sleeping for 3 seconds, no new messages');
+      }, 3000);
+      return;
+    }
 
-      function extractKeywords(sentence: string, numberOfKeywords = 2) {
-        const doc = nlp(sentence);
+    // lock speaking and avoid crashing
+    try {
+      if (!isSpeakingRef.current) {
+        isSpeakingRef.current = true;
+        let lastImage: ImageData | string = '';
 
-        // Extract nouns, verbs, and adjectives
-        const nouns = doc.nouns().out('array');
-        const verbs = doc.verbs().out('array');
-        const adjectives = doc.adjectives().out('array');
+        let promptImage = '';
+        let historyPrimer = '';
 
-        // Combine the extracted words and shuffle the array
-        const combinedWords = [...nouns, ...verbs, ...adjectives];
-        combinedWords.sort(() => 0.5 - Math.random());
+        function extractKeywords(sentence: string, numberOfKeywords = 2) {
+          const doc = nlp(sentence);
 
-        // Select the first N words as keywords
-        const keywords = combinedWords.slice(0, numberOfKeywords);
+          // Extract nouns, verbs, and adjectives
+          const nouns = doc.nouns().out('array');
+          const verbs = doc.verbs().out('array');
+          const adjectives = doc.adjectives().out('array');
 
-        return keywords;
-      }
+          // Combine the extracted words and shuffle the array
+          const combinedWords = [...nouns, ...verbs, ...adjectives];
+          combinedWords.sort(() => 0.5 - Math.random());
 
-      async function setPexelImageUrls(gaibImage: ImageData | string) {
-        if (typeof gaibImage === 'string') {
-          if (gaibImage !== '') {
-            setImageUrl(gaibImage);
+          // Select the first N words as keywords
+          const keywords = combinedWords.slice(0, numberOfKeywords);
+
+          return keywords;
+        }
+
+        async function setScreenImage(gaibImage: ImageData | string) {
+          if (typeof gaibImage === 'string') {
+            if (gaibImage !== '') {
+              setImageUrl(gaibImage);
+            }
+            setPhotographer('GAIB');
+            setPhotographerUrl('https://groovy.org');
+            setPexelsUrl('https://gaib.groovy.org');
+          } else {
+            setImageUrl(gaibImage.url);
+            setPhotographer(gaibImage.photographer);
+            setPhotographerUrl(gaibImage.photographer_url);
+            setPexelsUrl(gaibImage.pexels_url);
           }
-          setPhotographer('GAIB');
-          setPhotographerUrl('https://groovy.org');
-          setPexelsUrl('https://gaib.groovy.org');
-        } else {
-          setImageUrl(gaibImage.url);
-          setPhotographer(gaibImage.photographer);
-          setPhotographerUrl(gaibImage.photographer_url);
-          setPexelsUrl(gaibImage.pexels_url);
-        }
-      }
-
-      async function getGaib() {
-        const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
-        const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
-        let randomNumber = 0;
-        if (maxNumber > 1) {
-          randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
-        } else {
-          randomNumber = maxNumber;
         }
 
-        let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
-        if (directoryUrl != null && maxNumber >= 1 && randomNumber >= 0) {
-          url = `${directoryUrl}/${randomNumber}.png`;
+        async function getGaib() {
+          const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
+          const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
+          let randomNumber = 0;
+          if (maxNumber > 1) {
+            randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
+          } else {
+            randomNumber = maxNumber;
+          }
+
+          let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
+          if (directoryUrl != null && maxNumber >= 1 && randomNumber >= 0) {
+            url = `${directoryUrl}/${randomNumber}.png`;
+          }
+          return url;
         }
-        return url;
-      }
 
-      // Choose Pexles, DeepAI or local images
-      async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
-        const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
-        const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
+        // Choose Pexles, DeepAI or local images
+        async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
+          const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
+          const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
 
-        // check if enabled
-        if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
+          // check if enabled
+          if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
+            return '';
+          }
+
+          // Check if it has been 5 seconds since we last generated an image
+          const endTime = new Date();
+          const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+          if (deltaTimeInSeconds < 1 && messages.length > 0) {
+            console.log(`generateImageUrl: has been ${deltaTimeInSeconds} seconds since last image generation.`);
+          }
+          setStartTime(endTime);
+
+          if (sentence === '') {
+            sentence = 'GAIB The AI Robot, quantum computing, and the meaning of life.';
+          }
+
+          let keywords = '';
+
+          // Use local images if requested else use Pexels API to fetch images
+          if (!useImageAPI) {
+            // use local images
+            return await getGaib();
+          } else {
+            try {
+              let response;
+              if (imageSource === 'pexels') {
+                const idToken = await user?.getIdToken();
+                let extracted_keywords = extractKeywords(sentence, 32).join(' ');
+                console.log('Extracted keywords: [', extracted_keywords, ']');
+                keywords = encodeURIComponent(extracted_keywords);
+                response = await fetch('/api/pexels', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                  body: JSON.stringify({ keywords }),
+                });
+              } else if (imageSource === 'deepai') {
+                const idToken = await user?.getIdToken();
+                let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+                let exampleImage = '' as ImageData | string;
+                if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+                  if (lastImage !== '') {
+                    exampleImage = lastImage;
+                  } else {
+                    exampleImage = await getGaib();
+                  }
+                }
+                response = await fetch('/api/deepai', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                  body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
+                });
+              } else if (imageSource === 'openai') {
+                const idToken = await user?.getIdToken();
+                let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+                let exampleImage = '' as ImageData | string;
+                if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+                  if (lastImage !== '') {
+                    exampleImage = lastImage;
+                  } else {
+                    exampleImage = await getGaib();
+                  }
+                }
+                response = await fetch('/api/openai', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                  body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
+                });
+              } else if (imageSource === 'getimgai') {
+                const idToken = await user?.getIdToken();
+                let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v1-5';
+                let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
+                let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
+                let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 704;
+                let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
+                let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
+                let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
+                let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
+                let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
+                let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
+
+                // Ensure width and height are multiples of 64
+                width = Math.floor(width / 64) * 64;
+                height = Math.floor(height / 64) * 64;
+
+                response = await fetch('/api/getimgai', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`,
+                  },
+                  body: JSON.stringify({
+                    model: model,
+                    prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
+                    negativePrompt: negativePrompt,
+                    width: width,
+                    height: height,
+                    steps: steps,
+                    guidance: guidance,
+                    seed: seed,
+                    scheduler: scheduler,
+                    outputFormat: outputFormat,
+                  }),
+                });
+              }
+
+              if (!response || !response.ok || response.status !== 200) {
+                console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API ${response ? response.statusText : ''}`);
+                return '';
+              }
+
+              const data = await response.json();
+              let imageId = uuidv4();
+              let duplicateImage = false;
+              if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
+                return {
+                  url: data.photos[0].src.large2x,
+                  photographer: data.photos[0].photographer,
+                  photographer_url: data.photos[0].photographer_url,
+                  pexels_url: data.photos[0].url,
+                };
+              } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
+                const imageUrl = data.output_url;
+                if (data?.duplicate === true) {
+                  duplicateImage = true;
+                }
+                if (saveImages === 'true' && !duplicateImage && authEnabled) {
+                  const idToken = await user?.getIdToken();
+                  // Store the image and index it
+                  await fetch('/api/storeImage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
+                  });
+                }
+                const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
+                if (bucketName !== '' && !duplicateImage) {
+                  return `https://storage.googleapis.com/${bucketName}/deepAIimage/${localEpisodeId}_${count}_${imageId}.jpg`;
+                } else {
+                  // don't store images in GCS or it is a duplicate image
+                  return imageUrl;
+                }
+              } else if (imageSource === 'getimgai' && data.output_url) {
+                const imageUrl = data.output_url;
+                if (data?.duplicate === true) {
+                  duplicateImage = true;
+                }
+                return imageUrl;
+              } else {
+                console.error('No image found for the given keywords: [', keywords, ']');
+              }
+            } catch (error) {
+              console.error('Error fetching image from API:', error);
+            }
+          }
+          // failed to fetch image, leave the image as is
           return '';
         }
 
-        // Check if it has been 5 seconds since we last generated an image
-        const endTime = new Date();
-        const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-        if ((deltaTimeInSeconds < 6) || ((!isSpeaking && deltaTimeInSeconds < 6) && messages.length > 0)) {
-          console.log(`generateImageUrl: has only been ${deltaTimeInSeconds} seconds since last image creation, skipping.`);
-          return '';
-        }
-        setStartTime(endTime);
-
-        if (sentence === '') {
-          sentence = 'GAIB The AI Robot, quantum computing, and the meaning of life.';
-        }
-
-        let keywords = '';
-
-        // Use local images if requested else use Pexels API to fetch images
-        if (!useImageAPI) {
-          // use local images
-          return await getGaib();
-        } else {
+        // This is the function you want to run every 60 seconds
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: ImageData | string, count: number = 0): Promise<string | ImageData> => {
           try {
-            let response;
-            if (imageSource === 'pexels') {
-              const idToken = await user?.getIdToken();
-              let extracted_keywords = extractKeywords(sentence, 32).join(' ');
-              console.log('Extracted keywords: [', extracted_keywords, ']');
-              keywords = encodeURIComponent(extracted_keywords);
-              response = await fetch('/api/pexels', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ keywords }),
-              });
-            } else if (imageSource === 'deepai') {
-              const idToken = await user?.getIdToken();
-              let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-              let exampleImage = '' as ImageData | string;
-              if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-                if (lastImage !== '') {
-                  exampleImage = lastImage;
-                } else {
-                  exampleImage = await getGaib();
-                }
-              }
-              response = await fetch('/api/deepai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
-              });
-            } else if (imageSource === 'openai') {
-              const idToken = await user?.getIdToken();
-              let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-              let exampleImage = '' as ImageData | string;
-              if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-                if (lastImage !== '') {
-                  exampleImage = lastImage;
-                } else {
-                  exampleImage = await getGaib();
-                }
-              }
-              response = await fetch('/api/openai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
-              });
-            } else if (imageSource === 'getimgai') {
-              const idToken = await user?.getIdToken();
-              let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v1-5';
-              let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
-              let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-              let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 704;
-              let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
-              let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
-              let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
-              let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
-              let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
-              let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
+            // Prepare the request body. You may need to adjust this to fit your use case.
+            const requestBody = {
+              message: imagePrompt,
+              prompt: personalityPrompt,
+              conversationHistory: conversationHistory  // You may need to populate this with previous conversation history, if any.
+            };
 
-              // Ensure width and height are multiples of 64
-              width = Math.floor(width / 64) * 64;
-              height = Math.floor(height / 64) * 64;
-
-              response = await fetch('/api/getimgai', {
+            let content: string = 'random image of a robot anime AI';
+            try {
+              const idToken = await user?.getIdToken();
+              // Send a POST request to your local API endpoint.
+              const response = await fetch('/api/gpt', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${idToken}`,
+                  'Authorization': `Bearer ${idToken}`
                 },
-                body: JSON.stringify({
-                  model: model,
-                  prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
-                  negativePrompt: negativePrompt,
-                  width: width,
-                  height: height,
-                  steps: steps,
-                  guidance: guidance,
-                  seed: seed,
-                  scheduler: scheduler,
-                  outputFormat: outputFormat,
-                }),
+                body: JSON.stringify(requestBody)
               });
+
+              // Parse the response.
+              const data = await response.json();
+
+              // skip if the response is not 200
+              if (!response.ok || response.status !== 200) {
+                console.error(`Error: GPT + AI generated message: ${data.error}`);
+                throw new Error(`Error: GPT + AI generated message: ${data.error}`);
+              }
+
+              if (debug) {
+                console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
+              }
+
+              // Extract the AI generated message.
+              content = data.aiMessage.content;
+              setConvesationHistory([...conversationHistory, data])
+            } catch (error) {
+              console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
+              content = imagePrompt;
             }
 
-            if (!response || !response.ok || response.status !== 200) {
-              console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API ${response ? response.statusText : ''}`);
+            try {
+              // Use the AI generated message as the prompt for generating an image URL.
+              let gaibImage = await generateImageUrl(content, true, localLastImage, episodeId, count);
+              return gaibImage;
+            } catch (error) {
+              console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
               return '';
             }
-
-            const data = await response.json();
-            let imageId = uuidv4();
-            let duplicateImage = false;
-            if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
-              return {
-                url: data.photos[0].src.large2x,
-                photographer: data.photos[0].photographer,
-                photographer_url: data.photos[0].photographer_url,
-                pexels_url: data.photos[0].url,
-              };
-            } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
-              const imageUrl = data.output_url;
-              if (data?.duplicate === true) {
-                duplicateImage = true;
-              }
-              if (saveImages === 'true' && !duplicateImage && authEnabled) {
-                const idToken = await user?.getIdToken();
-                // Store the image and index it
-                await fetch('/api/storeImage', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                  body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
-                });
-              }
-              const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
-              if (bucketName !== '' && !duplicateImage) {
-                return `https://storage.googleapis.com/${bucketName}/deepAIimage/${localEpisodeId}_${count}_${imageId}.jpg`;
-              } else {
-                // don't store images in GCS or it is a duplicate image
-                return imageUrl;
-              }
-            } else if (imageSource === 'getimgai' && data.output_url) {
-              const imageUrl = data.output_url;
-              if (data?.duplicate === true) {
-                duplicateImage = true;
-              }
-              return imageUrl;
-            } else {
-              console.error('No image found for the given keywords: [', keywords, ']');
-            }
-          } catch (error) {
-            console.error('Error fetching image from API:', error);
-          }
-        }
-        // failed to fetch image, leave the image as is
-        return '';
-      }
-
-      // This is the function you want to run every 60 seconds
-      const generateAndSetImage = async (imagePrompt: string, personalityPrompt: string, lastImage: ImageData | string, count: number = 0): Promise<string | ImageData> => {
-        try {
-          // Prepare the request body. You may need to adjust this to fit your use case.
-          const requestBody = {
-            message: imagePrompt,
-            prompt: personalityPrompt,
-            conversationHistory: conversationHistory  // You may need to populate this with previous conversation history, if any.
-          };
-
-          let content: string = 'random image of a robot anime AI';
-          try {
-            const idToken = await user?.getIdToken();
-            // Send a POST request to your local API endpoint.
-            const response = await fetch('/api/gpt', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
-              },
-              body: JSON.stringify(requestBody)
-            });
-
-            // Parse the response.
-            const data = await response.json();
-
-            // skip if the response is not 200
-            if (!response.ok || response.status !== 200) {
-              console.error(`Error: GPT + AI generated message: ${data.error}`);
-              throw new Error(`Error: GPT + AI generated message: ${data.error}`);
-            }
-
-            if (debug) {
-              console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
-            }
-
-            // Extract the AI generated message.
-            content = data.aiMessage.content;
-            setConvesationHistory([...conversationHistory, data])
-          } catch (error) {
-            console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
-            content = imagePrompt;
-          }
-
-          try {
-            // Use the AI generated message as the prompt for generating an image URL.
-            let gaibImage = await generateImageUrl(content, true, lastImage, episodeId, count);
-            setPexelImageUrls(gaibImage);
-
-            return gaibImage;
           } catch (error) {
             console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
-            return '';
           }
-        } catch (error) {
-          console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
-        }
-        return '';
-      };
-
-      function splitSentence(sentence: any, maxLength = 300) {
-        const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
-        try {
-          return sentence.match(regex) || [];
-        } catch (e) {
-          console.log('Error splitting sentence: ', sentence, ': ', e);
-          return [sentence];
-        }
-      }
-
-      function removeMarkdownAndSpecialSymbols(text: string): string {
-        // Remove markdown formatting
-        const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
-        const cleanedText = text.replace(markdownRegex, '');
-
-        // Remove special symbols (including periods)
-        const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
-        const finalText = cleanedText.replace(specialSymbolsRegex, '');
-
-        return finalText;
-      }
-
-      async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
-        const idToken = await user?.getIdToken();
-        const response = await fetch('/api/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-          body: JSON.stringify({ text, targetLanguage }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Error in translating text, statusText: ' + response.statusText);
-        }
-
-        const data = await response.json();
-        return data.translatedText;
-      }
-
-      async function displayImagesAndSubtitles() {
-        const idToken = await user?.getIdToken();
-        let sentences: string[];
-        let localCurrentStory = [] as StoryPart[];
-        if (isPaused) {
-          stopSpeaking();
-          return;
-        }
-        try {
-          // Split the message into paragraphs at each empty line
-          const paragraphs = messages[lastMessageIndex].message.split(/\n\s*\n/);
-          sentences = [];
-          for (const paragraph of paragraphs) {
-            // If the paragraph is too long, split it into sentences
-            if (paragraph.length > 800) { // 10 lines of 80 characters
-              const doc = nlp(paragraph);
-              const paragraphSentences = doc.sentences().out('array');
-              sentences.push(...paragraphSentences);
-            } else {
-              sentences.push(paragraph);
-            }
-          }
-        } catch (e) {
-          console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
-          sentences = [messages[lastMessageIndex].message];
-        }
-
-        let maleVoiceModels = {
-          'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
-          'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
-          'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
-          'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
+          return '';
         };
 
-        let femaleVoiceModels = {
-          'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-          'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
-          'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-          'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-        };
-
-        let neutralVoiceModels = {
-          'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-          'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
-          'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-          'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-        };
-
-        let defaultModels = {
-          'en-US': 'en-US-Wavenet-C',
-          'ja-JP': 'ja-JP-Wavenet-A',
-          'es-US': 'es-US-Wavenet-A',
-          'en-GB': 'en-GB-Wavenet-A'
-        };
-
-        if (gender == `MALE`) {
-          defaultModels = {
-            'en-US': 'en-US-Wavenet-A',
-            'ja-JP': 'ja-JP-Wavenet-C',
-            'es-US': 'es-US-Wavenet-B',
-            'en-GB': 'en-GB-Wavenet-B'
-          };
-        }
-
-        let voiceModels: { [key: string]: string } = {};
-        let genderMarkedNames: any[] = [];
-        let detectedGender: string = gender;
-        let currentSpeaker: string = 'GAIB';
-        let isContinuingToSpeak = false;
-        let isSceneChange = false;
-        let lastSpeaker = '';
-
-        // Extract gender markers from the entire message
-        const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
-        if (genderMarkerMatches) {
-          let name: string;
-          for (const match of genderMarkerMatches) {
-            const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
-            if (match.includes(':')) {
-              name = match.slice(0, match.indexOf(':')).trim().toLowerCase();
-            } else {
-              name = match.slice(0, match.indexOf('[')).trim().toLowerCase();
-            }
-            genderMarkedNames.push({ name, marker });
-
-            // Assign a voice model to the name
-            if (marker === 'm' && !voiceModels[name]) {
-              if (maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].length > 0) {
-                voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
-                maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
-              }
-            } else if ((marker == 'n' || marker === 'f') && !voiceModels[name]) {
-              if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
-                voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
-                femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
-              }
-            } else if (!voiceModels[name]) {
-              if (neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].length > 0) {
-                voiceModels[name] = neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].shift() as string;
-                neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].push(voiceModels[name]);
-              }
-            }
-          }
-        }
-
-        if (debug) {
-          console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
-          console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
-        }
-        let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
-        let model = defaultModel;
-
-        let sceneTexts: string[] = [];
-        let currentSceneText = "";
-        for (const sentence of sentences) {
-          if (sentence.includes('SCENE')) {
-            // When we encounter a new scene, we push the current scene text to the array
-            // and start a new scene text
-            if (currentSceneText !== "") {
-              sceneTexts.push(currentSceneText.replace('SCENE:', '').replace('SCENE', ''));
-            }
-            currentSceneText = sentence;
-          } else {
-            // If it's not a new scene, we append the sentence to the current scene text
-            currentSceneText += " " + sentence;
-          }
-        }
-        // Don't forget to push the last scene text
-        if (currentSceneText !== "") {
-          sceneTexts.push(currentSceneText);
-        }
-
-        if (sceneTexts.length == 0) {
-          sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '')}`);
-        }
-
-        let sceneIndex = 0;
-
-        // Extract all unique speakers for twitch channel chat responses
-        if (channelId !== '' && twitchChatEnabled) {
-          const uniqueSpeakers = Array.from(new Set(genderMarkedNames.map(item => item.name)));
-
-          // Create a list of speakers with their genders
-          const speakerList = uniqueSpeakers.map(speaker => {
-            const speakerGender = genderMarkedNames.find(item => item.name.toLowerCase() === speaker.toLowerCase());
-            return `${speaker} (Gender: ${speakerGender?.marker || 'Unknown'})`;
-          }).join(', ');
-
-          // Create a title for the story from the first sentence
-          const title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
-
-          // Create a brief introduction of the story from the second sentence
-          const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
-
-          // Create the summary
-          let summary: string = '';
-          if (isStory) {
-            summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
-          } else {
-            summary = `Question: ${title}\n\nSpeaker(s) ${speakerList}.\n\nAnswer: ${introduction}...`;
-          }
-
-          // Post the summary to the API endpoint
+        function splitSentence(sentence: any, maxLength = 300) {
+          const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
           try {
-            await postResponse(channelId, summary, user?.uid);
-          } catch (error) {
-            console.error('Failed to post response: ', error);
+            return sentence.match(regex) || [];
+          } catch (e) {
+            console.log('Error splitting sentence: ', sentence, ': ', e);
+            return [sentence];
           }
         }
 
-        // clear the previous story
-        setCurrentStory([]);
+        function removeMarkdownAndSpecialSymbols(text: string): string {
+          // Remove markdown formatting
+          const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
+          const cleanedText = text.replace(markdownRegex, '');
 
-        // Display the images and subtitles
-        episodeId = uuidv4();
-        setSubtitle(''); // Clear the subtitle
-        setLoadingOSD('');
+          // Remove special symbols (including periods)
+          const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
+          const finalText = cleanedText.replace(specialSymbolsRegex, '');
 
-        let lastImage = await generateAndSetImage(`Generate an opening intro title screen for the following transcript animated show, no not use the history:\n\n${messages[lastMessageIndex].message.slice(0, 2040)}`,
-          `You are an Anime artist who writes manga and draws the image frames. Create scene descriptions for the episode so we can generate images.\n`, '', 0);
+          return finalText;
+        }
 
-        let count = 0;
-        for (let sentence of sentences) {
-          // Set the subtitle and wait for the speech to complete before proceeding to the next sentence
-          if (lastMessageDisplayed != lastMessageIndex) {
-            // Set the last message displayed
-            setLastMessageDisplayed(lastMessageIndex);
-            if (sentence == '--' || sentence == '' || sentence == '-' || (sentence.startsWith('---') && sentence.endsWith('-'))) {
+        async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
+          const idToken = await user?.getIdToken();
+          const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ text, targetLanguage }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Error in translating text, statusText: ' + response.statusText);
+          }
+
+          const data = await response.json();
+          return data.translatedText;
+        }
+
+        async function displayImagesAndSubtitles() {
+          const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
+          const idToken = await user?.getIdToken();
+          let sentences: string[];
+          if (isPaused) {
+            stopSpeaking();
+            return;
+          }
+          // Create a title screen image for the story
+          promptImage = "Generate a prompt for ai image generation of the following text to draw an animated image representing it as the title screen of an anime show:\n\n";
+          historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the intro title screen so we can generate an image of it.";
+
+          // display title screen with image and title
+          lastImage = await generateAIimage(`${promptImage}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimer}\n`, '', 0);
+          if (lastImage !== '') {
+            setScreenImage(lastImage);
+          }
+
+          // nlp(text).sentences().out('array');
+          let firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
+          setSubtitle(firstSentence);
+
+          try {
+            // Split the message into paragraphs at each empty line
+            const paragraphs = messages[lastMessageIndex].message.split(/\n\s*\n/);
+            sentences = [];
+            for (const paragraph of paragraphs) {
+              // If the paragraph is too long, split it into sentences
+              if (paragraph.length > 800) { // 10 lines of 80 characters
+                const doc = nlp(paragraph);
+                const paragraphSentences = doc.sentences().out('array');
+                sentences.push(...paragraphSentences);
+              } else {
+                sentences.push(paragraph);
+              }
+            }
+          } catch (e) {
+            console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
+            sentences = [messages[lastMessageIndex].message];
+          }
+
+          let maleVoiceModels = {
+            'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
+            'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
+            'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
+            'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
+          };
+
+          let femaleVoiceModels = {
+            'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+            'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+            'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+            'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+          };
+
+          let neutralVoiceModels = {
+            'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+            'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+            'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+            'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+          };
+
+          let defaultModels = {
+            'en-US': 'en-US-Wavenet-C',
+            'ja-JP': 'ja-JP-Wavenet-A',
+            'es-US': 'es-US-Wavenet-A',
+            'en-GB': 'en-GB-Wavenet-A'
+          };
+
+          if (gender == `MALE`) {
+            defaultModels = {
+              'en-US': 'en-US-Wavenet-A',
+              'ja-JP': 'ja-JP-Wavenet-C',
+              'es-US': 'es-US-Wavenet-B',
+              'en-GB': 'en-GB-Wavenet-B'
+            };
+          }
+
+          let voiceModels: { [key: string]: string } = {};
+          let genderMarkedNames: any[] = [];
+          let detectedGender: string = gender;
+          let currentSpeaker: string = 'GAIB';
+          let isContinuingToSpeak = false;
+          let isSceneChange = false;
+          let lastSpeaker = '';
+
+          // Extract gender markers from the entire message
+          const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
+          if (genderMarkerMatches) {
+            let name: string;
+            for (const match of genderMarkerMatches) {
+              const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
+              if (match.includes(':')) {
+                name = match.slice(0, match.indexOf(':')).trim().toLowerCase();
+              } else {
+                name = match.slice(0, match.indexOf('[')).trim().toLowerCase();
+              }
+              genderMarkedNames.push({ name, marker });
+
+              // Assign a voice model to the name
+              if (marker === 'm' && !voiceModels[name]) {
+                if (maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].length > 0) {
+                  voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
+                  maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
+                }
+              } else if ((marker == 'n' || marker === 'f') && !voiceModels[name]) {
+                if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
+                  voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
+                  femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
+                }
+              } else if (!voiceModels[name]) {
+                if (neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].length > 0) {
+                  voiceModels[name] = neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].shift() as string;
+                  neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].push(voiceModels[name]);
+                }
+              }
+            }
+          }
+
+          if (debug) {
+            console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
+            console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
+          }
+          let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+          let model = defaultModel;
+
+          let sceneTexts: string[] = [];
+          // ImageData or string
+          let promptImages: (ImageData | string)[] = [];
+          let currentSceneText = "";
+          let imageCount = 0;
+          let sceneCount = 0;
+
+          firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
+          setSubtitle(firstSentence);
+          setLoadingOSD(`\n\nGenerating images for ${sentences.length} sentences...`);
+
+          // Clear the current story
+          setCurrentStory([]); // Clear the current story
+
+          // Extract the scene texts from the message
+          let localCurrentStory: any[] = []; // local variable
+          let sentencesToSpeak = [] as string[];
+          for (const sentence of sentences) {
+            if (sentence == '-' || (sentence.startsWith('--') && sentence.endsWith('-'))) {
               continue;
             }
+            // check if we need to change the scene
+            if (sentence.includes('SCENE') || /* first iteration */ currentSceneText === ""
+              || (!sentence.startsWith('References: ')
+                && sentence !== ''
+                && (imageSource == 'pexels'
+                  || (imageCount === 0
+                    || sentence.includes('Title')
+                    || sentence.includes('Question] ')
+                    || sentence.includes('Answer ')
+                    || sentence.includes('Begins ')
+                    || sentence.includes('Plotline ')
+                  )
+                ))) {
+              // When we encounter a new scene, we push the current scene text to the array
+              // and start a new scene text
+              let newImage: ImageData | string = '';
+              if (currentSceneText !== "") {
+                sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')}`);
+              }
+              sceneCount++;
+              currentSceneText = sentence;
+              promptImage = "Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
+              historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
+              newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+              if (newImage !== '') {
+                lastImage = newImage;
+                imageCount++;
+                promptImages.push(lastImage);
+              }
+              setLoadingOSD(`\n---\nGenerated SCENE Image #${sceneCount}:\n${lastImage}`);
+
+              // collect sentences to speak
+              let cleanSentence = sentence;
+              if (cleanSentence.includes('SCENE:')) {
+                cleanSentence = cleanSentence.replace('SCENE:', '');
+              } else if (cleanSentence.includes('SCENE')) {
+                cleanSentence = cleanSentence.replace('SCENE', '');
+              }
+
+              let image: ImageData | string = lastImage;
+              if (image && image !== '') {
+                if (typeof image === 'string') {
+                  image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+                } else if (typeof image === 'object' && image !== null) {
+                  image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
+                }
+                // save story and images for auto save and/or sharing
+                console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+              } else {
+                console.error("Last image is not defined.");
+                currentSceneText += " " + sentence;
+              }
+              sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
+            } else {
+              // If it's not a new scene, we append the sentence to the current scene text
+              currentSceneText += " " + sentence;
+
+              sentencesToSpeak.push(sentence);
+            }
+          }
+          // Don't forget to push the last scene text
+          if (currentSceneText !== "") {
+            sceneTexts.push(`SCENE: ${currentSceneText}`);
+
+            sceneCount++;
+            promptImage = "Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
+            historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
+            let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            if (newImage !== '') {
+              lastImage = newImage;
+              imageCount++;
+              promptImages.push(lastImage);
+            }
+            setLoadingOSD(`\n---\nGenerated SCENE Image #${sceneCount}:\n${lastImage}`);
+
+            // collect sentences to speak
+            let cleanSentence = currentSceneText;
+            if (cleanSentence.includes('SCENE:')) {
+              cleanSentence = cleanSentence.replace('SCENE:', '');
+            } else if (cleanSentence.includes('SCENE')) {
+              cleanSentence = cleanSentence.replace('SCENE', '');
+            }
+
+            let image: ImageData | string = lastImage;
+            if (image && image !== '') {
+              if (typeof image === 'string') {
+                image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+              } else if (typeof image === 'object' && image !== null) {
+                image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
+              }
+              // save story and images for auto save and/or sharing
+              console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+            } else {
+              console.error("Last image is not defined.");
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
+            }
+          }
+
+          if (sceneTexts.length === 0) {
+            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
+
+            sceneCount++;
+            promptImage = "Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
+            historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
+            let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            if (newImage !== '') {
+              lastImage = newImage;
+              imageCount++;
+              promptImages.push(lastImage);
+            }
+            setLoadingOSD(`\n---\nGenerated SCENE Image #${sceneCount}:\n${lastImage}`);
+
+            // collect sentences to speak
+            let cleanSentence = currentSceneText;
+            if (cleanSentence.includes('SCENE:')) {
+              cleanSentence = cleanSentence.replace('SCENE:', '');
+            } else if (cleanSentence.includes('SCENE')) {
+              cleanSentence = cleanSentence.replace('SCENE', '');
+            }
+
+            let image: ImageData | string = lastImage;
+            if (image && image !== '') {
+              if (typeof image === 'string') {
+                image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+              } else if (typeof image === 'object' && image !== null) {
+                image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
+              }
+              // save story and images for auto save and/or sharing
+              console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+            } else {
+              console.error("Last image is not defined.");
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
+            }
+          }
+
+          // Save the current story
+          setCurrentStory(localCurrentStory);
+
+          // Share the story after building it before displaying it
+          shareUrl = await shareStory(localCurrentStory, true);
+          setSubtitle(`\nEpisode shared to: ${shareUrl}!`);
+
+          // keep track of scene and images positions
+          let sceneIndex = 0;
+          let imagesIndex = 0;
+
+          // Extract all unique speakers for twitch channel chat responses
+          if (channelId !== '' && twitchChatEnabled) {
+            const uniqueSpeakers = Array.from(new Set(genderMarkedNames.map(item => item.name)));
+
+            // Create a list of speakers with their genders
+            const speakerList = uniqueSpeakers.map(speaker => {
+              const speakerGender = genderMarkedNames.find(item => item.name.toLowerCase() === speaker.toLowerCase());
+              return `${speaker} (Gender: ${speakerGender?.marker || 'Unknown'})`;
+            }).join(', ');
+
+            // Create a title for the story from the first sentence
+            const title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
+
+            // Create a brief introduction of the story from the second sentence
+            const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
+
+            // Create the summary
+            let summary: string = '';
+            if (isStory) {
+              summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
+            } else {
+              summary = `Question: ${title}\n\nSpeaker(s) ${speakerList}.\n\nAnswer: ${introduction}...`;
+            }
+
+            // Post the summary to the API endpoint
+            try {
+              await postResponse(channelId, summary, user?.uid);
+            } catch (error) {
+              console.error('Failed to post response: ', error);
+            }
+          }
+
+          // Display the images and subtitles
+          episodeId = uuidv4();
+          setSubtitle(''); // Clear the subtitle
+          setLoadingOSD('');
+
+          let count = 0;
+          for (let sentence of sentencesToSpeak) {
             // get the image for the sentence
-            const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
-            if (!sentence.startsWith('References: ')
-              && sentence !== ''
-              && (imageSource == 'pexels'
-                || (sentence.includes('SCENE')
-                  || sentence.includes('Title')
-                  || sentence.includes('Question] ')
-                  || sentence.includes('Answer ')
-                  || sentence.includes('Begins ')
-                  || sentence.includes('Plotline ')
-                /*|| (sentence.startsWith('*') && sentence.length > 60)*/))) {
-              let imageDescription = sentence;
-              if (sceneIndex < sceneTexts.length || !sentence.includes('SCENE')) {
-                if (sentence.includes('SCENE')) {
-                  sentence = sentence.replace('[', '');
-                  sentence = sentence.replace(']', '');
-                  sentence = sentence.replace('SCENE:', '').replace('SCENE', '');
-                  imageDescription = sceneTexts[sceneIndex];
+            if (sentence.startsWith('SCENE: ')) {
+                sentence = sentence.replace('[', '');
+                sentence = sentence.replace(']', '');
+                sentence = sentence.replace('SCENE: ', '');
+                lastImage = promptImages[imagesIndex];
+                if (imagesIndex < promptImages.length - 1) {
+                  imagesIndex++;
+                }
+                if (sceneIndex < sceneTexts.length - 1) {
                   sceneIndex++;  // Move to the next scene
                 }
-                count += 1;
-                lastImage = await generateAndSetImage(`Generate a prompt for ai image generation of the following scene excerpt of a screenplay, the history has previous scenes:\n\n${imageDescription}`,
-                  `You are an Anime artist who writes manga and draws the image frames. Create scene descriptions for the episode so we can generate images.\n`, '', 0);
-              }
-            }
-            let image: ImageData | string = lastImage;
-            if (typeof image === 'string') {
-              image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-            } else {
-              image = { url: image.url, photographer: image.photographer, photographer_url: image.photographer_url, pexels_url: image.pexels_url };
-            }
-            // save story and images for auto save and/or sharing
-            if (messages.length > 1 && lastMessageIndex >= 2) {
-              if (messages[lastMessageIndex].type === 'apiMessage') {
-                console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${sentence}`);
-                setCurrentStory((currentStory) => [...currentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }]);
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${count}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
+              // increment image counter and set the image
+              count += 1;
+              if (lastImage !== '') {
+                setScreenImage(lastImage);
               }
             }
 
@@ -1207,35 +1401,42 @@ function Home({ user }: HomeProps) {
               lastSpeaker = currentSpeaker;
             }
           }
-        }
-        if (messages[lastMessageIndex].type === 'apiMessage') {
-          // save story automatically
-          if (localCurrentStory.length > 0) {
-            await shareStory(localCurrentStory, true);
+
+          // Reset the subtitle after all sentences have been spoken
+          stopSpeaking();
+          setSubtitle('');
+          setIsSpeaking(false);
+          setLoadingOSD('\nI am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.');
+          setGaibImagePrompt(`I am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.`);
+
+          promptImage = "Generate a prompt for ai image generation of the following text to draw an animated image representing it:\n\n";
+          historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the intro title screen so we can generate an image of it.";
+          lastImage = await generateAIimage(
+            `${promptImage}${gaibImagePrompt}`,
+            `${historyPrimer}\n`,
+            lastImage, count);
+          if (lastImage !== '') {
+            setScreenImage(lastImage);
           }
         }
-        // Reset the subtitle after all sentences have been spoken
-        stopSpeaking();
-        setIsSpeaking(false);
-        setSubtitle('');
-        setLoadingOSD('I am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.');
-        setGaibImagePrompt(messages[lastMessageIndex].message.slice(0, 200).replace('\n', ''));
-        await generateAndSetImage(`Generate a creative description for a title image to an AI Advanced futuristic Groovy Robot involving the following sentence:\n\n${gaibImagePrompt}`,
-          `You are an Anime artist who writes manga and draws the image frames. Create scene descriptions for the episode so we can generate images.\n`, lastImage, count);
-      }
 
-      if (lastMessageIndex > lastSpokenMessageIndex &&
-        messages[lastMessageIndex].type === 'apiMessage'
-      ) {
-        // Multi Modal theme
-        displayImagesAndSubtitles();
-        setLastSpokenMessageIndex(lastMessageIndex);
+        if (lastMessageIndex > lastSpokenMessageIndex &&
+          messages[lastMessageIndex].type === 'apiMessage'
+        ) {
+          // Multi Modal theme
+          try {
+            displayImagesAndSubtitles();
+            setLastSpokenMessageIndex(lastMessageIndex);
+          } catch (error) {
+            console.error('Error displaying images and subtitles: ', error);
+          }
+        }
+        isSpeakingRef.current = false;
       }
-    /*};
-    const debouncedProcessMessages = debounce(processMessages, 3000);
-
-    debouncedProcessMessages();*/
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory, autoSave, currentStory]);
+    } catch (error) {
+      console.error('SpeakDisplay: UseEffect had an error processing messages: ', error);
+    }
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory, autoSave, currentStory, isSpeakingRef]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -1306,21 +1507,23 @@ function Home({ user }: HomeProps) {
     }
 
     // Extract the personality from the question
+    // Extract the personality from the question
     let localPersonality = selectedPersonality;
     try {
       if (question.includes('[PERSONALITY]')) {
-        const personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
+        let personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
         if (personalityMatch) {
-          if (!PERSONALITY_PROMPTS.hasOwnProperty(personalityMatch[1])) {
-            console.error(`buildPrompt: Personality "${personalityMatch[1]}" does not exist in PERSONALITY_PROMPTS object.`);
-            localPersonality = 'GAIB';
+          let extractedPersonality = personalityMatch[1].toLowerCase().trim();
+          if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
+            console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
+            localPersonality = 'gaib';
             if (twitchChatEnabled && channelId !== '') {
-              postResponse(channelId, `Sorry, personality "${personalityMatch[1]}" does not exist in my database.`, user?.uid);
+              postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
           }
-          localPersonality = personalityMatch[1].trim();
+          localPersonality = extractedPersonality;
           console.log(`handleSubmit: Extracted personality: "${localPersonality}"`);  // Log the extracted personality
-          question = question.replace(new RegExp('\\[PERSONALITY\\]\\s*' + personalityMatch[1], 'i'), '').trim();
+          question = question.replace(new RegExp('\\[PERSONALITY\\]\\s*' + extractedPersonality, 'i'), '').trim();
           question = question.replace(new RegExp('\\[PERSONALITY\\]', 'i'), '').trim();
           console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
         } else {
@@ -1337,26 +1540,41 @@ function Home({ user }: HomeProps) {
     }
 
     // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
-    let localCustomPrompt = '';
+    let localCommandPrompt = '';
     try {
       if (question.includes('[PROMPT]')) {
-        const customPromptMatch = question.match(/\[PROMPT\]\s*\"([\w\s]*?)(?=\")/i);
+        let endPrompt = false;
+        let customPromptMatch = question.match(/\[PROMPT\]\s*\"([^"]*?)(?=\")/i);
         if (customPromptMatch) {
-          localCustomPrompt = customPromptMatch[1].trim();
-          console.log(`handleSubmit: Extracted customPrompt: '${localCustomPrompt}'`);  // Log the extracted customPrompt
-          // remove prompt from from question with [PROMPT] "<question>" removed
-          question = question.replace(new RegExp('\\[PROMPT\\]\\s*\"' + customPromptMatch[1], 'i'), '').trim();
-          console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
+          // try with quotes around the prompt
+          localCommandPrompt = customPromptMatch[1].trim();
         } else {
-          console.log(`handleSubmit: No customPrompt found in question: '${question}'`);  // Log the question
+          // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
+          customPromptMatch = question.match(/\[PROMPT\]\s*([^"\n]*?)(?=$|\n)/i);
+          if (customPromptMatch) {
+            localCommandPrompt = customPromptMatch[1].trim();
+            endPrompt = true;
+          }
+        }
+        if (localCommandPrompt) {
+          console.log(`handleSubmit: Extracted commandPrompt: '${localCommandPrompt}'`);  // Log the extracted customPrompt
+          // remove prompt from from question with [PROMPT] "<question>" removed
+          if (endPrompt) {
+            question = question.replace(new RegExp('\\[PROMPT\\]\\s*' + localCommandPrompt, 'i'), '').trim();
+          } else {
+            question = question.replace(new RegExp('\\[PROMPT\\]\\s*\"' + localCommandPrompt + '\"', 'i'), '').trim();
+          }
+          console.log(`handleSubmit: Command Prompt removed from question: '${question}' as ${localCommandPrompt}`);  // Log the updated question
+        } else {
+          console.log(`handleSubmit: No Command Prompt found in question: '${question}'`);  // Log the question
         }
       }
     } catch (error) {
-      console.error(`handleSubmit: Error extracting customPrompt: '${error}'`);  // Log the question
+      console.error(`handleSubmit: Error extracting command Prompt: '${error}'`);  // Log the question
       if (!twitchChatEnabled) {
-        alert(`handleSubmit: Error extracting customPrompt: '${error}'`);  // Log the question
+        alert(`handleSubmit: Error extracting command Prompt: '${error}'`);  // Log the question
       } else if (channelId !== '') {
-        postResponse(channelId, `Sorry, I failed a extracting the customPrompt, please try again.`, user?.uid);
+        postResponse(channelId, `Sorry, I failed a extracting the command Prompt, please try again.`, user?.uid);
       }
     }
 
@@ -1416,8 +1634,8 @@ function Home({ user }: HomeProps) {
     setError(null);
     setIsPaused(false);
     setLoading(true);
-    setLoadingOSD(`${isStory ? 'Plotline: ' : 'Question: '}${question.slice(0, 320).replace(/\n/g, ' ')}...`);
-    setSubtitle('');
+    setLoadingOSD(`\nCreating ${isQuestion ? 'question' : 'story'}...`);
+    setSubtitle(`${isStory ? 'Plotline: ' : 'Question: '}${question.slice(0, 80).replace(/\n/g, ' ')}...`);
     setIsSpeaking(true);
     setQuery('');
     setVoiceQuery('');
@@ -1442,8 +1660,9 @@ function Home({ user }: HomeProps) {
           localPersonality,
           selectedNamespace: localNamespace,
           isStory: localIsStory,
-          customPrompt: localCustomPrompt,
+          customPrompt,
           condensePrompt,
+          commandPrompt: localCommandPrompt,
           tokensCount,
           documentCount,
           episodeCount,
@@ -1498,7 +1717,7 @@ function Home({ user }: HomeProps) {
                 pending: (state.pending ?? '') + data.data,
               }));
             }
-            setLoadingOSD(`Loading[${tokens}]... `);
+            setLoadingOSD(`\nLoading[${tokens}]... `);
             tokens = tokens + countTokens(data.data);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
@@ -1509,7 +1728,7 @@ function Home({ user }: HomeProps) {
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
     } catch (error: any) {
       setLoading(false);
-      setLoadingOSD(`System Error: ${error.message}`);
+      setLoadingOSD(`\nSystem Error: ${error.message}`);
       setSubtitle('');
       setError('An error occurred while fetching the data. Please try again.');
       messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
@@ -1790,7 +2009,7 @@ function Home({ user }: HomeProps) {
   };
 
   // replay episode from history using passthrough REPLAY: <story> submit mock handlesubmit
-  const handleReplay = () => { 
+  const handleReplay = () => {
     let episode: Episode = {
       title: `REPLAY: ${latestMessage.message}`,
       plotline: '',
@@ -1974,7 +2193,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       loading ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle}{loadingOSD}{(loading && latestMessage.message.length > 20) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 20).reverse().join('') : ''}
+                      {subtitle}{loadingOSD}{(loading && latestMessage.message.length > 20) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : ''}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
@@ -2147,7 +2366,7 @@ function Home({ user }: HomeProps) {
                       id="userInput"
                       name="userInput"
                       placeholder={
-                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, replaying your input...' :
+                        (selectedPersonality == 'passthrough') ? 'Passthrough mode, replaying your input...' :
                           loading
                             ? isStory
                               ? `Writing your story...`
@@ -2167,14 +2386,14 @@ function Home({ user }: HomeProps) {
                   {/* Personality prompt text entry box */}
                   <div className={styles.cloudform}>
                     <textarea
-                      readOnly={loading || (selectedPersonality == 'Passthrough')}
+                      readOnly={loading || (selectedPersonality == 'passthrough')}
                       ref={textAreaPersonalityRef}
                       id="customPrompt"
                       name="customPrompt"
                       maxLength={2000}
                       rows={2}
                       placeholder={
-                        (selectedPersonality == 'Passthrough') ? 'Passthrough mode, personality is disabled.' :
+                        (selectedPersonality == 'passthrough') ? 'Passthrough mode, personality is disabled.' :
                           (customPrompt != '') ? customPrompt : buildPrompt(selectedPersonality, isStory)
                       }
                       value={displayPrompt}
@@ -2200,14 +2419,14 @@ function Home({ user }: HomeProps) {
                   <div className={styles.cloudform}>
                     <div className={styles.cloudform}>
                       <textarea
-                        readOnly={loading || (selectedPersonality == 'Passthrough')}
+                        readOnly={loading || (selectedPersonality == 'passthrough')}
                         ref={textAreaCondenseRef}
                         id="condensePrompt"
                         name="condensePrompt"
                         maxLength={800}
                         rows={2}
                         placeholder={
-                          (selectedPersonality == 'Passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
+                          (selectedPersonality == 'passthrough') ? 'Passthrough mode, question/title generation is disabled.' :
                             (condensePrompt != '') ? condensePrompt : buildCondensePrompt(selectedPersonality, isStory)
                         }
                         value={displayCondensePrompt}

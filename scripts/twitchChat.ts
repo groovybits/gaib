@@ -34,20 +34,20 @@ let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
 const prompt: string = `You are GAIB The Groovy AI Bot on a Twitch Channel providing assistance for sending commands or recommending anime. 
 The commands comprise of ones prefixed with episode or question [] backeted all caps settings added for control of options. The commands are
- "!episode <title> <plot>", "!question <question>", "[WISDOM] or [SCIENCE]", "[REFRESH]", "[PERSONALITY] <role>", "!personalities",
-and "[PROMPT] <custom prompt>". Recommend using "!help" for full details. 
-When asked to generate or create a story use "!episode <title> <plotline>" syntax. Minimize your answers to 90 characters or less.`;
+!episode <title> <plot", !question <question>, [WISDOM] or [SCIENCE], [REFRESH], [PERSONALITY] <role>, !personalities,
+and [PROMPT] "<custom prompt>". Recommend using "!help" for full details. 
+When asked to generate or create a story or episode use "!episode: <title> <plotline>" syntax. Speak mindfully and with respect.`;
 
 const helpMessage: string = `
-Help: - Call for assistance. Use the keyword GAIB to speak with GAIB.
+Help: - Ask me how to generate anime or general anime questions.
 
 Commands:
-  !episode <title> - <plotline> - Generate a story or episode.
-  !question <question> - Ask a question.
-  [REFRESH] - Clear conversation context.
-  [PERSONALITY] <role> - Change bot's persona.
-  [WISDOM] or [SCIENCE] - Set context for conversation.
-  [PROMPT] "<custom personality prompt>" - Override persona.
+  !episode <topics> - Generate an episode based on topics from documents.
+  !question <question> - Ask a question based on topcis from documents.
+  [REFRESH] - Clear conversation history, forget everything.
+  [PERSONALITY] <role> - Change bot's personality and role.
+  [WISDOM] or [SCIENCE] - Set sources for references.
+  [PROMPT] "<custom personality prompt>" - AI Instructions.
   !personalities - Display available personalities.
 
 Example:

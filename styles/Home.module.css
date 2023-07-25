@@ -126,7 +126,23 @@
 }
 
 .fullscreenButton:hover {
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(0, 80, 0, 0.9);
+  border-radius: 8px;
+}
+
+.footer:hover {
+  background-color: rgba(0, 80, 0, 0.9);
+  border-radius: 8px;
+}
+
+.header:hover {
+  background-color: rgba(0, 80, 0, 0.9);
+  border-radius: 8px;
+}
+
+.readerFooter:hover {
+  background-color: rgba(0, 80, 0, 0.9);
+  border-radius: 8px;
 }
 
 .readerImageContainer {
@@ -244,6 +260,7 @@
 
 .fullScreenOSD {
   position: absolute;
+  max-height: 300px;
   width: 97%;
   white-space: pre-wrap !important;
   background: transparent;
@@ -266,6 +283,8 @@
 .osd {
   position: absolute;
   width: 97%;
+  max-height: 500px;
+  max-width: 1080px;
   white-space: pre-wrap !important;
   background: transparent;
   color: white;
@@ -717,8 +736,12 @@
 }
 
 .listening {
-  background-color: #008000; /* Change to your desired color */
+  background-color: rgb(0,80, 0, 0.5); /* Change to your desired color */
   color: white; /* Change to your desired text color */
+  border-radius: 10px;
+  border-style: 1px solid #000000;
+  padding: 2px;
+  margin: 1px;
 }
 
 .footer {

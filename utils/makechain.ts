@@ -11,7 +11,7 @@ import isUserPremium from '@/config/isUserPremium';
 import { BaseLanguageModel } from 'langchain/dist/base_language';
 
 const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === undefined ? true : Boolean(process.env.RETURN_SOURCE_DOCUMENTS);
-const modelName = process.env.MODEL_NAME || 'gpt-3.5-turbo-16k';  //change this to gpt-4 if you have access
+const modelName = process.env.MODEL_NAME || 'gpt-4';  //change this to gpt-4 if you have access
 const fasterModelName = process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k';  // faster model for title/question generation
 const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process.env.PRESENCE_PENALTY) : 0.0;
 const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.0;
@@ -42,6 +42,7 @@ export const makeChain = async (
   storyMode: boolean,
   customPrompt: string,
   condensePrompt: string,
+  commandPrompt: string,
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
@@ -52,8 +53,10 @@ export const makeChain = async (
   if (customPrompt != '') {
     prompt = `${customPrompt}`;
   } else {
-    prompt = buildPrompt(personality, storyMode);
+    prompt = buildPrompt(personality, storyMode, commandPrompt);
   }
+
+  console.log(`makeChain: ${userId} Prompt:\n${prompt}\n\nCondense Prompt:\n${condensePromptString}\n\nTokens: ${tokensCount} Documents: ${documentCount} Story Mode: ${storyMode}\nTemperature: ${temperatureStory} Presence: ${presence} Frequency: ${frequency}\nReturn Source Documents: ${RETURN_SOURCE_DOCUMENTS}\n`);
 
   let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;

@@ -102,7 +102,20 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    const { question, userId, localPersonality, selectedNamespace, isStory, customPrompt, condensePrompt, tokensCount, documentCount, episodeCount, history } = req.body;
+    const {
+      question,
+      userId,
+      localPersonality,
+      selectedNamespace,
+      isStory,
+      customPrompt,
+      condensePrompt,
+      commandPrompt,
+      tokensCount,
+      documentCount,
+      episodeCount,
+      history
+    } = req.body;
 
     // check each input to confirm it is valid and not undefined
     if (question === undefined) {
@@ -128,6 +141,11 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     if (customPrompt === undefined) {
       console.error('ChatAPI: No customPrompt in the request');
       res.status(400).json({ error: 'No customPrompt in the request' });
+      return;
+    }
+    if (commandPrompt === undefined) {
+      console.error('ChatAPI: No commandPrompt in the request');
+      res.status(400).json({ error: 'No commandPrompt in the request' });
       return;
     }
     if (condensePrompt === undefined) {
@@ -245,6 +263,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       console.log('ChatAPI: Local Personality:', localPersonality);
       console.log('ChatAPI: Custom Prompt:', customPrompt);
       console.log('ChatAPI: Condense Prompt:', condensePrompt);
+      console.log('ChatAPI: Command Prompt:', commandPrompt);
       console.log('ChatAPI: Is Story:', isStory ? 'Yes' : 'No');
       console.log('ChatAPI: promptString: ', promptString, ' tokens: ', countTokens(promptString));
       console.log('ChatAPI: condensePromptString: ', condensePromptString, ' tokens: ', countTokens(condensePromptString));
@@ -266,7 +285,17 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       if (debug) {
         console.log(`createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${question}"`);
       }
-      return await makeChain(namespaceResult.vectorStore, localPersonality, requestedTokens, documentCount, userId, isStory, customPrompt, condensePrompt, (token: string) => {
+      return await makeChain(namespaceResult.vectorStore,
+        localPersonality,
+        requestedTokens,
+        documentCount,
+        userId,
+        isStory,
+        customPrompt,
+        condensePrompt,
+        commandPrompt,
+        (token: string) =>
+        {
         token_count++;
         if (token_count % 100 === 0) {
           if (debug) {
@@ -310,6 +339,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
               title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer.`;
             }
           }
+          chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
+        } else {
+          // If it's the first episode or single episode
           chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
         }
 

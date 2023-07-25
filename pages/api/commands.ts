@@ -18,6 +18,7 @@ if (admin && admin.apps && !admin.apps.length) {
 const db = admin.firestore();
 
 const allowedUserId = process.env.TWITCH_ALLOWED_USER_ID ? process.env.TWITCH_ALLOWED_USER_ID : '';
+const debug = process.env.DEBUG === 'true' ? true : false;
 
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
@@ -36,25 +37,30 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       if (snapshot.empty) {
         // output with a timestamp and date
-        console.log(`${new Date().toLocaleString()} No commands found for channel ${channelName} in snapshot ${JSON.stringify(snapshot, null, 2)}`);
-        return res.status(404).json({ error: 'No commands found' });
+        console.log(`${new Date().toLocaleString()} CommandAPI: No Twitch Chat Commands found for channel ${channelName}`);
+        if (debug) {
+          console.log(`CommandAPI: Twitch Chat Commands document snapshot ${JSON.stringify(snapshot, null, 2)}`);
+        }
+        return res.status(404).json({ error: 'CommandAPI: No Twitch Chat Commands found' });
       }
 
-      console.log(`Found ${snapshot.size} commands for channel ${channelName}.`);
+      console.log(`CommandAPI: Found ${snapshot.size} Twitch Chat Commands for channel ${channelName}.`);
 
       // Create an array of commands
       const commands: any[] = [];
       snapshot.forEach(doc => {
-        console.log(`Found command ${doc.id} for channel ${channelName} - ${doc.data().command}`);
+        const commandDoc = JSON.stringify(doc.data());
+        console.log(`Found command ${doc.id} for channel ${channelName} - ${commandDoc}`);
         const data = doc.data();
         data.id = doc.id;  // Include the document ID in the data
         commands.push(data);
       });
 
       // Send the commands to the client
-      res.status(200).json(commands);
+      return res.status(200).json(commands);
     } else {
-      res.status(405).json({ error: 'Invalid request method' });
+      return res.status(405).json({ error: 'Invalid request method' });
     }
+    return res.status(500).json({ error: 'An error occurred while processing your request' });
   });
 }
