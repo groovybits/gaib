@@ -1059,7 +1059,7 @@ function Home({ user }: HomeProps) {
               continue;
             }
             // check if we need to change the scene
-            if (sentence.includes('SCENE') || /* first iteration */ currentSceneText === ""
+            if (sentence.includes('SCENE')
               || (!sentence.startsWith('References: ')
                 && sentence !== ''
                 && (imageSource == 'pexels'
@@ -1077,8 +1077,7 @@ function Home({ user }: HomeProps) {
               if (currentSceneText !== "") {
                 sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')}`);
               }
-              sceneCount++;
-              currentSceneText = sentence;
+            
               promptImage = "Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
               historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
               newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
@@ -1105,11 +1104,15 @@ function Home({ user }: HomeProps) {
                   image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
                 }
                 // save story and images for auto save and/or sharing
-                console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+                sceneCount++;
+
+                console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${currentSceneText}`);
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${currentSceneText}\n`, imageUrl: JSON.stringify(image) }];
+
+                currentSceneText = cleanSentence;
               } else {
                 console.error("Last image is not defined.");
-                currentSceneText += " " + sentence;
+                currentSceneText += " " + cleanSentence;
               }
               sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
             } else {
