@@ -181,20 +181,20 @@ function Auth({ }: Props): ReactElement {
     return (
       <>
         <Home user={user} /> {/* Pass user object to Home component */}
-        <div className={`${styles.header} ${styles.center}`}>
-          <>Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</>&nbsp;&nbsp;&nbsp;&nbsp;
+        <div className={`${styles.footerContainer} ${styles.center}`}>
+          <label className={styles.header}>Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</label>&nbsp;&nbsp;&nbsp;&nbsp;
           {!userIsPremium ? (
             <>
               {showPremium ? (
                 <>
                   (${priceDetails?.unit_amount / 100}/month for {premiumTokenBalance} tokens, Free users have {freeTokenBalance} initially)
                   &nbsp;&nbsp;<a href="#" onClick={() => createCheckoutSession(user.uid)} className={`${styles.footer} ${styles.center}`}>
-                  Purchase Premium Subscription
+                    Purchase Premium Subscription
                   </a>
                 </>
               ) : (
                 <>
-                  [BETA]
+                    <label className={styles.header}>[BETA]</label>
                 </>
               )}
             </>
@@ -204,7 +204,7 @@ function Auth({ }: Props): ReactElement {
             </>
           )}
           {userIsPremium ? (
-            <div className={`${styles.footer} ${styles.center}`}>
+            <div className={`${styles.footerContainer} ${styles.center}`}>
               <a href="#" onClick={cancelSubscription} className={styles.cancelsubbutton}>Cancel Subscription</a>
               <Modal
                 isOpen={showModal}
@@ -213,7 +213,7 @@ function Auth({ }: Props): ReactElement {
                 ariaHideApp={false}
                 className={styles.popupContent}
               >
-                <div className={`${styles.footer} ${styles.center}`}>
+                <div className={`${styles.footerContainer} ${styles.center}`}>
                   <p className={`${styles.header} ${styles.center}`}>Are you sure you want to cancel your premium subscription?</p>
                 </div>
                 <button onClick={handleConfirmation} className={styles.stopvoicebutton}>Yes, cancel my subscription</button>
@@ -223,16 +223,14 @@ function Auth({ }: Props): ReactElement {
           ) : (
             <div></div>
           )}
-          <div className={styles.footer}>
-            <div className={styles.footerContainer}>
-              <a href="https://groovy.org">Groovy.ORG</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://twitch.tv/groovyaibot">Create Stories</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://facebook.com/groovyorg">Facebook</a>
-            </div>
+          <div className={`${styles.footerContainer} ${styles.center}`}>
+            <a className={styles.footer} href="https://groovy.org">Groovy.ORG</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className={styles.footer} href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className={styles.footer} href="https://twitch.tv/groovyaibot">Create Stories</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className={styles.footer} href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className={styles.footer} href="https://facebook.com/groovyorg">Facebook</a>
           </div>
-          <div>
+          <div className={`${styles.footerContainer} ${styles.center}`}>
             <a className={styles.header} href="#" onClick={signOut}>Sign out</a>
           </div>
         </div>
@@ -286,9 +284,9 @@ function Auth({ }: Props): ReactElement {
                     <button className={styles.signInButton} onClick={handleRegister}>Register</button>
                   </div>
                 ) : (
-                    <>
-                      <TermsPopup /> {/* Add the TermsPopup component */}
-                    </>
+                  <>
+                    <TermsPopup /> {/* Add the TermsPopup component */}
+                  </>
                 )}
                 <div className={styles.cloudform}>
                   {message && <div className={styles.message}>{message}</div>}

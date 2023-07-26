@@ -407,17 +407,6 @@ function Home({ user }: HomeProps) {
         // Add the new episodes to the episodes array
         console.log(`fetchEpisodeData: Adding ${newEpisodes.length} new episodes to the episodes array...`);
         setEpisodes([...episodes, ...newEpisodes]);
-
-        // Delete the documents from Firestore
-        data.forEach((item: any) => {
-          console.log(`fetchEpisodeData: Deleting document with ID ${item.id}...`);
-          fetch(`/api/commands/${item.id}?userId=${user?.uid}`, {
-            method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${idToken}`,
-            },
-          });
-        });
       } catch (error) {
         console.error('fetchEpisodeData: An error occurred in the fetchEpisodeData function:', error);
       }
@@ -1117,7 +1106,7 @@ function Home({ user }: HomeProps) {
               sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
             } else {
               // If it's not a new scene, we append the sentence to the current scene text
-              currentSceneText += " " + sentence;
+              currentSceneText += ` ${sentence}`;
 
               sentencesToSpeak.push(sentence);
             }

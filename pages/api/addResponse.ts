@@ -2,7 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import * as admin from 'firebase-admin';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
-
 // Initialize the Firebase Admin SDK
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -14,9 +13,10 @@ if (!admin.apps.length) {
     databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
   });
 }
-const db = admin.firestore();
 
-const allowedUserId = process.env.TWITCH_ALLOWED_USER_ID ? process.env.TWITCH_ALLOWED_USER_ID : '';
+const db = admin.database();
+
+const allowedUserId = process.env.TWITCH_ALLOWED_USER_ID || '';
 
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       return res.status(400).json({ error: 'Missing required fields: channel and message' });
     }
 
-    await db.collection('responses').add({
+    await db.ref('responses').push({
       channel,
       message,
     });

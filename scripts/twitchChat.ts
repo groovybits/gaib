@@ -13,7 +13,7 @@ admin.initializeApp({
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
 });
 
-const db = admin.firestore();
+const db = admin.database();
 
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
@@ -163,15 +163,15 @@ client.on('message', async (channel: any, tags: {
 
     // if title is defined and not empty, then add the command to Firestore
     if (title) {
-      // Add the command to Firestore
-      const docRef = db.collection('commands').doc();
-      docRef.set({
-        channelId: channelName,
+      // Add the command to the Realtime Database
+      const newCommandRef = db.ref(`commands/${channelName}`).push();
+      newCommandRef.set({
+        channelName: channelName,
         type: isStory ? 'episode' : 'question',
         title,
         plotline,
         username: tags.username, // Add this line to record the username
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
+        timestamp: admin.database.ServerValue.TIMESTAMP
       });
     } else {
       console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
@@ -248,37 +248,32 @@ client.on('message', async (channel: any, tags: {
     }
 });
 
-// Listen for new documents in the 'responses' collection
-db.collection('responses').onSnapshot((snapshot) => {
-  snapshot.docChanges().forEach((change) => {
-    if (change.type === 'added') {
-      const docData = change.doc.data();
+// Listen for new data in the 'responses' path
+db.ref('responses').on('child_added', (snapshot) => {
+  const docData = snapshot.val();
+  console.log(`Received message from GAIB:\n${JSON.stringify(docData)}\n`);
 
-      console.log(`Received message from GAIB:\n${JSON.stringify(docData)}\n`);
+  // confirm members exist in docData
+  if (!docData.channel || !docData.message) {
+    console.log(`GAIB sent Invalid Messsage Format:\n${JSON.stringify(docData)}\n`);
+    return;
+  }
 
-      // confirm members exist in docData
-      if (!docData.channel || !docData.message) {
-        console.log(`GAIB sent Invalid Messsage Format:\n${JSON.stringify(docData)}\n`);
-        return;
-      }
+  if (docData.channel !== channelName) {
+    console.log(`GAIBs Message not for this channel, ignoring ${docData.channel} != ${channelName}:\n${JSON.stringify(docData)}\n}`);
+    return;
+  }
 
-      if (docData.channel !== channelName) {
-        console.log(`GAIBs Message not for this channel, ignoring ${docData.channel} != ${channelName}:\n${JSON.stringify(docData)}\n}`);
-        return;
-      }
+  // Delete the data
+  snapshot.ref.remove();
 
-      // Delete the document
-      change.doc.ref.delete();
+  // Extract the channel and message from the data
+  const channel = docData.channel;
+  const message = docData.message;
 
-      // Extract the channel and message from the document
-      const channel = docData.channel;
-      const message = docData.message;
-
-      console.log(`Sending message to channel ${channel}: ${message}`);
-      // Send the message to the channel
-      client.say(channel, message);
-    }
-  });
+  console.log(`Sending message to channel ${channel}: ${message}`);
+  // Send the message to the channel
+  client.say(channel, message);
 });
 
 

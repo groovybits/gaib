@@ -130,16 +130,6 @@
   border-radius: 8px;
 }
 
-.footer:hover {
-  background-color: rgba(0, 80, 0, 0.9);
-  border-radius: 8px;
-}
-
-.header:hover {
-  background-color: rgba(0, 80, 0, 0.9);
-  border-radius: 8px;
-}
-
 .readerFooter:hover {
   background-color: rgba(0, 80, 0, 0.9);
   border-radius: 8px;
@@ -747,12 +737,22 @@
 .footer {
   color: #ffffff;
   font-size: 12px;
-  margin: 2px;
-  padding: 2px;
+  /*margin: 2px;
+  padding: 2px;*/
   font-weight: 500;
   font-family: 'Trebuchet MS', monospace;
   text-shadow: -2px -2px 2px #000000, /* top left */ 2px -2px 2px #000000,
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
+}
+
+.footer a:hover {
+  background-color: rgba(0, 80, 0, 0.9);
+  opacity: 0.8;
+  border-radius: 8px;
+}
+
+.footer p {
+  text-align: left;
 }
 
 .footer a {
@@ -764,14 +764,8 @@
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
-.footer a:hover {
-  text-decoration: underline;
-  background: #008000;
-  opacity: 0.8;
-}
-
 .header {
-  width: auto;
+  /*width: auto;*/
   color: #ffffff;
   font-size: 24px;
   font-weight: 500;
@@ -780,14 +774,16 @@
     /* top right */ -2px 2px 2px #000000, /* bottom left */ 3px 3px 3px #000000; /* bottom right */
 }
 
+.header a:hover {
+  background-color: rgba(0, 80, 0, 0.9);
+  opacity: 0.8;
+  border-radius: 8px;
+}
+
 .header p {
   text-align: left;
 }
 
-.header a:hover {
-  text-decoration: underline;
-  opacity: 0.8;
-}
 .readerHeader {
   word-wrap: break-word;
   white-space: pre-wrap !important;
