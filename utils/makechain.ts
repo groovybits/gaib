@@ -56,8 +56,9 @@ export const makeChain = async (
     prompt = buildPrompt(personality, storyMode, commandPrompt);
   }
 
-  console.log(`makeChain: ${userId} Prompt:\n${prompt}\n\nCondense Prompt:\n${condensePromptString}\n\nTokens: ${tokensCount} Documents: ${documentCount} Story Mode: ${storyMode}\nTemperature: ${temperatureStory} Presence: ${presence} Frequency: ${frequency}\nReturn Source Documents: ${RETURN_SOURCE_DOCUMENTS}\n`);
-
+  if (debug) {
+    console.log(`makeChain: ${userId} Prompt:\n${prompt}\n\nCondense Prompt:\n${condensePromptString}\n\nTokens: ${tokensCount} Documents: ${documentCount} Story Mode: ${storyMode}\nTemperature: ${temperatureStory} Presence: ${presence} Frequency: ${frequency}\nReturn Source Documents: ${RETURN_SOURCE_DOCUMENTS}\n`);
+  }
   let documentsReturned = documentCount;
   let temperature = (storyMode) ? temperatureStory : temperatureQuestion;
   let logInterval = 100; // Adjust this value to log less or more frequently

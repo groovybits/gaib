@@ -126,6 +126,7 @@ function Home({ user }: HomeProps) {
   const [gaibImagePrompt, setGaibImagePrompt] = useState<string>(process.env.NEXT_PUBLIC_GAIB_IMAGE_PROMPT || 'GAIB a Groovy AI Bot who is in the tibetan mountains with blue skys and white fluffy clouds above. technology and tibetan relics with temples prayer flags and bright colors.');
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
+  const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 6);
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -416,7 +417,7 @@ function Home({ user }: HomeProps) {
       if (isProcessing) return;  // If a fetch is already in progress, do nothing
       isProcessing = true;  // Set the flag to true to block other fetches
 
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && !isSubmittingRef.current && episodes.length <= 10) {
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && !isSubmittingRef.current && episodes.length <= maxQueueSize) {
         isProcessingTwitchRef.current = true;
         try {
           await fetchEpisodeData();
@@ -435,7 +436,7 @@ function Home({ user }: HomeProps) {
     }
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
+    const intervalId = setInterval(processTwitchChat, 3000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [channelId, twitchChatEnabled, isFetching, episodes, user]);
@@ -502,7 +503,7 @@ function Home({ user }: HomeProps) {
         return data.data;
       };
 
-      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= 10) {
+      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= maxQueueSize) {
         isProcessingRef.current = true;
 
         let currentNews = news;
@@ -1095,22 +1096,32 @@ function Home({ user }: HomeProps) {
                 // save story and images for auto save and/or sharing
                 sceneCount++;
 
-                console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${currentSceneText}`);
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${currentSceneText}\n`, imageUrl: JSON.stringify(image) }];
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
 
                 currentSceneText = cleanSentence;
               } else {
                 console.error("Last image is not defined.");
                 currentSceneText += " " + cleanSentence;
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
               }
               sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
             } else {
               // If it's not a new scene, we append the sentence to the current scene text
               currentSceneText += ` ${sentence}`;
+              let image: ImageData | string = lastImage;
+              if (image && image !== '') {
+                if (typeof image === 'string') {
+                  image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+                } else if (typeof image === 'object' && image !== null) {
+                  image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
+                }
+              }
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
 
               sentencesToSpeak.push(sentence);
             }
           }
+
           // Don't forget to push the last scene text
           if (currentSceneText !== "") {
             sceneTexts.push(`SCENE: ${currentSceneText}`);
@@ -1143,13 +1154,14 @@ function Home({ user }: HomeProps) {
               }
               // save story and images for auto save and/or sharing
               console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
             } else {
               console.error("Last image is not defined.");
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
             }
           }
 
+          // absence of SCENE markers in the message
           if (sceneTexts.length === 0) {
             sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
 
@@ -1181,10 +1193,10 @@ function Home({ user }: HomeProps) {
               }
               // save story and images for auto save and/or sharing
               console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
             } else {
               console.error("Last image is not defined.");
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
             }
           }
 

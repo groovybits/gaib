@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
             for (let key in commandsObj) {
               commands.push(commandsObj[key]);
             }
-            console.log(`CommandAPI: Found ${commands.length} Twitch Chat Commands for channel ${channelName}.`);
+            console.log(`CommandAPI: Found ${commands.length} Twitch Chat Commands for channel ${channelName} ${JSON.stringify(commands)}.`);
 
             // Delete the commands after they've been read
             commandsRef.remove()
@@ -55,7 +55,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
             // Send the commands to the client
             return res.status(200).json(commands);
           } else {
-            console.log(`${new Date().toLocaleString()} CommandAPI: No Twitch Chat Commands found for channel ${channelName}`);
+            if (debug) {
+              console.log(`${new Date().toLocaleString()} CommandAPI: No Twitch Chat Commands found for channel ${channelName}`);
+            }
             // No commands found
             return res.status(404).json({ error: 'CommandAPI: No Twitch Chat Commands found' });
           }
