@@ -111,11 +111,41 @@ client.on('message', async (channel: any, tags: {
     }  
   }
 
+  // structure tohold each users settings and personality prompts
+  const userSettings: any = {};
+
+  // add user if doesn't exist, else update last message timestamp in userSettings
+  if (tags.username) {
+    if (!userSettings[tags.username]) {
+      userSettings[tags.username] = {};
+    }
+    userSettings[tags.username].lastMessageTimestamp = admin.database.ServerValue.TIMESTAMP;
+  }
   console.log(`Received message: ${message}\nfrom ${tags.username} in ${channel}\nwith tags: ${JSON.stringify(tags)}\n`)
 
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
-  if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help' || message.toLowerCase().replace('answer:', '').trim().startsWith('/help'))) {
+  if (message.toLowerCase().startsWith('!image')) {
+    console.log(`REPLAY: ${tags.username} Sending Image to Channel: ${channel}\n`);
+    client.say(channel, `REPLAY: ${tags.username} Sending Image to Channel: ${channel}`);
+
+    let imagePrompt = message.slice(0, messageLimit).trim().replace(/(\r\n|\n|\r)/gm, " ").replace(/^\!/, '').replace(/^(image):/, '').replace(/^:/, '').replace('REPLAY:', '').trim();
+    if (imagePrompt) {
+      // Add the command to the Realtime Database
+      const newCommandRef = db.ref(`commands/${channelName}`).push();
+      newCommandRef.set({
+        channelName: channelName,
+        type: 'question',
+        plotline: '',
+        imagePrompt: `REPLAY: ${imagePrompt}`,
+        username: tags.username, // Add this line to record the username
+        timestamp: admin.database.ServerValue.TIMESTAMP
+      });
+    } else {
+      console.log(`Invalid Format ${tags.username} Please Use "!image: <prompt>" (received: ${message}).`);
+      client.say(channel, `GAIB Invalid Format ${tags.username} Please Use "!image: <prompt>" (received: ${message}). See !help for more info.`);
+    }
+  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help' || message.toLowerCase().replace('answer:', '').trim().startsWith('/help'))) {
     client.say(channel, helpMessage);
   //
   // Personality Prompts list for help with !personalities  
@@ -273,7 +303,7 @@ db.ref('responses').on('child_added', (snapshot) => {
 
   console.log(`Sending message to channel ${channel}: ${message}`);
   // Send the message to the channel
-  client.say(channel, message);
+  client.say(channel, `${message}`);
 });
 
 

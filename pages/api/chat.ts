@@ -197,9 +197,13 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     };
 
     // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
-    if (question.startsWith('REPLAY:') || localPersonality === 'Passthrough') {
-      if (debug) {
-        console.log(`ChatAPI Replay: ${question.replace('REPLAY:', '')}`);
+    if (question.startsWith('REPLAY:') || localPersonality === 'Passthrough' || question.startsWith(`!image`)) {
+      if (question.startsWith(`!image`)) {
+        question.replace(`!image:`, 'REPLAY: ').replace(`!image `, 'REPLAY: ');
+        console.log(`ChatAPI: Image Question: ${question}`);
+      }
+      if (true || debug) {
+        console.log(`ChatAPI Replay: ${question.replace('REPLAY:', '').replace('!image:', '').replace('!image', '')}`);
       }
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -207,7 +211,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         Connection: 'keep-alive',
       });
       sendData(JSON.stringify({ data: '' }));
-      sendData(JSON.stringify({ data: question.replace('REPLAY:', '') }));
+      sendData(JSON.stringify({ data: question.replace('REPLAY:', '').replace('!image:','').replace('!image','') }));
       sendData('[DONE]');
       res.end();
       return;
@@ -253,7 +257,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     let chatHistory = history;
     chatHistory = [{ "type": "systemMessage", "message": promptString }, ...chatHistory, { "type": "userMessage", "message": question }];
 
-    if (debug) {
+    if (true || debug) {
       console.log('ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
       console.log('ChatAPI: Question:', question);
       console.log('ChatAPI: Requested tokens:', requestedTokens);

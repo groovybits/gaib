@@ -17,26 +17,31 @@ const db = admin.firestore();
  * The context in which the event occurred.
  * @returns {Promise<void>}
  */
-/*
 exports.generateThumbnail = functions.firestore
   .document("stories/{storyId}")
   .onCreate(async (snapshot, context) => {
     try {
       const story = snapshot.data();
+      if (!story || !story.imageUrls) {
+        console.log("No story or imageUrls found");
+        return;
+      }
+
       const storyId = context.params.storyId;
+      console.log("generateThumbnail triggered with storyId: ", storyId);
 
-      console.log("generateThumbnail triggered with storyId: ",
-        context.params.storyId);
+      // Process each image individually
+      for (let index = 0; index < story.imageUrls.length; index++) {
+        try {
+          await createThumbnail(storyId,
+            JSON.parse(story.imageUrls[index]).url, index);
+        } catch (error) {
+          console.error(
+            `Failed to create thumbnail for image at index ${index}`,
+            error);
+        }
+      }
 
-      // Start the process of
-      // creating thumbnails concurrently
-      await Promise.all(
-        story.imageUrls.map((imageUrl: string,
-          index: number) => createThumbnail(storyId,
-          imageUrl, index)));
-
-      // After all thumbnails have been created,
-      // set a flag in the Firestore document
       console.log("Generated thumbnails for story:" +
         ` ${storyId} adding thumbnailsGenerated flag.`);
       const storyRef = db.collection("stories").doc(storyId);
@@ -47,7 +52,6 @@ exports.generateThumbnail = functions.firestore
       console.error("Failed to generate thumbnails", error);
     }
   });
-  */
 
 /**
  * Creates a thumbnail for an image in a story.
@@ -57,35 +61,43 @@ exports.generateThumbnail = functions.firestore
  * @param { number } index - The index of the image in the story.
  * @return { Promise<void> }
  */
-/*
 async function createThumbnail(storyId: string,
   imageUrl: string, index: number) {
   try {
-    // Parse the imageUrl to get the file path relative to the bucket root
     const parsedUrl = new URL(imageUrl);
-    const bucketFilePath = parsedUrl.pathname.slice(1);
+    let bucketFilePath = parsedUrl.pathname.slice(1);
 
     const bucketName: string = functions.config().storage.bucket;
 
-    // Download the image from Firestore
+    // Remove the bucket name from the file path if it exists
+    if (bucketFilePath.startsWith(bucketName)) {
+      bucketFilePath = bucketFilePath.slice(bucketName.length);
+    }
+
+    // Remove the leading slash from the file path if it exists
+    if (bucketFilePath.startsWith("/")) {
+      bucketFilePath = bucketFilePath.slice(1);
+    }
+
     const file = storage.bucket(bucketName).file(bucketFilePath);
     const [content] = await file.download();
 
-    // Generate a thumbnail using the Sharp library
     const resizedImageBuffer = await sharp(content)
       .resize(256)
       .jpeg({quality: 90})
       .toBuffer();
 
-    // Write the thumbnail to a Google Cloud Storage bucket
     const thumbnailPath = `thumbnails/${storyId}_${index}.jpeg`;
     const thumbnailFile = storage.bucket(bucketName).file(thumbnailPath);
-    await thumbnailFile.save(resizedImageBuffer, {contentType: "image/jpeg"});
+    await thumbnailFile.save(resizedImageBuffer,
+      {contentType: "image/jpeg"});
   } catch (error) {
-    console.error(`Failed to create thumbnail for story: ${storyId}`, error);
+    console.error(`Failed to create thumbnail for story: ${storyId}`,
+      error);
+    throw error; // Re-throw the error to be caught in the outer function
   }
 }
-*/
+
 
 const stripe = new Stripe(functions.config().stripe.secret, {
   apiVersion: functions.config().stripe.api_version,

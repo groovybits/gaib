@@ -587,9 +587,6 @@ function Home({ user }: HomeProps) {
         isSpeakingRef.current = true;
         let lastImage: ImageData | string = '';
 
-        let promptImage = '';
-        let historyPrimer = '';
-
         function extractKeywords(sentence: string, numberOfKeywords = 2) {
           const doc = nlp(sentence);
 
@@ -639,6 +636,22 @@ function Home({ user }: HomeProps) {
             url = `${directoryUrl}/${randomNumber}.png`;
           }
           return url;
+        }
+
+        /* create an image */
+        async function createImageData(lastImage: ImageData | string): Promise<ImageData | string> {
+          let image: ImageData | string = lastImage;
+          if (image && image !== '') {
+            if (typeof image === 'string') {
+              image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+            } else if (typeof image === 'object' && image !== null) {
+              image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
+            }
+            return image;
+          } else {
+            let newImage: ImageData | string = { url: '', photographer: '', photographer_url: '', pexels_url: '' };
+            return newImage;
+          }
         }
 
         // Choose Pexles, DeepAI or local images
@@ -909,19 +922,30 @@ function Home({ user }: HomeProps) {
             stopSpeaking();
             return;
           }
+
+          // Clear the current story
+          setCurrentStory([]); // Clear the current story
+
+          let voiceModels: { [key: string]: string } = {};
+          let genderMarkedNames: any[] = [];
+          let detectedGender: string = gender;
+          let currentSpeaker: string = 'GAIB';
+          let isContinuingToSpeak = false;
+          let isSceneChange = false;
+          let lastSpeaker = '';
+
+          let sceneTexts: string[] = [];
+          // ImageData or string
+          let promptImages: (ImageData | string)[] = [];
+          let currentSceneText = "";
+          let imageCount = 0;
+          let sceneCount = 0;
+
           // Create a title screen image for the story
-          promptImage = "Generate a prompt for ai image generation of the following text to draw an animated image representing it as the title screen of an anime show:\n\n";
-          historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the intro title screen so we can generate an image of it.";
-
-          // display title screen with image and title
-          lastImage = await generateAIimage(`${promptImage}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimer}\n`, '', 0);
-          if (lastImage !== '') {
-            setScreenImage(lastImage);
-          }
-
-          // nlp(text).sentences().out('array');
-          let firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
-          setSubtitle(firstSentence);
+          let promptImageTitle = "Generate a prompt for ai image generation of the following text to draw an animated image representing it as the title screen of an anime show:\n\n";
+          let historyPrimerTitle = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the intro title screen so we can generate an image of it.";
+          let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
+          let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
 
           try {
             // Split the message into paragraphs at each empty line
@@ -978,14 +1002,9 @@ function Home({ user }: HomeProps) {
               'en-GB': 'en-GB-Wavenet-B'
             };
           }
-
-          let voiceModels: { [key: string]: string } = {};
-          let genderMarkedNames: any[] = [];
-          let detectedGender: string = gender;
-          let currentSpeaker: string = 'GAIB';
-          let isContinuingToSpeak = false;
-          let isSceneChange = false;
-          let lastSpeaker = '';
+          // Define default voice model for language
+          let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+          let model = defaultModel;
 
           // Extract gender markers from the entire message
           const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
@@ -1024,22 +1043,17 @@ function Home({ user }: HomeProps) {
             console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
             console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
           }
-          let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
-          let model = defaultModel;
-
-          let sceneTexts: string[] = [];
-          // ImageData or string
-          let promptImages: (ImageData | string)[] = [];
-          let currentSceneText = "";
-          let imageCount = 0;
-          let sceneCount = 0;
-
-          firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
+          
+          // get first sentence as title or question to display
+          let firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
           setSubtitle(firstSentence);
           setLoadingOSD(`\n\nGenerating images for ${sentences.length} sentences...`);
 
-          // Clear the current story
-          setCurrentStory([]); // Clear the current story
+          // display title screen with image and title
+          lastImage = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
+          if (lastImage !== '') {
+            setScreenImage(lastImage);
+          }
 
           // Extract the scene texts from the message
           let localCurrentStory: any[] = []; // local variable
@@ -1049,74 +1063,51 @@ function Home({ user }: HomeProps) {
               continue;
             }
             // check if we need to change the scene
-            if (sentence.includes('SCENE')
+            const allowList = ['Title', 'Question', 'Answer', 'Begins', 'Plotline', 'Scene', 'SCENE', 'SCENE:'];
+
+            if (allowList.some(word => sentence.includes(word))
               || (!sentence.startsWith('References: ')
                 && sentence !== ''
                 && (imageSource == 'pexels'
-                  || (imageCount === 0
-                    || sentence.includes('Title')
-                    || sentence.includes('Question] ')
-                    || sentence.includes('Answer ')
-                    || sentence.includes('Begins ')
-                    || sentence.includes('Plotline ')
-                  )
-                ))) {
+                  || imageCount === 0
+                )
+              ))
+            {
               // When we encounter a new scene, we push the current scene text to the array
               // and start a new scene text
+              let cleanSentence = sentence.replace('SCENE:', '').replace('SCENE', '');
               let newImage: ImageData | string = '';
               if (currentSceneText !== "") {
                 sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')}`);
-              }
-            
-              promptImage = "Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
-              historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
-              newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-              if (newImage !== '') {
-                lastImage = newImage;
-                imageCount++;
-                promptImages.push(lastImage);
-              }
-              setLoadingOSD(`\n---\nGenerated SCENE Image #${sceneCount}:\n${lastImage}`);
-
-              // collect sentences to speak
-              let cleanSentence = sentence;
-              if (cleanSentence.includes('SCENE:')) {
-                cleanSentence = cleanSentence.replace('SCENE:', '');
-              } else if (cleanSentence.includes('SCENE')) {
-                cleanSentence = cleanSentence.replace('SCENE', '');
-              }
-
-              let image: ImageData | string = lastImage;
-              if (image && image !== '') {
-                if (typeof image === 'string') {
-                  image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-                } else if (typeof image === 'object' && image !== null) {
-                  image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
+              
+                // generate this scenes image
+                console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
+                setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
+                newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                if (newImage !== '') {
+                  lastImage = newImage;
+                  imageCount++;
+                  promptImages.push(lastImage);
                 }
-                // save story and images for auto save and/or sharing
+              
+                // store current scene text and image generated
+                let image: ImageData | string = await createImageData(lastImage);
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${currentSceneText}\n`, imageUrl: JSON.stringify(image) }];
                 sceneCount++;
-
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
-
-                currentSceneText = cleanSentence;
               } else {
-                console.error("Last image is not defined.");
-                currentSceneText += " " + cleanSentence;
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+                // store current scene text and image generated
+                let image: ImageData | string = await createImageData(lastImage);
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
               }
+              // Next scene setup and increment scene counter
+              currentSceneText = cleanSentence;
+
               sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
             } else {
               // If it's not a new scene, we append the sentence to the current scene text
               currentSceneText += ` ${sentence}`;
-              let image: ImageData | string = lastImage;
-              if (image && image !== '') {
-                if (typeof image === 'string') {
-                  image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-                } else if (typeof image === 'object' && image !== null) {
-                  image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
-                }
-              }
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
+              let image: ImageData | string = await createImageData(lastImage);
+              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
 
               sentencesToSpeak.push(sentence);
             }
@@ -1126,78 +1117,33 @@ function Home({ user }: HomeProps) {
           if (currentSceneText !== "") {
             sceneTexts.push(`SCENE: ${currentSceneText}`);
 
+            let image: ImageData | string = await createImageData(lastImage);
+
+            // save story and images for auto save and/or sharing
+            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${currentSceneText}\n`, imageUrl: JSON.stringify(image) }];
             sceneCount++;
-            promptImage = "Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
-            historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
-            let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-            if (newImage !== '') {
-              lastImage = newImage;
-              imageCount++;
-              promptImages.push(lastImage);
-            }
-            setLoadingOSD(`\n---\nGenerated SCENE Image #${sceneCount}:\n${lastImage}`);
-
-            // collect sentences to speak
-            let cleanSentence = currentSceneText;
-            if (cleanSentence.includes('SCENE:')) {
-              cleanSentence = cleanSentence.replace('SCENE:', '');
-            } else if (cleanSentence.includes('SCENE')) {
-              cleanSentence = cleanSentence.replace('SCENE', '');
-            }
-
-            let image: ImageData | string = lastImage;
-            if (image && image !== '') {
-              if (typeof image === 'string') {
-                image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-              } else if (typeof image === 'object' && image !== null) {
-                image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
-              }
-              // save story and images for auto save and/or sharing
-              console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
-            } else {
-              console.error("Last image is not defined.");
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
-            }
           }
 
-          // absence of SCENE markers in the message
-          if (sceneTexts.length === 0) {
+          // absence of SCENE markers in the message without any images and no sceneTexts
+          if (sceneTexts.length === 0 && imageCount === 0) {
             sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
-
-            sceneCount++;
-            promptImage = "Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
-            historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
+            
+            console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
+            setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
             let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             if (newImage !== '') {
               lastImage = newImage;
               imageCount++;
               promptImages.push(lastImage);
             }
-            setLoadingOSD(`\n---\nGenerated SCENE Image #${sceneCount}:\n${lastImage}`);
 
             // collect sentences to speak
-            let cleanSentence = currentSceneText;
-            if (cleanSentence.includes('SCENE:')) {
-              cleanSentence = cleanSentence.replace('SCENE:', '');
-            } else if (cleanSentence.includes('SCENE')) {
-              cleanSentence = cleanSentence.replace('SCENE', '');
-            }
-
-            let image: ImageData | string = lastImage;
-            if (image && image !== '') {
-              if (typeof image === 'string') {
-                image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-              } else if (typeof image === 'object' && image !== null) {
-                image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
-              }
-              // save story and images for auto save and/or sharing
-              console.log(`setting current story for ${messages[lastMessageIndex].type} message: ${cleanSentence}`);
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
-            } else {
-              console.error("Last image is not defined.");
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount}] ${cleanSentence}\n`, imageUrl: {url: '', photographer: '', pexels_url: ''} }];
-            }
+            let cleanSentence = currentSceneText.replace('SCENE:', '').replace('SCENE', '');
+            let image: ImageData | string = await createImageData(lastImage);
+            
+            // save story and images for auto save and/or sharing
+            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];           
+            sceneCount++;
           }
 
           // Save the current story
@@ -1412,16 +1358,6 @@ function Home({ user }: HomeProps) {
           setIsSpeaking(false);
           setLoadingOSD('\nI am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.');
           setGaibImagePrompt(`I am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.`);
-
-          promptImage = "Generate a prompt for ai image generation of the following text to draw an animated image representing it:\n\n";
-          historyPrimer = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the intro title screen so we can generate an image of it.";
-          lastImage = await generateAIimage(
-            `${promptImage}${gaibImagePrompt}`,
-            `${historyPrimer}\n`,
-            lastImage, count);
-          if (lastImage !== '') {
-            setScreenImage(lastImage);
-          }
         }
 
         if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -1638,8 +1574,8 @@ function Home({ user }: HomeProps) {
     setError(null);
     setIsPaused(false);
     setLoading(true);
-    setLoadingOSD(`\nCreating ${isQuestion ? 'question' : 'story'}...`);
-    setSubtitle(`${isStory ? 'Plotline: ' : 'Question: '}${question.slice(0, 80).replace(/\n/g, ' ')}...`);
+    setLoadingOSD(`\nRecieved ${isQuestion ? 'question' : 'story'}: ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
+    setSubtitle('');
     setIsSpeaking(true);
     setQuery('');
     setVoiceQuery('');
@@ -1721,8 +1657,8 @@ function Home({ user }: HomeProps) {
                 pending: (state.pending ?? '') + data.data,
               }));
             }
-            setLoadingOSD(`\nLoading[${tokens}]... `);
             tokens = tokens + countTokens(data.data);
+            setLoadingOSD(`\nLoading: ${tokens} GPT tokens generated...\n`);
             messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
           }
         },
