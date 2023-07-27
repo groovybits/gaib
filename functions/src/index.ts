@@ -15,59 +15,64 @@ const db = admin.firestore();
  * The metadata of the object that was created.
  * @returns {Promise<void>}
  */
-exports.generateThumbnail = functions.storage
-  .object()
-  .onFinalize(async (object) => {
+exports.generateThumbnail = functions.database
+  .ref("/stories/{storyId}")
+  .onCreate(async (snapshot, context) => {
     try {
-      // Get the file name
-      const filePath = object.name;
+      const storyId = context.params.storyId;
+      const storyUrl = snapshot.val().url;
 
-      console.log(`generateThumbnail triggered with filePath: ${filePath}`);
+      console.log(`generateThumbnail triggered by storyId: ${storyId}`);
 
-      // Proceed only if this is a new object and it's a JSON file
-      if (filePath && filePath.startsWith("stories/") &&
-        filePath.endsWith("data.json")) {
-        // Extract the storyId from the file path
-        const storyId = filePath.split("/")[1];
+      // Fetch the JSON file from the storage
+      const parsedUrl = new URL(storyUrl);
+      let bucketFilePath = parsedUrl.pathname.slice(1);
 
-        // Fetch the JSON file from the storage
-        const file = storage.bucket(object.bucket).file(filePath);
-        const [content] = await file.download();
-        const story = JSON.parse(content.toString());
+      const bucketName: string = functions.config().storage.bucket;
 
-        if (!story || !story.imageUrls) {
-          console.log("No story or imageUrls found");
-          return;
-        }
-
-        console.log("generateThumbnail triggered with storyId: ", storyId);
-
-        // Process each image individually
-        const thumbnailUrls = [];
-        for (let index = 0; index < story.imageUrls.length; index++) {
-          try {
-            const thumbnailUrl = await createThumbnail(storyId,
-              JSON.parse(story.imageUrls[index]).url, index);
-            thumbnailUrls.push(thumbnailUrl);
-          } catch (error) {
-            console.error(
-              `Failed to create thumbnail for image at index ${index}`,
-              error);
-          }
-        }
-
-        console.log("Generated thumbnails for story:" +
-          ` ${storyId} adding thumbnailsGenerated flag.`);
-
-        // Update the data.json in GCS to include the thumbnail URLs
-        const bucketName: string = functions.config().storage.bucket;
-        const dataJsonPath = `stories/${storyId}/data.json`;
-        const dataJsonFile = storage.bucket(bucketName).file(dataJsonPath);
-        const [dataJsonContent] = await dataJsonFile.download();
-        const dataJson = JSON.parse(dataJsonContent.toString());
-        dataJson["thumbnailUrls"] = thumbnailUrls;
-        await dataJsonFile.save(JSON.stringify(dataJson));
+      // Remove the bucket name from the file path if it exists
+      if (bucketFilePath.startsWith(bucketName)) {
+        bucketFilePath = bucketFilePath.slice(bucketName.length);
       }
+
+      // Remove the leading slash from the file path if it exists
+      if (bucketFilePath.startsWith("/")) {
+        bucketFilePath = bucketFilePath.slice(1);
+      }
+
+      const file = storage.bucket(bucketName).file(bucketFilePath);
+      const [content] = await file.download();
+      const story = JSON.parse(content.toString());
+
+      if (!story || !story.imageUrls) {
+        console.log("No story or imageUrls found");
+        return;
+      }
+
+      // Process each image individually
+      const thumbnailUrls = [];
+      for (let index = 0; index < story.imageUrls.length; index++) {
+        try {
+          const thumbnailUrl = await createThumbnail(storyId,
+            JSON.parse(story.imageUrls[index]).url, index);
+          thumbnailUrls.push(thumbnailUrl);
+        } catch (error) {
+          console.error(
+            `Failed to create thumbnail for image at index ${index}`,
+            error);
+        }
+      }
+
+      console.log("Generated thumbnails for story:" +
+        ` ${storyId} adding thumbnailsGenerated flag.`);
+
+      // Update the data.json in GCS to include the thumbnail URLs
+      const dataJsonPath = `stories/${storyId}/data.json`;
+      const dataJsonFile = storage.bucket(bucketName).file(dataJsonPath);
+      const [dataJsonContent] = await dataJsonFile.download();
+      const dataJson = JSON.parse(dataJsonContent.toString());
+      dataJson["thumbnailUrls"] = thumbnailUrls;
+      await dataJsonFile.save(JSON.stringify(dataJson));
     } catch (error) {
       console.error("Failed to generate thumbnails", error);
     }
