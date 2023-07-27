@@ -27,7 +27,6 @@ import { v4 as uuidv4 } from 'uuid';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
 import GPT3Tokenizer from 'gpt3-tokenizer';
-import { set } from 'lodash';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -198,6 +197,8 @@ function Home({ user }: HomeProps) {
     alert('Story copied to clipboard!');
   };
 
+  let lastSharedStoryUrl = ''; // This variable should be defined outside of the shareStory function
+
   const shareStory = async (storyToShare: any[], automated: boolean): Promise<string> => {
     try {
       if (!user && authEnabled) {
@@ -238,52 +239,71 @@ function Home({ user }: HomeProps) {
           userId: user.uid,
           text: storyText.replace('\n', ' '),
           imageUrls: JSON.stringify(imageUrls),
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         });
         console.log('ID of the current user:', user.uid);
       }
 
-      // Save the story to Firestore
-      const docRef = await firebase.firestore().collection('stories').add({
+      // Create the story object
+      const story = {
         userId: user.uid,
         text: storyText,
         imageUrls: imageUrls,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      });
+        timestamp: Date.now(),
+      };
 
-      if (docRef == null || docRef.id == null || docRef.id === '') {
-        console.log(`shareStory: No document reference returned for story ${storyText.slice(0, 30)}...`);
-        if (!automated) {
-          alert('An error occurred while sharing the story!');
-        }
-        return '';
+      let storyId;
+      if (lastSharedStoryUrl !== '') {
+        // If a story has already been shared, use its ID
+        storyId = lastSharedStoryUrl.split('/').pop();
+        console.log(`Story with ID ${storyId} already exists.`);
+      } else {
+        // If no story has been shared yet, create a new one
+        // Send a POST request to the API endpoint
+        const idToken = await user?.getIdToken();
+        const response = await fetch('/api/shareStory', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(story),
+        });
+
+        // Parse the response
+        const data = await response.json();
+
+        // Extract the story ID from the response
+        storyId = data.storyId;
+
+        console.log(`Story ${storyText.slice(0, 30)}... json stored to ${baseUrl}/${storyId}!`);
+
+        // Update the lastSharedStoryUrl variable
+        lastSharedStoryUrl = `${baseUrl}/${storyId}`;
       }
-
-      // The ID of the new document
-      const newStoryId = docRef.id;
-
-      console.log(`Story ${storyText.slice(0, 30)}... shared successfully to ${baseUrl}/${newStoryId}!`);
 
       if (!automated || autoSave) {
-        alert(`Story shared successfully to ${baseUrl}/${newStoryId}!`);
-        copy(`${baseUrl}/${newStoryId}`);
+        alert(`Story shared successfully to ${lastSharedStoryUrl}!`);
+        copy(`${lastSharedStoryUrl}`);
       }
-      setLastStory(`${baseUrl}/${newStoryId}`);
-
+      setLastStory(`${lastSharedStoryUrl}`);
       if (twitchChatEnabled && authEnabled && channelId !== '') {
         // Post the story to the Twitch chat
-        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${newStoryId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
+        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${lastSharedStoryUrl} for the story: ${storyText.slice(0, 200)}.`, user.uid);
       }
+
+      return `${lastSharedStoryUrl}`;
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
+      return '';
     }
-    return `${baseUrl}/${episodeId}`;
   };
 
   const handleShareStory = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     if (currentStory.length > 0) {
-      await shareStory(currentStory, false);
+      if (lastStory !== '') {
+        await shareStory(currentStory, false);
+      }
       if (!isSpeaking && !loading) {
         setCurrentStory([]); // Clear the current story
       }
@@ -925,6 +945,7 @@ function Home({ user }: HomeProps) {
 
           // Clear the current story
           setCurrentStory([]); // Clear the current story
+          setLastStory(''); // Clear the last story
 
           let voiceModels: { [key: string]: string } = {};
           let genderMarkedNames: any[] = [];

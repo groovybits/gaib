@@ -1,6 +1,5 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import firebase from '@/config/firebaseClientInit';
 import styles from '@/styles/Home.module.css';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
@@ -14,7 +13,7 @@ interface Story {
   id: string;
   text: string;
   imageUrls: string[];
-  timestamp: firebase.firestore.Timestamp;
+  timestamp: string; // Changed from firebase.firestore.Timestamp
 }
 
 interface InitialProps {
@@ -31,9 +30,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   useEffect(() => {
     if (storyId && typeof storyId === 'string') {
       const fetchStory = async () => {
-        const doc = await firebase.firestore().collection('stories').doc(storyId).get();
-        if (doc.exists) {
-          setSelectedStory({ id: doc.id, ...doc.data() } as Story);
+        // Fetch the story JSON data from the Google Cloud Storage bucket
+        const response = await fetch(`https://storage.googleapis.com/gaib/stories/${storyId}/data.json`);
+        if (response.ok) {
+          const storyData = await response.json();
+          setSelectedStory({ id: storyId, ...storyData });
         }
       };
       fetchStory();
@@ -186,9 +187,11 @@ Global.getInitialProps = async (ctx: NextPageContext) => {
   let initialStory: Story | null = null;
 
   if (storyId && typeof storyId === 'string') {
-    const doc = await firebase.firestore().collection('stories').doc(storyId).get();
-    if (doc.exists) {
-      initialStory = { id: doc.id, ...doc.data() } as Story;
+    // Fetch the story JSON data from the Google Cloud Storage bucket
+    const response = await fetch(`https://storage.googleapis.com/gaib/stories/${storyId}/data.json`);
+    if (response.ok) {
+      const storyData = await response.json();
+      initialStory = { id: storyId, ...storyData };
     }
   }
 

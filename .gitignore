@@ -57,6 +57,4 @@ gcloud-speech-to-text.json
 scripts/processedFiles.json
 utils/processedFiles.json
 
-tools/
-
 yarn.lock
