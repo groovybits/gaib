@@ -197,8 +197,6 @@ function Home({ user }: HomeProps) {
     alert('Story copied to clipboard!');
   };
 
-  let lastSharedStoryUrl = ''; // This variable should be defined outside of the shareStory function
-
   const shareStory = async (storyToShare: any[], automated: boolean): Promise<string> => {
     try {
       if (!user && authEnabled) {
@@ -251,47 +249,36 @@ function Home({ user }: HomeProps) {
         timestamp: Date.now(),
       };
 
-      let storyId;
-      if (lastSharedStoryUrl !== '') {
-        // If a story has already been shared, use its ID
-        storyId = lastSharedStoryUrl.split('/').pop();
-        console.log(`Story with ID ${storyId} already exists.`);
-      } else {
-        // If no story has been shared yet, create a new one
-        // Send a POST request to the API endpoint
-        const idToken = await user?.getIdToken();
-        const response = await fetch('/api/shareStory', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-          },
-          body: JSON.stringify(story),
-        });
+      // Send a POST request to the API endpoint
+      const idToken = await user?.getIdToken();
+      const response = await fetch('/api/shareStory', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(story),
+      });
 
-        // Parse the response
-        const data = await response.json();
+      // Parse the response
+      const data = await response.json();
 
-        // Extract the story ID from the response
-        storyId = data.storyId;
+      // Extract the story ID and URL from the response
+      const { storyId, storyUrl } = data;
 
-        console.log(`Story ${storyText.slice(0, 30)}... json stored to ${baseUrl}/${storyId}!`);
-
-        // Update the lastSharedStoryUrl variable
-        lastSharedStoryUrl = `${baseUrl}/${storyId}`;
-      }
+      console.log(`Story ${storyText.slice(0, 30)}... json stored to ${storyUrl}!`);
 
       if (!automated || autoSave) {
-        alert(`Story shared successfully to ${lastSharedStoryUrl}!`);
-        copy(`${lastSharedStoryUrl}`);
+        alert(`Story shared successfully to ${baseUrl}/${storyId}!`);
+        copy(`${baseUrl}/${storyId}`);
       }
-      setLastStory(`${lastSharedStoryUrl}`);
+      setLastStory(`${baseUrl}/${storyId}`);
       if (twitchChatEnabled && authEnabled && channelId !== '') {
         // Post the story to the Twitch chat
-        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${lastSharedStoryUrl} for the story: ${storyText.slice(0, 200)}.`, user.uid);
+        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storyId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
       }
 
-      return `${lastSharedStoryUrl}`;
+      return `${baseUrl}/${storyId}`;
     } catch (error) {
       console.error('An error occurred in the shareStory function:', error); // Check for any errors
       return '';
