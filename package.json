@@ -18,7 +18,8 @@
     "format": "prettier --ignore-path .gitignore \"**/*.+(ts|js|tsx)\" --write",
     "ingest": "tsx -r dotenv/config scripts/ingest-data.ts",
     "docker-build": "docker build . -t gaib",
-    "twitch": "tsx -r dotenv/config scripts/twitchChat.ts"
+    "twitch": "tsx -r dotenv/config scripts/twitchChat.ts",
+    "migrateS3toDB": "tsx -r dotenv/config scripts/migrateS3toDB.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^6.11.0",

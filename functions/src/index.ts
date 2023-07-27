@@ -15,46 +15,30 @@ const db = admin.firestore();
  * The metadata of the object that was created.
  * @returns {Promise<void>}
  */
-exports.generateThumbnail = functions.database
-  .ref("/stories/{storyId}")
+exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
   .onCreate(async (snapshot, context) => {
     try {
       const storyId = context.params.storyId;
       const storyUrl = snapshot.val().url;
-
-      console.log(`generateThumbnail triggered by storyId: ${storyId}`);
-
-      // Fetch the JSON file from the storage
-      const parsedUrl = new URL(storyUrl);
-      let bucketFilePath = parsedUrl.pathname.slice(1);
-
       const bucketName: string = functions.config().storage.bucket;
 
-      // Remove the bucket name from the file path if it exists
-      if (bucketFilePath.startsWith(bucketName)) {
-        bucketFilePath = bucketFilePath.slice(bucketName.length);
-      }
-
-      // Remove the leading slash from the file path if it exists
-      if (bucketFilePath.startsWith("/")) {
-        bucketFilePath = bucketFilePath.slice(1);
-      }
-
-      const file = storage.bucket(bucketName).file(bucketFilePath);
-      const [content] = await file.download();
-      const story = JSON.parse(content.toString());
+      const response = await fetch(storyUrl);
+      const story = await response.json();
 
       if (!story || !story.imageUrls) {
         console.log("No story or imageUrls found");
         return;
       }
 
+      console.log("generateThumbnail triggered with storyId: ", storyId);
+
       // Process each image individually
       const thumbnailUrls = [];
+      const uniqueImageUrls: Set<string> = new Set();
       for (let index = 0; index < story.imageUrls.length; index++) {
         try {
           const thumbnailUrl = await createThumbnail(storyId,
-            JSON.parse(story.imageUrls[index]).url, index);
+            JSON.parse(story.imageUrls[index]).url, index, uniqueImageUrls);
           thumbnailUrls.push(thumbnailUrl);
         } catch (error) {
           console.error(
@@ -84,15 +68,30 @@ exports.generateThumbnail = functions.database
  * @param { string } storyId - The ID of the story.
  * @param { string } imageUrl - The URL of the image.
  * @param { number } index - The index of the image in the story.
+ * @param { Set<string> } uniqueImageUrls - The set of unique image URLs.
  * @return { Promise<void> }
  */
 async function createThumbnail(storyId: string,
-  imageUrl: string, index: number): Promise<string> {
+  imageUrl: string, index: number,
+  uniqueImageUrls: Set<string>): Promise<string> {
   try {
+    const bucketName: string = functions.config().storage.bucket;
+
+    // Check if the image URL is unique
+    if (uniqueImageUrls.has(imageUrl)) {
+      // If the image URL is not unique,
+      // return the URL of the existing thumbnail
+      const thumbnailIndex = Array.from(uniqueImageUrls).indexOf(imageUrl);
+      const thumbnailUrl = `https://storage.googleapis.com/${bucketName}/` +
+        `thumbnails/${storyId}/${thumbnailIndex}.jpeg`;
+      return thumbnailUrl;
+    }
+
+    // If the image URL is unique, add it to the set of unique image URLs
+    uniqueImageUrls.add(imageUrl);
+
     const parsedUrl = new URL(imageUrl);
     let bucketFilePath = parsedUrl.pathname.slice(1);
-
-    const bucketName: string = functions.config().storage.bucket;
 
     // Remove the bucket name from the file path if it exists
     if (bucketFilePath.startsWith(bucketName)) {
@@ -118,7 +117,9 @@ async function createThumbnail(storyId: string,
       {contentType: "image/jpeg"});
 
     // Return the public URL of the thumbnail
-    return `https://storage.googleapis.com/${bucketName}/${thumbnailPath}`;
+    const thumbnailUrl = `https://storage.googleapis.com/${bucketName}/` +
+      `${thumbnailPath}`;
+    return thumbnailUrl;
   } catch (error) {
     console.error(`Failed to create thumbnail for story: ${storyId}`,
       error);
