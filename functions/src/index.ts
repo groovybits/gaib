@@ -57,6 +57,11 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
       const dataJson = JSON.parse(dataJsonContent.toString());
       dataJson["thumbnailUrls"] = thumbnailUrls;
       await dataJsonFile.save(JSON.stringify(dataJson));
+
+      // Update the story in the database with the URLs of the thumbnails
+      await admin.database().ref(`stories/${storyId}`).update({
+        thumbnailUrls: thumbnailUrls,
+      });
     } catch (error) {
       console.error("Failed to generate thumbnails", error);
     }
