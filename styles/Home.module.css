@@ -991,6 +991,13 @@
   border: 0px double #000000;
 }
 
+.shareButtons {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 4px;
+}
+
 .story {
   background-color: #000000;
   color: #f1ebeb;
@@ -1001,6 +1008,7 @@
   word-wrap: overflow-wrap;
   padding: 10px;
   margin: 10px;
+  width: 100%;
 }
 
 .story:hover {
@@ -1030,7 +1038,7 @@
   display: flex;
   align-items: flex-start; /* aligns items to the top */
   background: #ffc601;
-  padding: 2px;
+  padding: 4px;
   font-size: 24px;
   border: 4px double #0c4b8e;
   border-radius: 6px;
