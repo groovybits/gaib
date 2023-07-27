@@ -44,6 +44,7 @@ Help: - Ask me how to generate anime or general anime questions.
 Commands:
   !episode <topics> - Generate an episode based on topics from documents.
   !question <question> - Ask a question based on topcis from documents.
+  !image <prompt> - Generate an image based on prompt.
   [REFRESH] - Clear conversation history, forget everything.
   [PERSONALITY] <role> - Change bot's personality and role.
   [WISDOM] or [SCIENCE] - Set sources for references.
@@ -126,10 +127,10 @@ client.on('message', async (channel: any, tags: {
   // Check if the message is a command
   // If the message contains "GAIB" or "gaib", make a call to the OpenAI API
   if (message.toLowerCase().startsWith('!image')) {
-    console.log(`REPLAY: ${tags.username} Sending Image to Channel: ${channel}\n`);
-    client.say(channel, `REPLAY: ${tags.username} Sending Image to Channel: ${channel}`);
+    console.log(`${tags.username} Sending Image to Channel: ${channel}\n`);
+    client.say(channel, `${tags.username} Sending Image to Channel: ${channel}`);
 
-    let imagePrompt = message.slice(0, messageLimit).trim().replace(/(\r\n|\n|\r)/gm, " ").replace(/^\!/, '').replace(/^(image):/, '').replace(/^:/, '').replace('REPLAY:', '').trim();
+    let imagePrompt = message.slice(0, messageLimit).trim();
     if (imagePrompt) {
       // Add the command to the Realtime Database
       const newCommandRef = db.ref(`commands/${channelName}`).push();
@@ -137,7 +138,7 @@ client.on('message', async (channel: any, tags: {
         channelName: channelName,
         type: 'question',
         plotline: '',
-        imagePrompt: `REPLAY: ${imagePrompt}`,
+        imagePrompt: `${imagePrompt}`,
         username: tags.username, // Add this line to record the username
         timestamp: admin.database.ServerValue.TIMESTAMP
       });

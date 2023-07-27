@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
               console.log(`${new Date().toLocaleString()} CommandAPI: No Twitch Chat Commands found for channel ${channelName}`);
             }
             // No commands found
-            return res.status(404).json({ error: 'CommandAPI: No Twitch Chat Commands found' });
+            return res.status(200).json([]);
           }
         })
         .catch((error) => {

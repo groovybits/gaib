@@ -144,9 +144,11 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                       src={actualImageUrl}
                       alt="Scene"
                     />
-                    <div className={isFullScreen ? styles.readerFullScreenSubtitle : styles.subtitle}>{scenes[currentScene].replace(/\|$/g, '')}</div>
+                    <div className={isFullScreen ? `${styles.subtitle}` : styles.subtitle}>
+                      {scenes[currentScene].replace(/\|$/g, '')}
+                    </div>
                   </div>
-                  <div className={`${styles.footer} ${styles.center}`}>
+                  <div className={`${styles.footerContainer} ${styles.center}`}>
                     <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <button onClick={nextPage} className={styles.pageButton}>Next Page</button>

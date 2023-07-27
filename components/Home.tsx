@@ -197,109 +197,13 @@ function Home({ user }: HomeProps) {
     alert('Story copied to clipboard!');
   };
 
-  const shareStory = async (storyToShare: any[], automated: boolean): Promise<string> => {
-    try {
-      if (!user && authEnabled) {
-        if (!automated) {
-          alert('Please sign in first!');
-        }
-        return '';
-      } else if (!user) {
-        if (!automated) {
-          alert('Cannot share story when user auth is disabled without a firestore db hooked up.')
-        }
-        return '';
-      }
-
-      if (storyToShare.length === 0) {
-        console.log(`shareStory: No stories to share: ${JSON.stringify(storyToShare)}}`);
-        if (!automated) {
-          alert('Please generate a story first!');
-        }
-        return '';
-      }
-      const storyText = storyToShare.map((item) => item.sentence).join('|');
-      const imageUrls = storyToShare.map((item) => item.imageUrl);
-
-      if (storyText.length === 0) {
-        console.log(`shareStory: No story text to share: ${JSON.stringify(storyText)}}`);
-
-        if (!automated) {
-          alert('Please generate a story first!');
-        }
-        return '';
-      } else if (imageUrls.length === 0) {
-        console.log(`shareStory: No image URLs to share: ${JSON.stringify(imageUrls)}}`);
-      }
-
-      if (debug) {
-        console.log('Data being written:', {
-          userId: user.uid,
-          text: storyText.replace('\n', ' '),
-          imageUrls: JSON.stringify(imageUrls),
-        });
-        console.log('ID of the current user:', user.uid);
-      }
-
-      // Create the story object
-      const story = {
-        userId: user.uid,
-        text: storyText,
-        imageUrls: imageUrls,
-        timestamp: Date.now(),
-      };
-
-      // Send a POST request to the API endpoint
-      const idToken = await user?.getIdToken();
-      const response = await fetch('/api/shareStory', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(story),
-      });
-
-      // Parse the response
-      const data = await response.json();
-
-      // Extract the story ID and URL from the response
-      const { storyId, storyUrl } = data;
-
-      console.log(`Story ${storyText.slice(0, 30)}... json stored to ${storyUrl}!`);
-
-      if (!automated || autoSave) {
-        alert(`Story shared successfully to ${baseUrl}/${storyId}!`);
-        copy(`${baseUrl}/${storyId}`);
-      }
-      setLastStory(`${baseUrl}/${storyId}`);
-      if (twitchChatEnabled && authEnabled && channelId !== '') {
-        // Post the story to the Twitch chat
-        await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storyId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
-      }
-
-      return `${baseUrl}/${storyId}`;
-    } catch (error) {
-      console.error('An error occurred in the shareStory function:', error); // Check for any errors
-      return '';
-    }
-  };
-
   const handleShareStory = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
-    if (currentStory.length > 0) {
-      if (lastStory !== '') {
-        await shareStory(currentStory, false);
-      }
-      if (!isSpeaking && !loading) {
-        setCurrentStory([]); // Clear the current story
-      }
+    if (lastStory !== '') {
+      alert(`Story shared successfully to ${lastStory}!`);
+      copy(`${lastStory}`);
     } else {
-      if (lastStory !== '') {
-        alert(`Story shared successfully to ${lastStory}!`);
-      } else {
-        alert('Please generate a story first!');
-      }
+      alert('Please generate a story first!');
     }
   };
 
@@ -375,7 +279,9 @@ function Home({ user }: HomeProps) {
     async function fetchEpisodeData() {
       const idToken = await user?.getIdToken();
       try {
-        console.log(`fetchEpisodeData: Fetching documents for channel ${channelId} and user ${user?.uid}...`);
+        if (debug) {
+          console.log(`fetchEpisodeData: Fetching documents for channel ${channelId} and user ${user?.uid}...`);
+        }
         const res = await fetch(`/api/commands?channelName=${channelId}&userId=${user?.uid}`,
           {
             headers: {
@@ -388,7 +294,9 @@ function Home({ user }: HomeProps) {
             console.log(`fetchEpisodeData: User ${user?.uid} is not authorized to access channel ${channelId}.`);
             return;
           } else if (res.status === 404) {
-            console.log(`fetchEpisodeData: Channel ${channelId} doesn't have any data.`);
+            if (debug) {
+              console.log(`fetchEpisodeData: Channel ${channelId} doesn't have any data.`);
+            }
             return;
           }
           console.error(`fetchEpisodeData: An error occurred in the fetchEpisodeData function: ${res.statusText}`);
@@ -397,10 +305,11 @@ function Home({ user }: HomeProps) {
         const data = await res.json();
 
         if (data.length === 0 || data.error == 'No commands found') {
-          console.log(`fetchEpisodeData: No documents found for channel ${channelId} and user ${user?.uid}`);
+          if (debug) {
+            console.log(`fetchEpisodeData: No documents found for channel ${channelId} and user ${user?.uid}`);
+          }
           return;
         }
-
         console.log(`fetchEpisodeData: Found ${data.length} documents for channel ${channelId} and user ${user?.uid}.`);
 
         const newEpisodes = data.map((item: any) => ({
@@ -583,7 +492,9 @@ function Home({ user }: HomeProps) {
     } else {
       // sleep for 1 second
       setTimeout(() => {
-        console.log('SpeakingDisplay: sleeping for 3 seconds, no new messages');
+        if (debug) {
+          console.log('SpeakingDisplay: sleeping for 3 seconds, no new messages');
+        }
       }, 3000);
       return;
     }
@@ -921,6 +832,76 @@ function Home({ user }: HomeProps) {
           return data.translatedText;
         }
 
+        const shareStory = async (storyToShare: any[], automated: boolean): Promise<string> => {
+          try {
+            if (!user && authEnabled) {
+              return '';
+            } else if (!user) {
+              return '';
+            }
+
+            if (storyToShare.length === 0) {
+              console.log(`shareStory: No stories to share: ${JSON.stringify(storyToShare)}}`);
+              return '';
+            }
+            const storyText = storyToShare.map((item) => item.sentence).join('|');
+            const imageUrls = storyToShare.map((item) => item.imageUrl);
+
+            if (storyText.length === 0) {
+              console.log(`shareStory: No story text to share: ${JSON.stringify(storyText)}}`);
+              return '';
+            } else if (imageUrls.length === 0) {
+              console.log(`shareStory: No image URLs to share: ${JSON.stringify(imageUrls)}}`);
+            }
+
+            if (debug) {
+              console.log('Data being written:', {
+                userId: user.uid,
+                text: storyText.replace('\n', ' '),
+                imageUrls: JSON.stringify(imageUrls),
+              });
+              console.log('ID of the current user:', user.uid);
+            }
+
+            // Create the story object
+            const story = {
+              userId: user.uid,
+              text: storyText,
+              imageUrls: imageUrls,
+              timestamp: Date.now(),
+            };
+
+            // Send a POST request to the API endpoint
+            const idToken = await user?.getIdToken();
+            const response = await fetch('/api/shareStory', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+              },
+              body: JSON.stringify(story),
+            });
+
+            // Parse the response
+            const data = await response.json();
+
+            // Extract the story ID and URL from the response
+            const { storyId, storyUrl } = data;
+
+            console.log(`Story ${storyText.slice(0, 30)}... json stored to ${storyUrl}!`);
+            setLastStory(`${baseUrl}/${storyId}`);
+            if (twitchChatEnabled && authEnabled && channelId !== '') {
+              // Post the story to the Twitch chat
+              await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storyId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
+            }
+
+            return `${baseUrl}/${storyId}`;
+          } catch (error) {
+            console.error('An error occurred in the shareStory function:', error); // Check for any errors
+            return '';
+          }
+        };
+
         async function displayImagesAndSubtitles() {
           const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
           const idToken = await user?.getIdToken();
@@ -1051,7 +1032,7 @@ function Home({ user }: HomeProps) {
             console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
             console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
           }
-          
+
           // get first sentence as title or question to display
           let firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
           setSubtitle(firstSentence);
@@ -1079,15 +1060,14 @@ function Home({ user }: HomeProps) {
                 && (imageSource == 'pexels'
                   || imageCount === 0
                 )
-              ))
-            {
+              )) {
               // When we encounter a new scene, we push the current scene text to the array
               // and start a new scene text
               let cleanSentence = sentence.replace('SCENE:', '').replace('SCENE', '');
               let newImage: ImageData | string = '';
               if (currentSceneText !== "") {
                 sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')}`);
-              
+
                 // generate this scenes image
                 console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
                 setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
@@ -1097,7 +1077,7 @@ function Home({ user }: HomeProps) {
                   imageCount++;
                   promptImages.push(lastImage);
                 }
-              
+
                 // store current scene text and image generated
                 let image: ImageData | string = await createImageData(lastImage);
                 localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${currentSceneText}\n`, imageUrl: JSON.stringify(image) }];
@@ -1135,7 +1115,7 @@ function Home({ user }: HomeProps) {
           // absence of SCENE markers in the message without any images and no sceneTexts
           if (sceneTexts.length === 0 && imageCount === 0) {
             sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
-            
+
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
             setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
             let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
@@ -1148,9 +1128,9 @@ function Home({ user }: HomeProps) {
             // collect sentences to speak
             let cleanSentence = currentSceneText.replace('SCENE:', '').replace('SCENE', '');
             let image: ImageData | string = await createImageData(lastImage);
-            
+
             // save story and images for auto save and/or sharing
-            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];           
+            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
             sceneCount++;
           }
 
@@ -1158,7 +1138,11 @@ function Home({ user }: HomeProps) {
           setCurrentStory(localCurrentStory);
 
           // Share the story after building it before displaying it
-          shareUrl = await shareStory(localCurrentStory, true);
+          shareUrl = await shareStory(localCurrentStory, isFetching);
+          if (!isFetching) {
+            alert(`Story shared successfully to ${shareUrl}!`);
+            copy(`${shareUrl}`);
+          }
           setSubtitle(`\nEpisode shared to: ${shareUrl}!`);
 
           // keep track of scene and images positions
@@ -1206,16 +1190,16 @@ function Home({ user }: HomeProps) {
           for (let sentence of sentencesToSpeak) {
             // get the image for the sentence
             if (sentence.startsWith('SCENE: ')) {
-                sentence = sentence.replace('[', '');
-                sentence = sentence.replace(']', '');
-                sentence = sentence.replace('SCENE: ', '');
-                lastImage = promptImages[imagesIndex];
-                if (imagesIndex < promptImages.length - 1) {
-                  imagesIndex++;
-                }
-                if (sceneIndex < sceneTexts.length - 1) {
-                  sceneIndex++;  // Move to the next scene
-                }
+              sentence = sentence.replace('[', '');
+              sentence = sentence.replace(']', '');
+              sentence = sentence.replace('SCENE: ', '');
+              lastImage = promptImages[imagesIndex];
+              if (imagesIndex < promptImages.length - 1) {
+                imagesIndex++;
+              }
+              if (sceneIndex < sceneTexts.length - 1) {
+                sceneIndex++;  // Move to the next scene
+              }
               // increment image counter and set the image
               count += 1;
               if (lastImage !== '') {
@@ -1285,7 +1269,9 @@ function Home({ user }: HomeProps) {
                 }
               }
 
-              console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+              if (debug) {
+                console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+              }
 
               // If the speaker has changed or if it's a scene change, switch back to the default voice
               if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
@@ -1384,7 +1370,7 @@ function Home({ user }: HomeProps) {
     } catch (error) {
       console.error('SpeakDisplay: UseEffect had an error processing messages: ', error);
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, shareStory, autoSave, currentStory, isSpeakingRef]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -2214,7 +2200,7 @@ function Home({ user }: HomeProps) {
                           title="Share Story"
                           onClick={handleShareStory}
                           type="button"
-                          disabled={loading || isSpeaking}
+                          disabled={isSpeaking}
                           className={styles.footer}
                         >Publish and Share Story</button>
                       </>

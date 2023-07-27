@@ -54,6 +54,7 @@
   object-fit: scale-up;
   border-radius: 10px;
   box-sizing: content-box;
+  align-self: center;
 }
 
 .fullScreenImage {

@@ -202,7 +202,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         question.replace(`!image:`, 'REPLAY: ').replace(`!image `, 'REPLAY: ');
         console.log(`ChatAPI: Image Question: ${question}`);
       }
-      if (true || debug) {
+      if (debug) {
         console.log(`ChatAPI Replay: ${question.replace('REPLAY:', '').replace('!image:', '').replace('!image', '')}`);
       }
       res.writeHead(200, {
@@ -257,7 +257,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     let chatHistory = history;
     chatHistory = [{ "type": "systemMessage", "message": promptString }, ...chatHistory, { "type": "userMessage", "message": question }];
 
-    if (true || debug) {
+    if (debug) {
       console.log('ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
       console.log('ChatAPI: Question:', question);
       console.log('ChatAPI: Requested tokens:', requestedTokens);
