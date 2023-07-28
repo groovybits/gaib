@@ -20,13 +20,13 @@ export default function Feed() {
   const [expandedStoryId, setExpandedStoryId] = useState<string | null>(null); // State for the currently expanded story
   const observer = useRef<IntersectionObserver | null>(null);
 
-  const fetchStories = async () => {
+  const fetchStories = useCallback(async () => {
     const tokenParam = nextPageToken ? `&pageToken=${nextPageToken}` : '';
     const response = await fetch(`/api/stories?maxResults=20${tokenParam}`);
     const data = await response.json();
     setStories((prevStories) => [...prevStories, ...data.stories]);
     setNextPageToken(data.nextPageToken);
-  };
+  }, [nextPageToken]);
 
   const lastStoryElementRef = useCallback(
     (node: any) => {

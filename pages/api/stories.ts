@@ -1,38 +1,53 @@
+import * as admin from 'firebase-admin';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Storage } from '@google-cloud/storage';
 
-const storage = new Storage();
-const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
-const maxResults = 20;
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID as string,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL as string,
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY as string).replace(/\\n/g, '\n'),
+    }),
+    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL as string,
+  });
+}
+
+// Get a reference to the Firebase Realtime Database
+const db = admin.database();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
+    // Get the nextPageToken from the query parameters
     const nextPageToken = req.query.nextPageToken as string | undefined;
-    const options: { maxResults: number; pageToken?: string; prefix: string } = {
-      maxResults,
-      prefix: 'stories/', // Only get files in the 'stories' directory
-    };
+
+    // Create a reference to the stories in the database
+    let ref = db.ref('stories').orderByChild('timestamp').limitToLast(21);
+
+    // If a nextPageToken was provided, start at that story
     if (nextPageToken) {
-      options.pageToken = nextPageToken;
+      ref = ref.endAt(Number(nextPageToken));
     }
 
-    const [files, newNextPageToken] = await storage.bucket(bucketName).getFiles(options);
+    // Fetch the stories
+    const snapshot = await ref.once('value');
+    const stories = snapshot.val();
 
-    const stories = [];
-    for (const file of files) {
-      try {
-        // Only process 'data.json' files
-        if (file.name.endsWith('/data.json')) {
-          const [storyData] = await file.download();
-          const story = JSON.parse(storyData.toString());
-          stories.push({ id: file.name, ...story });
-        }
-      } catch (err) {
-        console.error(`Error processing file ${file.name}:`, err);
-      }
-    }
+    // Convert the stories from an object to an array
+    const storiesArray = Object.keys(stories).map((key) => ({
+      id: key,
+      ...stories[key],
+    }));
 
-    res.status(200).json({ stories, nextPageToken: newNextPageToken || null });
+    // Sort the stories by timestamp in descending order
+    storiesArray.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Remove the last story from the array and use its timestamp as the nextPageToken
+    const lastStory = storiesArray.pop();
+    const newNextPageToken = lastStory ? lastStory.timestamp : null;
+
+    // Send the stories and the new nextPageToken in the response
+    res.status(200).json({ stories: storiesArray, nextPageToken: newNextPageToken });
   } else {
     res.status(405).json({ message: 'Method not allowed' });
   }
