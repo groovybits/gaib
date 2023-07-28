@@ -74,11 +74,11 @@ function Home({ user }: HomeProps) {
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
   const [subtitle, setSubtitle] = useState<string>('');
-  const [loadingOSD, setLoadingOSD] = useState<string>('\nI am GAIB, The Groovy AI Entertainment System!\nPlease ask me questions or enter a prompt to generate a story.');
+  const [loadingOSD, setLoadingOSD] = useState<string>('\nGroovy\nCreate your own stories');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('gaib');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('groovy');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
@@ -122,7 +122,6 @@ function Home({ user }: HomeProps) {
   const [twitchChatEnabled, setTwitchChatEnabled] = useState(false);
   let episodeId = uuidv4();
   const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
-  const [gaibImagePrompt, setGaibImagePrompt] = useState<string>(process.env.NEXT_PUBLIC_GAIB_IMAGE_PROMPT || 'GAIB a Groovy AI Bot who is in the tibetan mountains with blue skys and white fluffy clouds above. technology and tibetan relics with temples prayer flags and bright colors.');
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
   const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 6);
@@ -528,7 +527,7 @@ function Home({ user }: HomeProps) {
             if (gaibImage !== '') {
               setImageUrl(gaibImage);
             }
-            setPhotographer('GAIB');
+            setPhotographer('Groovy');
             setPhotographerUrl('https://groovy.org');
             setPexelsUrl('https://gaib.groovy.org');
           } else {
@@ -561,7 +560,7 @@ function Home({ user }: HomeProps) {
           let image: ImageData | string = lastImage;
           if (image && image !== '') {
             if (typeof image === 'string') {
-              image = { url: image, photographer: 'GAIB', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
+              image = { url: image, photographer: 'Groovy', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
             } else if (typeof image === 'object' && image !== null) {
               image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
             }
@@ -591,7 +590,8 @@ function Home({ user }: HomeProps) {
           setStartTime(endTime);
 
           if (sentence === '') {
-            sentence = 'GAIB The AI Robot, quantum computing, and the meaning of life.';
+            sentence = '';
+            return '';
           }
 
           let keywords = '';
@@ -918,7 +918,7 @@ function Home({ user }: HomeProps) {
           let voiceModels: { [key: string]: string } = {};
           let genderMarkedNames: any[] = [];
           let detectedGender: string = gender;
-          let currentSpeaker: string = 'GAIB';
+          let currentSpeaker: string = 'groovy';
           let isContinuingToSpeak = false;
           let isSceneChange = false;
           let lastSpeaker = '';
@@ -1276,7 +1276,7 @@ function Home({ user }: HomeProps) {
               // If the speaker has changed or if it's a scene change, switch back to the default voice
               if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
                 detectedGender = gender;
-                currentSpeaker = 'GAIB';
+                currentSpeaker = 'groovy';
                 model = defaultModel;
                 console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
                 isSceneChange = true;  // Reset the scene change flag
@@ -1350,8 +1350,7 @@ function Home({ user }: HomeProps) {
           stopSpeaking();
           setSubtitle('');
           setIsSpeaking(false);
-          setLoadingOSD('\nI am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.');
-          setGaibImagePrompt(`I am GAIB The Groovy AI Entertainment System.\nPlease ask me to either generate a story or answer a question.`);
+          setLoadingOSD('\nGroovy\nCreate your visions and dreams today');
         }
 
         if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -1450,7 +1449,7 @@ function Home({ user }: HomeProps) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim();
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localPersonality = 'gaib';
+            localPersonality = 'groovy';
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
@@ -1782,10 +1781,10 @@ function Home({ user }: HomeProps) {
             }
           }
 
-          // If the transcript includes the word "hey gabe", set the start word detected ref to true
-          if (spokenInput.toLowerCase().includes("hey gabe") || spokenInput.toLowerCase().includes("hey gaib")) {
-            // trim off the text prefixing "hey gabe" or "hey gaib" in the spokenInput
-            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey gabe|hey gaib)/gi, '').trim();
+          // If the transcript includes the word "hey groovy", set the start word detected ref to true
+          if (spokenInput.toLowerCase().includes("hey groovy") || spokenInput.toLowerCase().includes("hey groovy")) {
+            // trim off the text prefixing "hey gabe" or "hey groovy" in the spokenInput
+            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey groovy|hey groovy)/gi, '').trim();
             startWordDetected.current = true;
           } else if (!startWordDetected.current) {
             console.log(`Speech recognition onresult: Start word not detected, spokenInput: '${spokenInput.slice(0, 16)}...'`);
@@ -1793,8 +1792,8 @@ function Home({ user }: HomeProps) {
             spokenInput = '';
           }
 
-          // If the transcript includes the word "stop gabe", stop the recognition
-          if (spokenInput.toLowerCase().includes("stop gabe") || spokenInput.toLowerCase().includes("stop gaib")) {
+          // If the transcript includes the word "stop groovy", stop the recognition
+          if (spokenInput.toLowerCase().includes("stop groovy") || spokenInput.toLowerCase().includes("stop groovy")) {
             stopWordDetected.current = true;
             recognition.stop();
             setVoiceQuery('');
@@ -2052,7 +2051,7 @@ function Home({ user }: HomeProps) {
   return (
     <>
       <div className={styles.header}>
-        <title>GAIB The Groovy AI Bot</title>
+        <title>Groovy</title>
       </div>
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
@@ -2120,7 +2119,7 @@ function Home({ user }: HomeProps) {
                       <>
                         <img
                           src={imageUrl}
-                          alt="GAIB"
+                          alt="Groovy"
                         />
                       </>
                     )}
@@ -2306,8 +2305,8 @@ function Home({ user }: HomeProps) {
                               ? `Writing your story...`
                               : `Answering your question...`
                             : isStory
-                              ? `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} episodes]\nSay "Hey GAIB...Plotline" for a story, say "Stop GAIB" to cancel. You can also type it here then press the Enter key.`
-                              : `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} answers]\nSay "Hey GAIB...Question" for an answer, say "Stop GAIB" to cancel. You can also type it here then press the Enter key.`
+                              ? `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} episodes]\nSay "Hey Groovy...Plotline" for a story, say "Stop Groovy" to cancel. You can also type it here then press the Enter key.`
+                              : `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} answers]\nSay "Hey Groovy...Question" for an answer, say "Stop Groovy" to cancel. You can also type it here then press the Enter key.`
                       }
                       value={query}
                       onChange={(e) => {

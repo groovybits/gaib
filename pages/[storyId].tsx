@@ -20,6 +20,8 @@ interface InitialProps {
   initialStory: Story | null;
 }
 
+const adSenseCode = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID ? process.env.NEXT_PUBLIC_ADSENSE_PUB_ID : '';
+
 const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const router = useRouter();
   const { storyId }: ParsedUrlQuery = router.query;
@@ -105,6 +107,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
           <meta property="og:description" content={scenes[1] ? scenes.slice(1).join(' ').slice(0, 500) : scenes[0]} />
           <meta property="og:image" content={imageUrl} />
           <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/${storyId}`} />
+          <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
         </Head>
         <Layout>
           <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
@@ -167,8 +170,8 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
               </div>
               <div className={`${styles.footer} ${styles.center}`}>
                 <div className={styles.footerContainer}>
-                  <a href="https://groovy.org">Groovy.ORG</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-                  <a href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                  <a href="https://groovy.org">Groovy</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                  <a href="https://github.com/groovybits/gaib">Groovy Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
                   <a href="https://twitch.tv/groovyaibot">Create Story</a>&nbsp;&nbsp;|&nbsp;&nbsp;
                   <a href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
                   <a href="https://facebook.com/groovyorg">Facebook</a>

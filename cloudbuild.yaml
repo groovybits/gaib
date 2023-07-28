@@ -88,5 +88,9 @@ steps:
   - 'NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT=${_NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT}'
   - '--build-arg'
   - 'NEXT_PUBLIC_FIREBASE_DATABASE_URL=${_NEXT_PUBLIC_FIREBASE_DATABASE_URL}'
+  - '--build-arg'
+  - 'ADSENSE_INFO=${_ADSENSE_INFO}'
+  - '--build-arg'
+  - 'NEXT_PUBLIC_ENABLE_ADSENSE=${_NEXT_PUBLIC_ENABLE_ADSENSE}'
   - '.'
 images: ['gcr.io/$PROJECT_ID/github.com/groovybits/gaib:$COMMIT_SHA']

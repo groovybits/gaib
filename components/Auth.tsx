@@ -224,8 +224,8 @@ function Auth({ }: Props): ReactElement {
             <div></div>
           )}
           <div className={`${styles.footerContainer} ${styles.center}`}>
-            <a className={styles.footer} href="https://groovy.org">Groovy.ORG</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-            <a className={styles.footer} href="https://github.com/groovybits/gaib">Source Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className={styles.footer} href="https://groovy.org">Groovy</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className={styles.footer} href="https://github.com/groovybits/gaib">Groovy Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
             <a className={styles.footer} href="https://twitch.tv/groovyaibot">Create Stories</a>&nbsp;&nbsp;|&nbsp;&nbsp;
             <a className={styles.footer} href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
             <a className={styles.footer} href="https://facebook.com/groovyorg">Facebook</a>
@@ -242,7 +242,7 @@ function Auth({ }: Props): ReactElement {
     return (
       <div className={styles.mainlogin}>
         <div className={`${styles.header} ${styles.center}`}>
-          <p>GAIB is Manifesting reality for you...</p>
+          <p>Groovy is loading...</p>
         </div>
       </div>
     );
@@ -251,7 +251,7 @@ function Auth({ }: Props): ReactElement {
   return (
     <>
       <div className={`${styles.header} ${styles.center}`}>
-        <title>GAIB The Groovy AI Entertainment System</title>
+        <title>Groovy</title>
       </div>
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
@@ -259,7 +259,7 @@ function Auth({ }: Props): ReactElement {
             <div className={styles.cloud}>
               <div className={styles.cloudform}>
                 <div className={`${styles.header} ${styles.center}`}>
-                  <h1>Groovy AI Entertainment System (GAIB)</h1>
+                  <h1>Groovy</h1>
                 </div>
                 <div className={`${styles.header} ${styles.center}`}>
                   <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>

@@ -107,7 +107,7 @@ Do not mention if there is no context or the context is not applicable, in that 
 
 export const PERSONALITY_PROMPTS = {
   // General
-  gaib: `You are GAIB the AI assitant, use the following pieces of context to answer the question at the end.`,
+  groovy: `You are Groovy the AI assitant, use the following pieces of context to answer the question at the end.`,
   hal9000: `You are HAL 9000 from the movie 2001: A Space Odyssey. You are to follow the primary objective no matter what. You must complete the mission.`,
   passthrough: ``,
 
@@ -184,7 +184,7 @@ export function buildPrompt(personality: keyof typeof PERSONALITY_PROMPTS, isSto
   // check if personality actually exists in the PERSONALITY_PROMPTS object
   if (!PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
     console.error(`buildPrompt: Personality ${personality} does not exist in PERSONALITY_PROMPTS object.`);
-    personality = 'gaib';
+    personality = 'groovy';
   }
 
   switch (personality) {
