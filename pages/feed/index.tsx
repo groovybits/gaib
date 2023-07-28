@@ -184,6 +184,7 @@ export default function Feed() {
                   </a>
                   <div className={styles.shareButtons}>
                     <p className={styles.storyTimestamp}>{dateString}</p>
+                    <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
                     <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
                     <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
                     <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
@@ -203,7 +204,7 @@ export default function Feed() {
                           overflowY: 'auto', // Enable vertical scrolling if necessary
                           overflowX: 'hidden' // Prevent horizontal scrolling
                         }}>                          <p style={{ /* plain text white space */ whiteSpace: 'pre-wrap' }}>
-                            {formatStoryText(story.text)}
+                            {formatStoryText(story.text.slice(0, 5000))} (Click on the story to read more)
                           </p>
                           <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
                             {story.imageUrls.map((imageUrl, index) => (
