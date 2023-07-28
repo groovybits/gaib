@@ -184,7 +184,7 @@ export default function Feed() {
                   </a>
                   <div className={styles.shareButtons}>
                     <p className={styles.storyTimestamp}>{dateString}</p>
-                    <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
+                    <a href={`/${story.id.split('/')[1]}`} target="_blank" rel="noopener noreferrer">View Story</a>
                     <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
                     <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
                     <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
