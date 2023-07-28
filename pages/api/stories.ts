@@ -1,6 +1,8 @@
 import * as admin from 'firebase-admin';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
+
 // Initialize Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -18,36 +20,49 @@ const db = admin.database();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
+    // Log the incoming request
+    if (debug) {
+      console.log('Received GET request with query:', req.query);
+    }
+
     // Get the nextPageToken from the query parameters
     const nextPageToken = req.query.nextPageToken as string | undefined;
 
     // Create a reference to the stories in the database
     let ref = db.ref('stories').orderByChild('timestamp').limitToLast(21);
 
-    // If a nextPageToken was provided, start at that story
+    // If a nextPageToken was provided, end at that story
     if (nextPageToken) {
-      ref = ref.endAt(Number(nextPageToken));
+      ref = ref.endAt(parseInt(nextPageToken));
     }
 
     // Fetch the stories
     const snapshot = await ref.once('value');
-    const stories = snapshot.val();
+    let stories = snapshot.val();
 
     // Convert the stories from an object to an array
-    const storiesArray = Object.keys(stories).map((key) => ({
-      id: key,
+    let storiesArray = Object.keys(stories).map((key) => ({
+      id: stories[key].id || key, // Use the id property of the story if it exists, else use the key
       ...stories[key],
     }));
 
     // Sort the stories by timestamp in descending order
     storiesArray.sort((a, b) => b.timestamp - a.timestamp);
 
-    // Remove the last story from the array and use its timestamp as the nextPageToken
-    const lastStory = storiesArray.pop();
-    const newNextPageToken = lastStory ? lastStory.timestamp : null;
+    // If there are more than 20 stories, remove the last one and use its timestamp as the nextPageToken
+    let nextPageTokenOut = null;
+    if (storiesArray.length > 20) {
+      const lastStory = storiesArray.pop();
+      nextPageTokenOut = lastStory.timestamp.toString();
+    }
 
-    // Send the stories and the new nextPageToken in the response
-    res.status(200).json({ stories: storiesArray, nextPageToken: newNextPageToken });
+    // Log the stories being returned
+    if (debug) {
+      console.log('Returning stories:', storiesArray);
+    }
+
+    // Send the stories and nextPageToken in the response
+    res.status(200).json({ items: storiesArray, nextPageToken: nextPageTokenOut });
   } else {
     res.status(405).json({ message: 'Method not allowed' });
   }

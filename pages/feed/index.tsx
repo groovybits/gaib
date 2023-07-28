@@ -8,38 +8,67 @@ export type Story = {
   text: string;
   timestamp: number;
   imageUrls: string[];
-  thumbnailUrl?: string;
+  thumbnailUrls: string[] | null;
 };
 
 const adSenseCode = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID ? process.env.NEXT_PUBLIC_ADSENSE_PUB_ID : '';
 const gaibImage = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE ? process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE : '';
+const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
 
 export default function Feed() {
   const [stories, setStories] = useState<Story[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [expandedStoryId, setExpandedStoryId] = useState<string | null>(null); // State for the currently expanded story
-  const observer = useRef<IntersectionObserver | null>(null);
+
+  // Set the length of the interval in milliseconds
+  const FETCH_REQUEST_INTERVAL = 3000; // Adjust this value as needed
+
+  const lastFetchTime = useRef(0);
 
   const fetchStories = useCallback(async () => {
-    const tokenParam = nextPageToken ? `&pageToken=${nextPageToken}` : '';
-    const response = await fetch(`/api/stories?maxResults=20${tokenParam}`);
-    const data = await response.json();
-    setStories((prevStories) => [...prevStories, ...data.stories]);
-    setNextPageToken(data.nextPageToken);
-  }, [nextPageToken]);
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
 
-  const lastStoryElementRef = useCallback(
-    (node: any) => {
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && nextPageToken) {
-          fetchStories();
-        }
-      });
-      if (node) observer.current.observe(node);
-    },
-    [nextPageToken, fetchStories]
-  );
+    // If it's been less than FETCH_REQUEST_INTERVAL since the last fetch, don't fetch again
+    if (timeSinceLastFetch < FETCH_REQUEST_INTERVAL && lastFetchTime.current !== 0) {
+      console.log(`Fetch rate limited. Time since last fetch is ${timeSinceLastFetch}ms`);
+      return;
+    }
+
+    // Update the last fetch time
+    lastFetchTime.current = now;
+
+    // Actual fetch code
+    try {
+      const tokenParam = nextPageToken ? `?nextPageToken=${nextPageToken}` : '';
+      const response = await fetch(`/api/stories${tokenParam}`);
+      const data = await response.json();
+      if (debug) {
+        console.log('Received stories:', data); // Log the received stories
+      }
+      if (!data.items || !Array.isArray(data.items)) {
+        console.error('Unexpected response from API:', data);
+        return;
+      }
+      setStories((prevStories) => [...prevStories, ...data.items]); // Use data.items directly
+      setNextPageToken(data.nextPageToken); // Update nextPageToken
+    } catch (error) {
+      console.error('Error fetching stories:', error); // Log any errors that occur
+    }
+  }, [nextPageToken]); // Add nextPageToken as a dependency
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Set a threshold of 200px from the bottom of the page
+      const threshold = 200;
+      if (window.innerHeight + document.documentElement.scrollTop < document.documentElement.offsetHeight - threshold) return;
+      fetchStories();
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [fetchStories]);
 
   useEffect(() => {
     fetchStories();
@@ -54,27 +83,23 @@ export default function Feed() {
   };
 
   const handleShareClick = (storyId: string) => {
-    const id = storyId.split('/')[1]; // Extract the id from the storyId string
-    const url = `${window.location.origin}/${id}`;
+    const url = `${window.location.origin}/${storyId}`;
     navigator.clipboard.writeText(url);
     alert(`Copied ${url} to clipboard!`);
   };
 
   const handleFacebookShareClick = (storyId: string) => {
-    const id = storyId.split('/')[1]; // Extract the id from the storyId string
-    const url = `${window.location.origin}/${id}`;
+    const url = `${window.location.origin}/${storyId}`;
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
   };
 
   const handleLinkedInShareClick = (storyId: string) => {
-    const id = storyId.split('/')[1]; // Extract the id from the storyId string
-    const url = `${window.location.origin}/${id}`;
+    const url = `${window.location.origin}/${storyId}`;
     window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}`, '_blank');
   };
 
   const handleTwitterShareClick = (storyId: string) => {
-    const id = storyId.split('/')[1]; // Extract the id from the storyId string
-    const url = `${window.location.origin}/${id}`;
+    const url = `${window.location.origin}/${storyId}`;
     window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}`, '_blank');
   };
 
@@ -125,12 +150,17 @@ export default function Feed() {
         </div>
         <div className={styles.feed}>
           {stories.map((story, index) => {
-            const thumbnailSrc = story.thumbnailUrl || JSON.parse(story.imageUrls[0]).url; // Use thumbnail if it exists, else use the first image
+            let thumbnailUrls = story.thumbnailUrls;
+            if (typeof thumbnailUrls === 'string') {
+              thumbnailUrls = (thumbnailUrls as string).split(',');
+            }
+
+            const thumbnailSrc = thumbnailUrls && thumbnailUrls.length > 0 ? thumbnailUrls[0] : JSON.parse(story.imageUrls[0]).url;
             const dateString = new Date(story.timestamp).toLocaleDateString();
 
             if (stories.length === index + 1) {
               return (
-                <div ref={lastStoryElementRef} key={story.id} className={styles.story}>
+                <div key={story.id} className={styles.story}>
                   <p className={styles.storyTimestamp}>{dateString}</p>
                   <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>
                     <img
@@ -148,8 +178,8 @@ export default function Feed() {
                       {story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}
                     </div>
                   </a>
-                  <div className={styles.shareButtons}>                    
-                    <a href={`/${story.id.split('/')[1]}`} target="_blank" rel="noopener noreferrer">View Story</a>
+                  <div className={styles.shareButtons}>
+                    <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
                     <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
                     <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
                     <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
@@ -159,6 +189,37 @@ export default function Feed() {
                   {expandedStoryId === story.id && (
                     <div>
                       {/* Add the expanded view content here */}
+                      {expandedStoryId === story.id && (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          fontSize: '24px',
+                          maxHeight: '90vh', // 90% of the viewport height
+                          maxWidth: '90vw', // 90% of the viewport width
+                          overflowY: 'auto', // Enable vertical scrolling if necessary
+                          overflowX: 'hidden' // Prevent horizontal scrolling
+                        }}>
+                          <p style={{ /* plain text white space */ whiteSpace: 'pre-wrap' }}>
+                            {formatStoryText(story.text.slice(0, 5000))} (Click on the story to read more)
+                          </p>
+                          <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
+                            {story.imageUrls.map((imageUrl, index) => (
+                              <img
+                                key={index} // Add this line
+                                src={thumbnailUrls && thumbnailUrls[index] ? thumbnailUrls[index] : JSON.parse(imageUrl).url}
+                                alt=""
+                                style={{
+                                  width: '256px',  // Set the width you want
+                                  /*height: '256px',*/  // Set the height you want
+                                  padding: '4px',
+                                  objectFit: 'contain',
+                                  margin: '10px'
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -184,7 +245,7 @@ export default function Feed() {
                   </a>
                   <div className={styles.shareButtons}>
                     <p className={styles.storyTimestamp}>{dateString}</p>
-                    <a href={`/${story.id.split('/')[1]}`} target="_blank" rel="noopener noreferrer">View Story</a>
+                    <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
                     <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
                     <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
                     <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
@@ -203,24 +264,40 @@ export default function Feed() {
                           maxWidth: '90vw', // 90% of the viewport width
                           overflowY: 'auto', // Enable vertical scrolling if necessary
                           overflowX: 'hidden' // Prevent horizontal scrolling
-                        }}>                          <p style={{ /* plain text white space */ whiteSpace: 'pre-wrap' }}>
+                        }}>
+                          <p style={{ /* plain text white space */ whiteSpace: 'pre-wrap' }}>
                             {formatStoryText(story.text.slice(0, 5000))} (Click on the story to read more)
                           </p>
                           <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
-                            {story.imageUrls.map((imageUrl, index) => (
-                              <img
-                                key={index} // Add this line
-                                src={JSON.parse(imageUrl).url}
-                                alt=""
-                                style={{
-                                  width: '256px',  // Set the width you want
-                                  /*height: '256px',*/  // Set the height you want
-                                  padding: '4px',
-                                  objectFit: 'contain',
-                                  margin: '10px'
-                                }}
-                              />
-                            ))}
+                            {story.imageUrls.map((imageUrl, index) => {
+                              let src;
+                              try {
+                                // Try to parse imageUrl as JSON
+                                src = JSON.parse(imageUrl).url;
+                              } catch {
+                                // If it's not JSON, use it as a string URL
+                                src = imageUrl;
+                              }
+
+                              // If thumbnailUrls exist, use them instead
+                              if (story.thumbnailUrls && story.thumbnailUrls[index]) {
+                                src = story.thumbnailUrls[index];
+                              }
+
+                              return (
+                                <img
+                                  key={index}
+                                  src={src}
+                                  alt=""
+                                  style={{
+                                    width: '256px',
+                                    padding: '4px',
+                                    objectFit: 'contain',
+                                    margin: '10px'
+                                  }}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       )}
