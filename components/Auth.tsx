@@ -245,6 +245,9 @@ function Auth({ }: Props): ReactElement {
           <div className={`${styles.footerContainer} ${styles.center}`}>
             <a className={styles.header} href="#" onClick={signOut}>Sign out</a>
           </div>
+          <div className={styles.centerImage}>
+            <img src='https://storage.googleapis.com/gaib/groovylogo.png' alt="Groovy" />
+          </div>
         </div>
       </>
     );
@@ -262,6 +265,9 @@ function Auth({ }: Props): ReactElement {
           <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
           <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
         </Head>
+        <div className={styles.centerImage}>
+          <img src='https://storage.googleapis.com/gaib/groovylogo.png' alt="Groovy" />
+        </div>
         <div className={styles.mainlogin}>
           <div className={`${styles.header} ${styles.center}`}>
             <p>Groovy is loading...</p>
@@ -282,17 +288,11 @@ function Auth({ }: Props): ReactElement {
         <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
         <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
       </Head>
-      <div className={`${styles.topHeader} ${styles.center}`}>
-        <title>Groovy</title>
-      </div>
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
           <main className={styles.main}>
             <div className={styles.cloud}>
               <div className={styles.cloudform}>
-                <div className={`${styles.topHeader} ${styles.center}`}>
-                  <h1>Groovy</h1>
-                </div>
                 <div className={styles.main}>
                   {message && <div className={styles.message}>{message}</div>}
                   <ServiceInfo /> {/* Add the ServiceInfo component */}
@@ -325,6 +325,9 @@ function Auth({ }: Props): ReactElement {
                     <TermsPopup /> {/* Add the TermsPopup component */}
                   </>
                 )}
+              </div>
+              <div className={styles.centerImage}>
+                <img src='https://storage.googleapis.com/gaib/groovylogo.png' alt="Groovy" />
               </div>
             </div>
           </main>

@@ -725,6 +725,13 @@
   text-align: center;
 }
 
+.centerImage {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  display: flex;
+}
+
 .left {
   justify-content: left;
   align-items: left;
