@@ -11,6 +11,7 @@ import { useDocumentData } from "react-firebase-hooks/firestore";
 import Modal from "react-modal";
 import Layout from '@/components/Layout';
 import TermsPopup from "@/components/TermsPopup";
+import Head from 'next/head';
 
 const premiumTokenBalance = process.env.NEXT_PUBLIC_PREMIUM_TOKEN_BALANCE;
 const freeTokenBalance = process.env.NEXT_PUBLIC_FREE_TOKEN_START;
@@ -19,6 +20,8 @@ const loginAuth = process.env.NEXT_PUBLIC_LOGIN_AUTH_ENABLE ?
   (process.env.NEXT_PUBLIC_LOGIN_AUTH_ENABLE == 'true') ?
     true : false : false;
 const debug = process.env.DEBUG ? (process.env.DEBUG == 'true') ? true : false : false;
+const adSenseCode = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID ? process.env.NEXT_PUBLIC_ADSENSE_PUB_ID : '';
+const gaibImage = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE ? process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE : '';
 
 interface Props { }
 
@@ -180,6 +183,15 @@ function Auth({ }: Props): ReactElement {
   if (!userLoading && user) {
     return (
       <>
+        <Head>
+          <title>Groovy</title>
+          <meta name="description" content="Groovy - The Stories are for You." />
+          <meta property="og:title" content="Groovy" />
+          <meta property="og:description" content="Groovy Stories Created by You." />
+          <meta property="og:image" content={gaibImage} />
+          <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
+          <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
+        </Head>
         <Home user={user} /> {/* Pass user object to Home component */}
         <div className={`${styles.footerContainer} ${styles.center}`}>
           <label className={styles.header}>Token Balance: {userDataLoading ? "Loading..." : userData?.tokenBalance}</label>&nbsp;&nbsp;&nbsp;&nbsp;
@@ -194,7 +206,7 @@ function Auth({ }: Props): ReactElement {
                 </>
               ) : (
                 <>
-                    <label className={styles.header}>[BETA]</label>
+                  <label className={styles.header}>[BETA]</label>
                 </>
               )}
             </>
@@ -240,16 +252,36 @@ function Auth({ }: Props): ReactElement {
 
   if (!user && userLoading) {
     return (
-      <div className={styles.mainlogin}>
-        <div className={`${styles.header} ${styles.center}`}>
-          <p>Groovy is loading...</p>
+      <>
+        <Head>
+          <title>Groovy</title>
+          <meta name="description" content="Groovy - The Stories are for You." />
+          <meta property="og:title" content="Groovy" />
+          <meta property="og:description" content="Groovy Stories Created by You." />
+          <meta property="og:image" content={gaibImage} />
+          <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
+          <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
+        </Head>
+        <div className={styles.mainlogin}>
+          <div className={`${styles.header} ${styles.center}`}>
+            <p>Groovy is loading...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
     <>
+      <Head>
+        <title>Groovy</title>
+        <meta name="description" content="Groovy - The Stories are for You." />
+        <meta property="og:title" content="Groovy" />
+        <meta property="og:description" content="Groovy Stories Created by You." />
+        <meta property="og:image" content={gaibImage} />
+        <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
+        <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
+      </Head>
       <div className={`${styles.topHeader} ${styles.center}`}>
         <title>Groovy</title>
       </div>
