@@ -91,6 +91,6 @@ steps:
   - '--build-arg'
   - 'ADSENSE_INFO=${_ADSENSE_INFO}'
   - '--build-arg'
-  - 'NEXT_PUBLIC_ENABLE_ADSENSE=${_NEXT_PUBLIC_ENABLE_ADSENSE}'
+  - 'NEXT_PUBLIC_ADSENSE_PUB_ID=${_NEXT_PUBLIC_ADSENSE_PUB_ID}'
   - '.'
 images: ['gcr.io/$PROJECT_ID/github.com/groovybits/gaib:$COMMIT_SHA']
