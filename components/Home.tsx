@@ -168,7 +168,7 @@ function Home({ user }: HomeProps) {
   const [authEnabled, setAuthEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true');
   const [channelId, setChannelId] = useState(process.env.NEXT_PUBLIC_TWITCH_CHANNEL_ID || '');
   const [twitchChatEnabled, setTwitchChatEnabled] = useState(false);
-  let episodeId = uuidv4();
+  const episodeIdRef = useRef<string>(uuidv4());
   const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
@@ -368,51 +368,47 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(processTwitchChat, 3000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [channelId, twitchChatEnabled, isFetching, episodes, user]);
+  }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef, maxQueueSize]);
 
   // News fetching for automating input via a news feed
   useEffect(() => {
-    const processNewsArticle = async () => {
-      // fetch news from mediastack service and set the news state
-      const fetchNews = async () => {
-        const idToken = await user?.getIdToken();
-        const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }); // offset, sort
-        if (!res.ok) {
-          console.log('Error fetching news: ', res.statusText);
-          return [];
-        }
-        const data = await res.json();
-        // Increment the offset by the limit after each request
-        setCurrentOffset(currentOffset + 100);
-        return data.data;
-      };
+    let isRunning = false;
 
-      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= maxQueueSize) {
+    const processNewsArticle = async () => {
+      if (isFetching && !isRunning && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= maxQueueSize) {
+        isRunning = true;
         isProcessingRef.current = true;
 
         let currentNews = news;
         let index = currentNewsIndex;
 
-        // If we have reached the end of the news feed, fetch more news
-        if (index >= currentNews.length || currentNews.length === 0) {
-          if (currentNews.length === 0) {
-            console.log(`Reached end of news feed, fetching new news`);
+        const fetchNews = async () => {
+          const idToken = await user?.getIdToken();
+          const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+          if (!res.ok) {
+            console.log('Error fetching news: ', res.statusText);
+            return [];
           }
+          const data = await res.json();
+          setCurrentOffset(currentOffset + 100);
+          return data.data;
+        };
+
+        if (index >= currentNews.length || currentNews.length === 0) {
           try {
             currentNews = await fetchNews();
             console.log(`Fetching news: found ${currentNews.length} news articles`);
             setNews(currentNews);
             index = 0;
           } catch (error) {
-            console.error('An error occurred in the fetchNews function:', error); // Check for any errors
+            console.error('An error occurred in the fetchNews function:', error);
           }
         }
 
-        // If we have news articles, send them to the chat
         try {
           if (currentNews.length > 0 && index < currentNews.length) {
             const headline = currentNews[index].title;
@@ -439,31 +435,33 @@ function Home({ user }: HomeProps) {
             currentNews = await fetchNews();
           }
         } catch (error) {
-          console.error('An error occurred in the processNewsArticle function:', error); // Check for any errors
+          console.error('An error occurred in the processNewsArticle function:', error);
         }
 
         isProcessingRef.current = false;
+        isRunning = false;
       }
     };
 
     try {
       processNewsArticle();  // Run immediately on mount
     } catch (error) {
-      console.error('An error occurred in the processNewsArticle function:', error); // Check for any errors
+      console.error('An error occurred in the processNewsArticle function:', error);
       isProcessingRef.current = false;
     }
 
-    // check if there are any episodes left, if so we don't need to sleep
     const intervalId = setInterval(processNewsArticle, 10000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled]);
+  }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, isSubmittingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize]);
 
-  // Episode Queue processing for handleSubmit
+  // Fetch the MediaStack News
   useEffect(() => {
-    // episode feed processing
+    let isRunning = false;
+
     const processQueue = async () => {
-      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening && !isProcessingRef.current && !isSubmittingRef.current) {
+      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening && !isProcessingRef.current && !isSubmittingRef.current && !isRunning) {
+        isRunning = true;
         const episode = episodes.shift();
         isSubmittingRef.current = true;
         try {
@@ -472,7 +470,6 @@ function Home({ user }: HomeProps) {
 
             // send query to handlesubmit with a mock event
             console.log(`handleSubmitQueue: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
-            //setQuery(currentQuery);
             let prefix = '';
             if (episode.type != '') {
               prefix = `!${episode.type}: `;
@@ -491,6 +488,7 @@ function Home({ user }: HomeProps) {
           episode && episodes.unshift(episode); // Put the episode back in the queue
           isSubmittingRef.current = false;
         }
+        isRunning = false;
       }
     };
 
@@ -504,9 +502,11 @@ function Home({ user }: HomeProps) {
 
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
-    // playback Queue main display of images and audio plus subtitles
+    let isRunning = false;
+
     const playQueueDisplay = async () => {
-      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
+      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current && !isRunning) {
+        isRunning = true;
         const playStory = playQueue[0];  // Get the first story
         try {
           console.log(`PlayQueaue: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
@@ -554,6 +554,7 @@ function Home({ user }: HomeProps) {
         setSubtitle('');
         setLoadingOSD('Finished playing story...');
         setSubtitle('\nGroovy\nCreate your visions and dreams today');
+        isRunning = false;
       }
     };
 
@@ -868,7 +869,7 @@ function Home({ user }: HomeProps) {
 
             try {
               // Use the AI generated message as the prompt for generating an image URL.
-              let gaibImage = await generateImageUrl(content, true, localLastImage, episodeId, count);
+              let gaibImage = await generateImageUrl(content, true, localLastImage, episodeIdRef.current, count);
               return gaibImage;
             } catch (error) {
               console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
@@ -1295,7 +1296,7 @@ function Home({ user }: HomeProps) {
           }
 
           // Display the images and subtitles
-          episodeId = uuidv4();
+          episodeIdRef.current = uuidv4();
 
           // Fill the story object
           story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
@@ -1505,7 +1506,7 @@ function Home({ user }: HomeProps) {
       }
       isSpeakingRef.current = false;
     }
-  }, [messages, isDisplayingRef.current, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue]);
+  }, [messages, isDisplayingRef.current, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -1847,9 +1848,10 @@ function Home({ user }: HomeProps) {
     ];
   }, [messages, pending, pendingSourceDocs]);
 
-  // Get the latest message
-  const latestMessage: Message | PendingMessage = (chatMessages.length > 0) ? chatMessages[chatMessages.length - 1] :
-    { type: 'apiMessage', message: '', sourceDocs: undefined };
+  const latestMessage = useMemo(() => {
+    return (chatMessages.length > 0) ? chatMessages[chatMessages.length - 1] :
+      { type: 'apiMessage', message: '', sourceDocs: undefined };
+  }, [chatMessages]);
 
   useEffect(() => {
     if (messageListRef.current) {
@@ -2020,7 +2022,7 @@ function Home({ user }: HomeProps) {
         startSpeechRecognition();
       }
     }
-  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, timeoutDetected.current, stopWordDetected.current, isStory, episodes]);
+  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, timeoutDetected.current, stopWordDetected.current, isStory, episodes, startSpeechRecognition]);
 
   // Add a useEffect hook to start the speech recognition when the component mounts
   useEffect(() => {
@@ -2030,7 +2032,7 @@ function Home({ user }: HomeProps) {
         startSpeechRecognition();
       }
     }
-  }, [listening, isSpeaking, voiceQuery, stoppedManually]);
+  }, [listening, isSpeaking, voiceQuery, stoppedManually, startSpeechRecognition]);
 
   // autoSave toggle
   const handleAutoSaveToggle = () => {
