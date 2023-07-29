@@ -119,8 +119,8 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
-  const [subtitle, setSubtitle] = useState<string>('');
-  const [loadingOSD, setLoadingOSD] = useState<string>('\nGroovy\nCreate your own stories');
+  const [subtitle, setSubtitle] = useState<string>('\n- Groovy -\nCreate your own stories!');
+  const [loadingOSD, setLoadingOSD] = useState<string>('Waiting for your ideas...');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
@@ -511,7 +511,7 @@ function Home({ user }: HomeProps) {
           setIsSpeaking(true);
 
           setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
-          setLoadingOSD(`\nPrompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references.join(', ')}`);
+          setLoadingOSD(`Prompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references.join(', ')}`);
           setLastStory(playStory.shareUrl);
           setImageUrl(playStory.imageUrl);
 
@@ -548,8 +548,8 @@ function Home({ user }: HomeProps) {
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
         setSubtitle('');
-        setLoadingOSD('');
-        setLoadingOSD('\nGroovy\nCreate your visions and dreams today');
+        setLoadingOSD('Finished playing story...');
+        setSubtitle('\nGroovy\nCreate your visions and dreams today');
       }
     };
 
@@ -1132,8 +1132,8 @@ function Home({ user }: HomeProps) {
           // only if we are not currently displaying a story
           if (isDisplayingRef.current === false) {
             setSubtitle(firstSentence);
-            setLoadingOSD(`\n\nGenerating images for ${sentences.length} sentences...`);
           }
+          setLoadingOSD(`\n\nGenerating images for ${sentences.length} sentences...`);
 
           // display title screen with image and title
           lastImage = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
@@ -1171,8 +1171,8 @@ function Home({ user }: HomeProps) {
 
                 // generate this scenes image
                 console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
+                setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of:\n${lastImage}`);
                 if (isDisplayingRef.current === false) {
-                  setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
                   setSubtitle('');
                 }
                 newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
@@ -1221,7 +1221,7 @@ function Home({ user }: HomeProps) {
             sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
 
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
-            setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
+            setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of:\n${lastImage}`);
             setSubtitle('');
             let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             if (newImage !== '') {
@@ -1700,9 +1700,7 @@ function Home({ user }: HomeProps) {
     // Reset the state
     setError(null);
     setLoading(true);
-    if (isDisplayingRef.current === false) {
-      setLoadingOSD(`\nRecieved ${isQuestion ? 'question' : 'story'}: ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
-    }
+    setLoadingOSD(`Recieved ${isQuestion ? 'question' : 'story'}: ${question.slice(0, 50).replace(/\n/g, ' ')}...`);
     setQuery('');
     setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
@@ -1769,8 +1767,8 @@ function Home({ user }: HomeProps) {
               pendingSourceDocs: undefined,
             }));
             setLoading(false);
+            setLoadingOSD('System Error... Please try again.');
             if (isDisplayingRef.current === false) {
-              setLoadingOSD('System Error... Please try again.');
               messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             }
             ctrl.abort();
@@ -1788,11 +1786,9 @@ function Home({ user }: HomeProps) {
               }));
             }
             tokens = tokens + countTokens(data.data);
+            setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
             if (isDisplayingRef.current === false && isSpeaking === false) {
-              setLoadingOSD(`\nLoading: ${tokens} GPT tokens generated...\n`);
               messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-            } else {
-              setLoadingOSD('');
             }
           }
         },
@@ -1804,8 +1800,8 @@ function Home({ user }: HomeProps) {
       }
     } catch (error: any) {
       setLoading(false);
+      setLoadingOSD(`\nSystem Error: ${error.message}`);
       if (isDisplayingRef.current === false && isSpeaking === false) {
-        setLoadingOSD(`\nSystem Error: ${error.message}`);
         setSubtitle('');
       }
       setError('An error occurred while fetching the data. Please try again.');
@@ -2268,6 +2264,9 @@ function Home({ user }: HomeProps) {
                         </>
                       ) : (<></>)}
                     </div>
+                    <div className={styles.footer}>
+                      {loadingOSD}
+                    </div>
                     {(imageUrl === '') ? "" : (
                       <>
                         <img
@@ -2279,7 +2278,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isDisplayingRef.current ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle}{(!isDisplayingRef.current && !isSpeaking) ? ''/*loadingOSD */: ''}{(!isDisplayingRef.current && !isSpeaking) ? /*latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('')*/'' : ''}
+                      {subtitle}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
