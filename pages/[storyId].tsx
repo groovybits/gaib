@@ -186,7 +186,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                           }}
                           className={styles.readerPager}
                         >
-                          Previous Page
+                          {/* Previous Page Click left side of screen */}
                         </button>
                       </div>
                       <div
@@ -213,7 +213,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                           }}
                           className={styles.readerPager}
                         >
-                          Next Page
+                          {/* Previous Page Click left side of screen */}
                         </button>
                       </div>
                     </>
