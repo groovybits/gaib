@@ -414,7 +414,7 @@ function Home({ user }: HomeProps) {
 
         // If we have news articles, send them to the chat
         try {
-          if (currentNews[index]) {
+          if (currentNews.length > 0 && index < currentNews.length) {
             const headline = currentNews[index].title;
             const body = currentNews[index].description.substring(0, 300);
             let currentQuery = `${headline}\n\n${body}`;
@@ -433,6 +433,10 @@ function Home({ user }: HomeProps) {
             setEpisodes([...episodes, episode]);
 
             setCurrentNewsIndex(index + 1);
+          } else {
+            setCurrentOffset(currentOffset + 100);
+            setCurrentNewsIndex(0);
+            currentNews = await fetchNews();
           }
         } catch (error) {
           console.error('An error occurred in the processNewsArticle function:', error); // Check for any errors
@@ -521,7 +525,7 @@ function Home({ user }: HomeProps) {
               console.log(`PlayQueue: Displaying Sentence #${sentence.id}: ${sentence.text}\n${JSON.stringify(sentence)}\nImage: ${sentence.imageUrl})\n`)
               if (sentence.text != '') {
                 setSubtitle(sentence.text);
-                setLoadingOSD('');
+                setLoadingOSD('Building scenes...');
               }
               if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
                 setImageUrl(sentence.imageUrl);
@@ -559,7 +563,7 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(playQueueDisplay, 10000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD]);
+  }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD, setImageUrl, setLastStory]);
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
@@ -1133,7 +1137,7 @@ function Home({ user }: HomeProps) {
           if (isDisplayingRef.current === false) {
             setSubtitle(firstSentence);
           }
-          setLoadingOSD(`\n\nGenerating images for ${sentences.length} sentences...`);
+          setLoadingOSD(`Generating images for ${sentences.length} sentences...`);
 
           // display title screen with image and title
           lastImage = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
@@ -1171,7 +1175,7 @@ function Home({ user }: HomeProps) {
 
                 // generate this scenes image
                 console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
-                setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of:\n${lastImage}`);
+                setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
                 if (isDisplayingRef.current === false) {
                   setSubtitle('');
                 }
@@ -1221,7 +1225,7 @@ function Home({ user }: HomeProps) {
             sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
 
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
-            setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of:\n${lastImage}`);
+            setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
             setSubtitle('');
             let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             if (newImage !== '') {
@@ -1800,7 +1804,7 @@ function Home({ user }: HomeProps) {
       }
     } catch (error: any) {
       setLoading(false);
-      setLoadingOSD(`\nSystem Error: ${error.message}`);
+      setLoadingOSD(`System Error: ${error.message}`);
       if (isDisplayingRef.current === false && isSpeaking === false) {
         setSubtitle('');
       }
