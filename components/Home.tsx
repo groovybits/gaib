@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
 import GPT3Tokenizer from 'gpt3-tokenizer';
+import { set } from 'lodash';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -39,7 +40,7 @@ interface StoryPart {
 interface Sentence {
   id: number;
   text: string;
-  imageUrl: ImageData | string;
+  imageUrl: string;
   speaker: string;
   gender: string;
   language: string;
@@ -50,7 +51,7 @@ interface Sentence {
 interface Scene {
   id: number;
   sentences: Sentence[];
-  imageUrl: ImageData | string;
+  imageUrl: string;
 }
 
 type Story = {
@@ -58,7 +59,7 @@ type Story = {
   prompt: string;
   tokens: number;
   title: string;
-  imageUrl: ImageData | string;
+  imageUrl: string;
   scenes: Scene[];
   timestamp: number;
   personality: string;
@@ -369,80 +370,6 @@ function Home({ user }: HomeProps) {
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [channelId, twitchChatEnabled, isFetching, episodes, user]);
 
-  useEffect(() => {
-    // episode feed processing
-    const processQueue = async () => {
-      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening && !isProcessingRef.current && !isSubmittingRef.current) {
-        const episode = episodes.shift();
-        try {
-          if (episode) {
-            const currentQuery = `${episode.title}\n\n${episode.plotline}`;
-
-            // send query to handlesubmit with a mock event
-            console.log(`TwitchStream: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
-            setQuery(currentQuery);
-            let prefix = '';
-            if (episode.type != '') {
-              prefix = `!${episode.type}: `;
-            }
-            const mockEvent = {
-              preventDefault: () => { },
-              target: {
-                value: `${prefix}${currentQuery}`,
-              },
-            };
-            isSubmittingRef.current = true;
-            handleSubmit(mockEvent);
-          }
-        } catch (error) {
-          console.error('An error occurred in the processQueue function:', error); // Check for any errors
-          episode && episodes.unshift(episode); // Put the episode back in the queue
-        }
-      }
-    };
-
-    processQueue();  // Run immediately on mount
-
-    // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processQueue, 3000);  // Then every N seconds
-
-    return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening]);
-
-  useEffect(() => {
-    // episode feed processing
-    const playQueueDisplay = async () => {
-      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
-        const playStory = playQueue[0];  // Get the first story
-        try {
-          console.log(`TwitchStream: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
-
-          isDisplayingRef.current = true;
-
-          // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
-          for (let scene of playStory.scenes) {
-            for (let sentence of scene.sentences) {
-              setSubtitle(sentence.text);
-              setPexelsUrl(typeof sentence.imageUrl == 'string' ? sentence.imageUrl : sentence.imageUrl.pexels_url);
-              await speakAudioUrl(sentence.audioFile);
-            }
-          }
-
-          setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
-        } catch (error) {
-          console.error('An error occurred in the processQueue function:', error); // Check for any errors
-        }
-      }
-    };
-
-    playQueueDisplay();  // Run immediately on mount
-
-    // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(playQueueDisplay, 3000);  // Then every N seconds
-
-    return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [playQueue, isSpeaking, isDisplayingRef]);
-
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
@@ -519,6 +446,7 @@ function Home({ user }: HomeProps) {
       processNewsArticle();  // Run immediately on mount
     } catch (error) {
       console.error('An error occurred in the processNewsArticle function:', error); // Check for any errors
+      isProcessingRef.current = false;
     }
 
     // check if there are any episodes left, if so we don't need to sleep
@@ -527,27 +455,135 @@ function Home({ user }: HomeProps) {
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled]);
 
-
+  // Episode Queue processing for handleSubmit
   useEffect(() => {
-    const lastMessageIndex: number = messages.length - 1;
-    let shareUrl = '';
-    if (lastMessageDisplayed != lastMessageIndex) {
-      // Set the last message displayed
-      setLastMessageDisplayed(lastMessageIndex);
-    } else {
-      // sleep for 1 second
-      setTimeout(() => {
-        if (debug) {
-          console.log('SpeakingDisplay: sleeping for 3 seconds, no new messages');
-        }
-      }, 3000);
-      return;
-    }
+    // episode feed processing
+    const processQueue = async () => {
+      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening && !isProcessingRef.current && !isSubmittingRef.current) {
+        const episode = episodes.shift();
+        isSubmittingRef.current = true;
+        try {
+          if (episode) {
+            const currentQuery = `${episode.title}\n\n${episode.plotline}`;
 
-    // lock speaking and avoid crashing
-    try {
-      if (!isSpeakingRef.current) {
-        isSpeakingRef.current = true;
+            // send query to handlesubmit with a mock event
+            console.log(`handleSubmitQueue: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
+            //setQuery(currentQuery);
+            let prefix = '';
+            if (episode.type != '') {
+              prefix = `!${episode.type}: `;
+            }
+            const mockEvent = {
+              preventDefault: () => { },
+              target: {
+                value: `${prefix}${currentQuery}`,
+              },
+            };
+            isSubmittingRef.current = false;
+            handleSubmit(mockEvent);
+          }
+        } catch (error) {
+          console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
+          episode && episodes.unshift(episode); // Put the episode back in the queue
+          isSubmittingRef.current = false;
+        }
+      }
+    };
+
+    processQueue();  // Run immediately on mount
+
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(processQueue, 30000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
+  }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening]);
+
+  // Playback Queue processing of stories after they are generated
+  useEffect(() => {
+    // playback Queue main display of images and audio plus subtitles
+    const playQueueDisplay = async () => {
+      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
+        const playStory = playQueue[0];  // Get the first story
+        try {
+          console.log(`PlayQueaue: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
+
+          isDisplayingRef.current = true;
+          setIsSpeaking(true);
+
+          setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
+          setLoadingOSD(`\nPrompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references.join(', ')}`);
+          setLastStory(playStory.shareUrl);
+          setImageUrl(playStory.imageUrl);
+
+          // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
+          for (let scene of playStory.scenes) {
+            for (let sentence of scene.sentences) {
+              console.log(`PlayQueue: Displaying Sentence #${sentence.id}: ${sentence.text}\n${JSON.stringify(sentence)}\nImage: ${sentence.imageUrl})\n`)
+              if (sentence.text != '') {
+                setSubtitle(sentence.text);
+                setLoadingOSD('');
+              }
+              if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
+                setImageUrl(sentence.imageUrl);
+              }
+              if (sentence.audioFile != '' && sentence.audioFile.match(/\.mp3$/)) {
+                try {
+                  await speakAudioUrl(sentence.audioFile);
+                } catch (error) {
+                  console.error(`PlaybackDisplay: An error with speakAudioUrl ${sentence.audioFile}:\n${error}`); // Check for any errors
+                }
+              }
+            }
+          }
+
+          setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
+
+          // Reset the subtitle after all sentences have been spoken
+          stopSpeaking();
+          setSubtitle('');
+          setLoadingOSD('\nGroovy\nCreate your visions and dreams today');
+
+          isDisplayingRef.current = false;
+          setIsSpeaking(false);
+        } catch (error) {
+          console.error('An error occurred in the processQueue function:', error); // Check for any errors
+          isDisplayingRef.current = false;
+          setIsSpeaking(false);
+        }
+      }
+    };
+
+    playQueueDisplay();  // Run immediately on mount
+
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(playQueueDisplay, 10000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
+  }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD]);
+
+  // Generate a new story when the query input has been added to
+  useEffect(() => {
+    if (!isSpeakingRef.current) {
+      isSpeakingRef.current = true;
+
+      const lastMessageIndex: number = messages.length - 1;
+      let shareUrl = '';
+      if (lastMessageDisplayed != lastMessageIndex) {
+        // Set the last message displayed
+        setLastMessageDisplayed(lastMessageIndex);
+      } else {
+        // sleep for 1 second
+        setTimeout(() => {
+          if (debug) {
+            console.log('SpeakingDisplay: sleeping for 3 seconds, no new messages');
+          }
+        }, 3000);
+        isSpeakingRef.current = false;
+        return;
+      }
+
+      // lock speaking and avoid crashing
+      try {
         let lastImage: ImageData | string = '';
 
         function extractKeywords(sentence: string, numberOfKeywords = 2) {
@@ -935,7 +971,6 @@ function Home({ user }: HomeProps) {
             const { storyId, storyUrl } = data;
 
             console.log(`Story ${storyText.slice(0, 30)}... json stored to ${storyUrl}!`);
-            setLastStory(`${baseUrl}/${storyId}`);
             if (twitchChatEnabled && authEnabled && channelId !== '') {
               // Post the story to the Twitch chat
               await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storyId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
@@ -948,18 +983,13 @@ function Home({ user }: HomeProps) {
           }
         };
 
-        async function displayImagesAndSubtitles() {
+        async function processImagesAndSubtitles() {
           const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
           const idToken = await user?.getIdToken();
           let sentences: string[];
-          if (isPaused) {
-            stopSpeaking();
-            return;
-          }
 
           // Clear the current story
           setCurrentStory([]); // Clear the current story
-          setLastStory(''); // Clear the last story
 
           // setup the story structure
           let story: Story = {
@@ -1098,13 +1128,19 @@ function Home({ user }: HomeProps) {
 
           // get first sentence as title or question to display
           let firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
-          setSubtitle(firstSentence);
-          setLoadingOSD(`\n\nGenerating images for ${sentences.length} sentences...`);
+
+          // only if we are not currently displaying a story
+          if (isDisplayingRef.current === false) {
+            setSubtitle(firstSentence);
+            setLoadingOSD(`\n\nGenerating images for ${sentences.length} sentences...`);
+          }
 
           // display title screen with image and title
           lastImage = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
-          if (lastImage !== '') {
-            setScreenImage(lastImage);
+          if (isDisplayingRef.current === false) {
+            if (lastImage !== '') {
+              setScreenImage(lastImage);
+            }
           }
           const titleScreen: ImageData | string = lastImage;
           const titleScreenText = firstSentence;
@@ -1135,7 +1171,10 @@ function Home({ user }: HomeProps) {
 
                 // generate this scenes image
                 console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
-                setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
+                if (isDisplayingRef.current === false) {
+                  setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
+                  setSubtitle('');
+                }
                 newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
                 if (newImage !== '') {
                   lastImage = newImage;
@@ -1183,6 +1222,7 @@ function Home({ user }: HomeProps) {
 
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
             setLoadingOSD(`\n---\nGenerating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}:\n${lastImage}`);
+            setSubtitle('');
             let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             if (newImage !== '') {
               lastImage = newImage;
@@ -1202,14 +1242,16 @@ function Home({ user }: HomeProps) {
           // Save the current story
           setCurrentStory(localCurrentStory);
 
-          // Share the story after building it before displaying it
-          storyId = await shareStory(localCurrentStory, isFetching);
-          shareUrl = baseUrl + '/' + storyId;
-          if (!isFetching) {
-            alert(`Story shared successfully to ${shareUrl}!`);
-            copy(`${shareUrl}`);
+          try {
+            // Share the story after building it before displaying it
+            storyId = await shareStory(localCurrentStory, isFetching);
+            shareUrl = baseUrl + '/' + storyId;
+            if (isDisplayingRef.current === false) {
+              setSubtitle(`\nEpisode shared to: ${shareUrl}!`);
+            }
+          } catch (error) {
+            console.error(`Error sharing story: ${error}`);
           }
-          setSubtitle(`\nEpisode shared to: ${shareUrl}!`);
 
           // keep track of scene and images positions
           let sceneIndex = 0;
@@ -1250,15 +1292,13 @@ function Home({ user }: HomeProps) {
 
           // Display the images and subtitles
           episodeId = uuidv4();
-          setSubtitle(''); // Clear the subtitle
-          setLoadingOSD('');
 
           // Fill the story object
           story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
           story.title = titleScreenText;
           story.storyId = storyId;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
-          story.imageUrl = titleScreen;
+          story.imageUrl = titleScreen.toString();
           story.shareUrl = shareUrl;
           story.personality = selectedPersonality; // TODO - add personality to the story object
           story.namespace = selectedNamespace; // TODO - add namespace to the story object
@@ -1284,9 +1324,6 @@ function Home({ user }: HomeProps) {
               }
               // increment image counter and set the image
               count += 1;
-              if (lastImage !== '') {
-                setScreenImage(lastImage);
-              }
 
               // If there is a previous scene, add it to the story
               if (scene) {
@@ -1297,7 +1334,7 @@ function Home({ user }: HomeProps) {
               scene = {
                 id: sceneIndex,
                 sentences: [],
-                imageUrl: lastImage,
+                imageUrl: lastImage.toString(),
               };
             }
 
@@ -1306,13 +1343,14 @@ function Home({ user }: HomeProps) {
             // go through by sentence so we can preserve the speaker
             let spokenLineIndex = 0;
             for (const sentence_by_character of sentences_by_character) {
+              if (sentence_by_character == '') {
+                continue;
+              }
+
               // Set the subtitle to the translated text if the text is not in English
               let translatedText = '';
               if (subtitleLanguage !== 'en-US' && translateText) {
                 translatedText = await fetchTranslation(sentence_by_character, subtitleLanguage);
-                setSubtitle(splitSentence(translatedText));
-              } else {
-                setSubtitle(splitSentence(sentence_by_character));
               }
 
               let speakerChanged = false;
@@ -1424,11 +1462,11 @@ function Home({ user }: HomeProps) {
               lastSpeaker = currentSpeaker;
 
               // If there is a current scene, add the sentence to it
-              if (scene) {
+              if (scene && (cleanText !== '' || translationEntry !== '') && audioFile !== '') {
                 scene.sentences.push({
                   id: sentenceId++,
                   text: translationEntry != '' ? translationEntry : cleanText,
-                  imageUrl: lastImage,  // or another image related to the sentence
+                  imageUrl: lastImage.toString(),  // or another image related to the sentence
                   speaker: currentSpeaker,  // or another speaker related to the sentence
                   gender: detectedGender,  // or another gender related to the sentence
                   language: audioLanguage,  // or another language related to the sentence
@@ -1445,12 +1483,6 @@ function Home({ user }: HomeProps) {
           }
           // Add the story to the playQueue
           setPlayQueue(prevPlayQueue => [...prevPlayQueue, story]);
-
-          // Reset the subtitle after all sentences have been spoken
-          stopSpeaking();
-          setSubtitle('');
-          setIsSpeaking(false);
-          setLoadingOSD('\nGroovy\nCreate your visions and dreams today');
         }
 
         if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -1458,18 +1490,18 @@ function Home({ user }: HomeProps) {
         ) {
           // Multi Modal theme
           try {
-            displayImagesAndSubtitles();
+            processImagesAndSubtitles();
             setLastSpokenMessageIndex(lastMessageIndex);
           } catch (error) {
             console.error('Error displaying images and subtitles: ', error);
           }
         }
-        isSpeakingRef.current = false;
+      } catch (error) {
+        console.error('SpeakDisplay: UseEffect had an error processing messages: ', error);
       }
-    } catch (error) {
-      console.error('SpeakDisplay: UseEffect had an error processing messages: ', error);
+      isSpeakingRef.current = false;
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue]);
+  }, [messages, isDisplayingRef.current, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -1481,19 +1513,22 @@ function Home({ user }: HomeProps) {
     let question = e.target?.value ? e.target.value.trim() : query.trim();
 
     // Don't submit if the query is empty
-    if (isSpeaking || !question) {
-      console.log(`handleSubmit: Not submitting question: '${question}', isSpeaking: ${isSpeaking}, speechRecognitionComplete: ${speechRecognitionComplete}`);
-      // Queue the question if speech recognition is not complete
-      if (question && question !== '') {
-        let episode: Episode = {
-          title: question,
-          plotline: '',
-          type: question.startsWith('!question') ? 'question' : 'episode',
-          username: 'anonymous',
-        }
-        setEpisodes([...episodes, episode]);
-      }
+    if (!question || question === '') {
+      console.log(`handleSubmit: Not submitting question: '${question}'`);
       return;
+    }
+
+    // Queue the question if processing is in progress
+    if (loading) {
+      let episode: Episode = {
+        title: question,
+        plotline: '',
+        type: question.startsWith('!question') ? 'question' : 'episode',
+        username: 'anonymous',
+      }
+      setEpisodes([...episodes, episode]);
+      setQuery('');
+      return; // Don't submit the question yet, let the queue do it
     }
 
     // Check if the message is a story and remove the "!type:" prefix
@@ -1539,7 +1574,6 @@ function Home({ user }: HomeProps) {
       }
     }
 
-    // Extract the personality from the question
     // Extract the personality from the question
     let localPersonality = selectedPersonality;
     try {
@@ -1665,11 +1699,10 @@ function Home({ user }: HomeProps) {
 
     // Reset the state
     setError(null);
-    setIsPaused(false);
     setLoading(true);
-    setLoadingOSD(`\nRecieved ${isQuestion ? 'question' : 'story'}: ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
-    setSubtitle('');
-    setIsSpeaking(true);
+    if (isDisplayingRef.current === false) {
+      setLoadingOSD(`\nRecieved ${isQuestion ? 'question' : 'story'}: ${question.slice(0, 80).replace(/\n/g, ' ')}...`);
+    }
     setQuery('');
     setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
@@ -1718,7 +1751,9 @@ function Home({ user }: HomeProps) {
               pendingSourceDocs: undefined,
             }));
             setLoading(false);
-            messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+            if (isDisplayingRef.current === false) {
+              messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+            }
             ctrl.abort();
           } else if (event.data === '[OUT_OF_TOKENS]') {
             setMessageState((state) => ({
@@ -1734,8 +1769,10 @@ function Home({ user }: HomeProps) {
               pendingSourceDocs: undefined,
             }));
             setLoading(false);
-            setLoadingOSD('System Error... Please try again.');
-            messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+            if (isDisplayingRef.current === false) {
+              setLoadingOSD('System Error... Please try again.');
+              messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+            }
             ctrl.abort();
           } else {
             const data = JSON.parse(event.data);
@@ -1751,20 +1788,30 @@ function Home({ user }: HomeProps) {
               }));
             }
             tokens = tokens + countTokens(data.data);
-            setLoadingOSD(`\nLoading: ${tokens} GPT tokens generated...\n`);
-            messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+            if (isDisplayingRef.current === false && isSpeaking === false) {
+              setLoadingOSD(`\nLoading: ${tokens} GPT tokens generated...\n`);
+              messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+            } else {
+              setLoadingOSD('');
+            }
           }
         },
       });
       // Scroll to the message box
-      messageListRef.current?.scrollIntoView({ behavior: 'smooth' });
-      messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+      if (isDisplayingRef.current === false) {
+        messageListRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+      }
     } catch (error: any) {
       setLoading(false);
-      setLoadingOSD(`\nSystem Error: ${error.message}`);
-      setSubtitle('');
+      if (isDisplayingRef.current === false && isSpeaking === false) {
+        setLoadingOSD(`\nSystem Error: ${error.message}`);
+        setSubtitle('');
+      }
       setError('An error occurred while fetching the data. Please try again.');
-      messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+      if (isDisplayingRef.current === false) {
+        messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
+      }
       console.log(`HomeChatMessages: Error: ${error.message}`);
     }
     isSubmittingRef.current = false;
@@ -1773,8 +1820,14 @@ function Home({ user }: HomeProps) {
   // Handle the submit event on Enter
   const handleEnter = (e: any) => {
     if (e.key === 'Enter' && !e.shiftKey && query) {
-      e.preventDefault(); // prevent new line
-      handleSubmit(e);
+      let episode: Episode = {
+        title: query,
+        plotline: '',
+        type: query.startsWith('!question') ? 'question' : 'episode',
+        username: 'anonymous',
+      }
+      setEpisodes([...episodes, episode]);
+      setQuery('');
     }
   };
 
@@ -2187,7 +2240,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isFullScreen ? styles.fullScreenOSD : styles.osd
                     }>
-                      {(!isSpeaking || loading) && episodes.length > 0 ? (
+                      {(!isDisplayingRef.current) && episodes.length > 0 ? (
                         <>
                           <div className={styles.generatedImage}>
                             <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
@@ -2224,9 +2277,9 @@ function Home({ user }: HomeProps) {
                       </>
                     )}
                     <div className={
-                      loading ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+                      isDisplayingRef.current ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle}{loadingOSD}{(loading && latestMessage.message.length > 20) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : ''}
+                      {subtitle}{(!isDisplayingRef.current && !isSpeaking) ? loadingOSD : ''}{(!isDisplayingRef.current && !isSpeaking) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : ''}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>
@@ -2275,7 +2328,6 @@ function Home({ user }: HomeProps) {
                           title="Replay"
                           onClick={handleReplay}
                           type="button"
-                          disabled={isSpeaking}
                           className={`${styles.footer}`}
                         >Replay</button> &nbsp;&nbsp;&nbsp;&nbsp;</>
                     )}
@@ -2299,7 +2351,6 @@ function Home({ user }: HomeProps) {
                           title="Share Story"
                           onClick={handleShareStory}
                           type="button"
-                          disabled={isSpeaking}
                           className={styles.footer}
                         >Share Story</button>&nbsp;&nbsp;&nbsp;&nbsp;
                         <>
@@ -2315,7 +2366,6 @@ function Home({ user }: HomeProps) {
                     <div className={styles.cloudform}>
                       <select
                         className={styles.dropdown}
-                        disabled={loading}
                         value={selectedPersonality}
                         onChange={(e) => {
                           setSelectedPersonality(e.target.value as keyof typeof PERSONALITY_PROMPTS);
@@ -2336,7 +2386,6 @@ function Home({ user }: HomeProps) {
                       <select
                         id="gender-select"
                         className={styles.dropdown}
-                        disabled={loading}
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
                       >
@@ -2351,7 +2400,6 @@ function Home({ user }: HomeProps) {
                       <select
                         id="audio-language-select"
                         className={styles.dropdown}
-                        disabled={loading}
                         value={audioLanguage}
                         onChange={(e) => setAudioLanguage(e.target.value)}
                       >
@@ -2366,7 +2414,6 @@ function Home({ user }: HomeProps) {
                       <select
                         id="subtitle-language-select"
                         className={styles.dropdown}
-                        disabled={loading}
                         value={subtitleLanguage}
                         onChange={(e) => setSubtitleLanguage(e.target.value)}
                       >
@@ -2393,17 +2440,16 @@ function Home({ user }: HomeProps) {
                   {/* Question/Topic text entry box */}
                   <div className={styles.cloudform}>
                     <textarea
-                      disabled={loading || isSpeaking}
                       onKeyDown={handleEnter}
                       ref={textAreaRef}
                       autoFocus={true}
-                      rows={2}
+                      rows={3}
                       maxLength={1000000}
                       id="userInput"
                       name="userInput"
                       placeholder={
                         (selectedPersonality == 'passthrough') ? 'Passthrough mode, replaying your input...' :
-                          loading
+                          isDisplayingRef.current
                             ? isStory
                               ? `Writing your story...`
                               : `Answering your question...`
@@ -2422,7 +2468,7 @@ function Home({ user }: HomeProps) {
                   {/* Personality prompt text entry box */}
                   <div className={styles.cloudform}>
                     <textarea
-                      readOnly={loading || (selectedPersonality == 'passthrough')}
+                      readOnly={isDisplayingRef.current || (selectedPersonality == 'passthrough')}
                       ref={textAreaPersonalityRef}
                       id="customPrompt"
                       name="customPrompt"
@@ -2455,7 +2501,7 @@ function Home({ user }: HomeProps) {
                   <div className={styles.cloudform}>
                     <div className={styles.cloudform}>
                       <textarea
-                        readOnly={loading || (selectedPersonality == 'passthrough')}
+                        readOnly={isDisplayingRef.current || (selectedPersonality == 'passthrough')}
                         ref={textAreaCondenseRef}
                         id="condensePrompt"
                         name="condensePrompt"

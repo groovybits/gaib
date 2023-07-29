@@ -21,12 +21,6 @@ export const useSpeakText = () => {
   ): Promise<void> => {
     return new Promise(async (resolve) => {
       try {
-        if (audioRef.current && !audioRef.current.paused) {
-          console.log('Audio is already playing');
-          resolve();
-          throw new Error('Audio is already playing');
-        }
-
         let apiBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
         if (!apiBaseUrl || apiBaseUrl === '') {
           apiBaseUrl = 'http://127.0.0.1:3000';
