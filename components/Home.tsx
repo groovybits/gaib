@@ -1420,13 +1420,13 @@ function Home({ user }: HomeProps) {
 
     let localNamespace = selectedNamespace;
     try {
-      if (question.includes('[SCIENCE]') || question.includes('[WISDOM]')) {
-        if (question.includes('[SCIENCE]')) {
+      if (question.toLowerCase().includes('[science]') || question.toLowerCase().includes('[wisdom]')) {
+        if (question.toLowerCase().includes('[science]')) {
           localNamespace = 'videoengineer';
-          question = question.replace('[SCIENCE]', '').trim();
-        } else if (question.includes('WISDOM')) {
+          question = question.toLowerCase().replace('[science]', '').trim();
+        } else if (question.toLowerCase().includes('wisdom')) {
           localNamespace = 'groovypdf';
-          question = question.replace('[WISDOM]', '').trim();
+          question = question.toLowerCase().replace('[wisdom]', '').trim();
         }
         console.log(`handleSubmit: Extracting namespace from question: as ${localNamespace}`);  // Log the question
       }
@@ -1443,8 +1443,8 @@ function Home({ user }: HomeProps) {
     // Extract the personality from the question
     let localPersonality = selectedPersonality;
     try {
-      if (question.includes('[PERSONALITY]')) {
-        let personalityMatch = question.match(/\[PERSONALITY\]\s*([\w\s]*?)(?=\s|$)/i);
+      if (question.toLowerCase().includes('[personality]')) {
+        let personalityMatch = question.toLowerCase().match(/\[personality\]\s*([\w\s]*?)(?=\s|$)/i);
         if (personalityMatch) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim();
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
@@ -1456,8 +1456,8 @@ function Home({ user }: HomeProps) {
           }
           localPersonality = extractedPersonality;
           console.log(`handleSubmit: Extracted personality: "${localPersonality}"`);  // Log the extracted personality
-          question = question.replace(new RegExp('\\[PERSONALITY\\]\\s*' + extractedPersonality, 'i'), '').trim();
-          question = question.replace(new RegExp('\\[PERSONALITY\\]', 'i'), '').trim();
+          question = question.toLowerCase().replace(new RegExp('\\[personality\\]\\s*' + extractedPersonality, 'i'), '').trim();
+          question = question.toLowerCase().replace(new RegExp('\\[personality\\]', 'i'), '').trim();
           console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
         } else {
           console.log(`handleSubmit: No personality found in question: '${question}'`);  // Log the question
@@ -1475,15 +1475,15 @@ function Home({ user }: HomeProps) {
     // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
     let localCommandPrompt = '';
     try {
-      if (question.includes('[PROMPT]')) {
+      if (question.toLowerCase().includes('[prompt]')) {
         let endPrompt = false;
-        let customPromptMatch = question.match(/\[PROMPT\]\s*\"([^"]*?)(?=\")/i);
+        let customPromptMatch = question.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
         if (customPromptMatch) {
           // try with quotes around the prompt
           localCommandPrompt = customPromptMatch[1].trim();
         } else {
           // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
-          customPromptMatch = question.match(/\[PROMPT\]\s*([^"\n]*?)(?=$|\n)/i);
+          customPromptMatch = question.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
           if (customPromptMatch) {
             localCommandPrompt = customPromptMatch[1].trim();
             endPrompt = true;
@@ -1493,9 +1493,9 @@ function Home({ user }: HomeProps) {
           console.log(`handleSubmit: Extracted commandPrompt: '${localCommandPrompt}'`);  // Log the extracted customPrompt
           // remove prompt from from question with [PROMPT] "<question>" removed
           if (endPrompt) {
-            question = question.replace(new RegExp('\\[PROMPT\\]\\s*' + localCommandPrompt, 'i'), '').trim();
+            question = question.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*' + localCommandPrompt, 'i'), '').trim();
           } else {
-            question = question.replace(new RegExp('\\[PROMPT\\]\\s*\"' + localCommandPrompt + '\"', 'i'), '').trim();
+            question = question.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + localCommandPrompt + '\"', 'i'), '').trim();
           }
           console.log(`handleSubmit: Command Prompt removed from question: '${question}' as ${localCommandPrompt}`);  // Log the updated question
         } else {
@@ -1518,7 +1518,7 @@ function Home({ user }: HomeProps) {
       console.log(`handleSubmit: localHistory is ${JSON.stringify(localHistory, null, 2)}`);
     }
 
-    if (question.includes('[REFRESH]')) {
+    if (question.toLowerCase().includes('[refresh]')) {
       try {
         // Clear the shared history
         console.log(`handleSubmit: Clearing the shared history`);
@@ -1529,7 +1529,7 @@ function Home({ user }: HomeProps) {
           };
         });
 
-        question = question.replace('[REFRESH]', '').trim();
+        question = question.toLowerCase().replace('[refresh]', '').trim();
         console.log(`handleSubmit: [REFRESH] Cleared history and Updated question: '${question}'\nhistory is ${JSON.stringify(localHistory, null, 2)}`);
       } catch (error) {
         console.error(`handleSubmit: Error clearing history: '${error}'`);  // Log the question

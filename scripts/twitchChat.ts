@@ -34,8 +34,8 @@ let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
 const prompt: string = `You are the Moderator and Support on a Twitch Channel providing assistance for operating an AI story and answer playback system. 
 The commands comprise of ones prefixed with episode or question [] backeted all caps settings added for control of options. The commands are
-!episode <title> <plot", !question <question>, [WISDOM] or [SCIENCE], [REFRESH], [PERSONALITY] <role>, !personalities,
-and [PROMPT] "<custom prompt>". You can create images with "!image: <image description>". Recommend using "!help" for full details. 
+!episode <title> <plot", !question <question>, [wisdom] or [science], [refresh], [personality] <role>, !personalities,
+and [prompt] "<custom prompt>". You can create images with "!image: <image description>". Recommend using "!help" for full details. 
 When asked to generate or create a story or episode use "!episode: <title> <plotline>" syntax. Speak mindfully and with respect.`;
 
 const helpMessage: string = `
@@ -45,14 +45,14 @@ Commands:
   !episode <topics> - Generate an episode based on topics from documents.
   !question <question> - Ask a question based on topcis from documents.
   !image <prompt> - Generate an image based on prompt.
-  [REFRESH] - Clear conversation history, forget everything.
-  [PERSONALITY] <role> - Change bot's personality and role.
-  [WISDOM] or [SCIENCE] - Set sources for references.
-  [PROMPT] "<custom personality prompt>" - AI Instructions.
+  [refresh] - Clear conversation history, forget everything.
+  [personality] <role> - Change bot's personality and role.
+  [wisdom] or [science] - Set sources for references.
+  [prompt] "<custom personality prompt>" - AI Instructions.
   !personalities - Display available personalities.
 
 Example:
-  !episode: Buddha is enlightened - the story of Buddha. [PERSONALITY] Anime [REFRESH][WISDOM] [PROMPT] "You are the Buddha."
+  !episode: Buddha is enlightened - the story of Buddha. [personality] Anime [refresh][wisdom] [prompt] "You are the Buddha."
 
 Note: Type !episode: and !question:  in lower case. Ask any questions and our AI will answer them.
 `;
@@ -164,7 +164,7 @@ client.on('message', async (channel: any, tags: {
     let title: any = '';
     let plotline: any = '';
 
-    title = message.slice(0, messageLimit).trim().replace(/(\r\n|\n|\r)/gm, " ").replace(/^\!/, '').replace(/^(episode|question):/, '').replace(/^:/, '').trim();
+    title = message.slice(0, messageLimit).trim().toLowerCase().replace(/(\r\n|\n|\r)/gm, " ").replace(/^\!/, '').replace(/^(episode|question):/, '').replace(/^:/, '').trim();
     const isStory: any = message.toLowerCase().includes('episode') ? true : false;
 
     // make sure nothing odd is in the title or plotline that isn't a story idea and title
@@ -183,13 +183,13 @@ client.on('message', async (channel: any, tags: {
     }
 
     // Story or Episode mode
-    if (isStory) {
-      console.log(`Groovy: ${tags.username} Playing Episode Title and Plotline: ${title} ${plotline}\n`);
-      client.say(channel, `Groovy: ${tags.username} Playing Episode Title and Plotline: ${title} ${plotline}`);
+    /*if (isStory) {
+      console.log(`Groovy: ${tags.username} Creating Episode Title and Plotline: ${title} ${plotline}\n`);
+      client.say(channel, `Groovy: ${tags.username} Creating Episode Title and Plotline: ${title} ${plotline}`);
     } else {
-      console.log(`Groovy ${tags.username} Answering the question: ${title} ${plotline}`);
-      client.say(channel, `Groovy ${tags.username} Answering the Question: ${title} ${plotline}`);
-    }
+      console.log(`Groovy ${tags.username} Pondering the question: ${title} ${plotline}`);
+      client.say(channel, `Groovy ${tags.username} Pondering the Question: ${title} ${plotline}`);
+    }*/
 
     // if title is defined and not empty, then add the command to Firestore
     if (title) {
