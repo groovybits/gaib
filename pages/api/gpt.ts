@@ -98,9 +98,13 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
             if (data.error && data.error.type && data.error.type === 'server_error') {
               console.error(`OpenAI GPT: Server error: ${data.error.message}`);
               res.status(500).json({ error: `OpenAI GPT: Server error: ${data.error.message}` });
+              res.end();
+              return;
             }
             console.error(`OpenAI GPT: No choices returned from OpenAI! data: ${JSON.stringify(data)}`);
             res.status(500).json({ error: 'No choices returned from OpenAI' });
+            res.end();
+            return;
           }
         } catch (error) {
           console.error('OpenAI GPT: An error occurred:', error);
