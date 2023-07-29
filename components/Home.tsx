@@ -538,11 +538,6 @@ function Home({ user }: HomeProps) {
 
           setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
 
-          // Reset the subtitle after all sentences have been spoken
-          stopSpeaking();
-          setSubtitle('');
-          setLoadingOSD('\nGroovy\nCreate your visions and dreams today');
-
           isDisplayingRef.current = false;
           setIsSpeaking(false);
         } catch (error) {
@@ -550,6 +545,11 @@ function Home({ user }: HomeProps) {
           isDisplayingRef.current = false;
           setIsSpeaking(false);
         }
+        // Reset the subtitle after all sentences have been spoken
+        stopSpeaking();
+        setSubtitle('');
+        setLoadingOSD('');
+        setLoadingOSD('\nGroovy\nCreate your visions and dreams today');
       }
     };
 
@@ -2279,7 +2279,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isDisplayingRef.current ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                     }>
-                      {subtitle}{(!isDisplayingRef.current && !isSpeaking) ? loadingOSD : ''}{(!isDisplayingRef.current && !isSpeaking) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : ''}
+                      {subtitle}{(!isDisplayingRef.current && !isSpeaking) ? ''/*loadingOSD */: ''}{(!isDisplayingRef.current && !isSpeaking) ? /*latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('')*/'' : ''}
                     </div>
                     {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
                       <div>

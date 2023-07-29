@@ -6,6 +6,7 @@ import { Storage } from '@google-cloud/storage';
 
 const storage = new Storage();
 const bucketName = process.env.GCS_BUCKET_NAME ? process.env.GCS_BUCKET_NAME : "";
+const debug = process.env.DEBUG ? process.env.DEBUG === 'true' : false;
 
 const handler = async (req: NextApiRequestWithUser, res: NextApiResponse) => {
   await authCheck(req, res, async () => {
@@ -67,7 +68,9 @@ const handler = async (req: NextApiRequestWithUser, res: NextApiResponse) => {
               res.status(500).json({ message: 'Error in saving audio to file' });
             });
             stream.on('finish', () => {
-              console.log(`Saved audio to file ${audioFile}`);
+              if (debug) {
+                console.log(`Saved audio to file ${audioFile}`);
+              }
               res.status(200).json({ message: 'Saved audio to file' });
             });
             stream.end(response!.audioContent);
