@@ -2,17 +2,17 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 8px;
   background-color: #ffc601;
   border-radius: 10px;
-  border: 2px double rgb(0, 0, 0, 0.8);
+  border: 2px double rgb(0, 0, 0, 1);
   max-width: 1000px; /* limit width */
   box-sizing: content-box;
 }
 
 .cloud {
   position: relative; /* Add this line */
-  background-color: rgb(0, 0, 0, 0.8);
+  background-color: rgb(0, 0, 0, 1);
   width: auto;
   height: 100%;
   justify-content: center;
@@ -20,7 +20,7 @@
   border-radius: 10px;
   padding: 4px; /* Adjust the padding to reduce the black area around the image */
   max-width: 1000px; /* limit width */
-  box-sizing: content-box;
+  /*box-sizing: content-box;*/
 }
 
 .readerImage img {
@@ -37,11 +37,10 @@
   position: relative; /* Add this to position the subtitle */
   width: auto;
   height: 100%;
-  min-height: 95%;
   object-fit: scale-up;
   border-radius: 10px;
   padding: 0px; /* Adjust the padding to reduce the black area around the image */
-  max-height: 95%; /* Set maximum height */
+  max-height: 100%; /* Set maximum height */
   box-sizing: content-box;
 }
 
@@ -131,8 +130,25 @@
   border-radius: 8px;
 }
 
+.readerPager {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 8px;
+  background-color: rgba(0, 0, 0, 0.0);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 10;
+}
+
+.readerPager:hover {
+  background-color: rgba(0, 0, 0, 0.0);
+  border-radius: 8px;
+}
+
 .readerFooter:hover {
-  background-color: rgba(0, 80, 0, 0.9);
+  background-color: rgba(0, 0, 0, 0.0);
   border-radius: 8px;
 }
 
@@ -767,7 +783,7 @@
 
 .topHeader {
   color: #ffffff;
-  font-size: 48px;
+  font-size: 60px;
   font-weight: 500;
   text-align: center;
   font-family: 'Trebuchet MS', monospace;
@@ -891,7 +907,7 @@
 }
 
 .container {
-  display: flex;
+  /*display: flex;*/
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -986,7 +1002,7 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 4px;
+  padding: 2px;
   background-color: #ffffff;
   color: #000000;
   border: none;
@@ -994,7 +1010,7 @@
 
 .feedSection {
   align-items: center;
-  padding: 8px;
+  padding: 2px;
   background-color: #ffffff;
   color: #000000;
   border-radius: 10px;
@@ -1016,8 +1032,8 @@
   overflow: hidden;
   transition: box-shadow 0.3s ease;
   word-wrap: overflow-wrap;
-  padding: 8px;
-  margin: 8px;
+  padding: 2px;
+  margin: 2px;
   width: 100%;
 }
 
@@ -1149,83 +1165,75 @@
 }
 
 /* Mobile optimization */
-@media (max-width: 100%) {
+@media screen and (max-width: 768px) {
   .main {
-    padding: 0.5rem;
-    max-height: 60vh;
-    max-width: fit-content;
+    max-width: 100%; /* Adjust the maximum width for mobile screens */
   }
 
-  .cloud {
-    width: fit-content;
-    height: fit-content;
+  .cloud,
+  .readerImage,
+  .readerFullScreenImage,
+  .fullScreenImage,
+  .generatedImage,
+  .generatedTerminal,
+  .readerImageContainer,
+  .imageContainer,
+  .fullScreenTerminal,
+  .readerFullScreenSubtitle,
+  .fullScreenSubtitle,
+  .subtitle,
+  .fullScreenOSD,
+  .osd,
+  .fullScreenLoadingOSD,
+  .loadingOSD,
+  .markdownanswer,
+  .mainlogin,
+  .episodeTable,
+  .episodeScreenTable,
+  .episodeList,
+  .episodeListDescription,
+  .personalityTable,
+  .cloudform,
+  .textarea,
+  .textareaConfig,
+  .labelButtons,
+  .labelButton,
+  .transcriptcontainer,
+  .buttoncontainer,
+  .voicebutton,
+  .generatebutton {
+    max-width: 100%; /* Adjust the maximum width for mobile screens */
   }
-  .textarea {
-    width: 22rem;
-    color: #000000; /* Changed font color to yellow-green */
-    background: #ffffff; /* Changed background color to a darker color */
-    font-family: 'Trebuchet MS', monospace; /* Added font family */
+
+  .readerImage img,
+  .generatedImage img,
+  .generatedTerminal img {
+    height: auto; /* Adjust the height for mobile screens */
   }
+
+  .readerFullScreenSubtitle,
+  .fullScreenSubtitle,
+  .subtitle,
+  .fullScreenOSD,
+  .osd,
+  .fullScreenLoadingOSD,
+  .loadingOSD {
+    font-size: 10px; /* Adjust the font size for mobile screens */
+  }
+
+  .markdownanswer {
+    font-size: 10px; /* Adjust the font size for mobile screens */
+  }
+
   .textareaConfig {
-    width: 22rem;
-    color: #000000; /* Changed font color to yellow-green */
-    background: #979797; /* Changed background color to a darker color */
-    font-family: 'Trebuchet MS', monospace; /* Added font family */
-  }
-  .topnav {
-    border: 1px solid black;
-    align-items: center;
-    padding: 0.85rem 0.75rem 0.85rem 0.75rem;
+    background: #f5f105; /* Adjust the background color for mobile screens */
   }
 
-  .navlogo {
-    font-size: 1.25rem;
-    width: 20rem;
+  .voicebutton {
+    padding: 8px 10px; /* Adjust the padding for mobile screens */
   }
 
-  .footer {
-    font-size: 0.7rem;
-    width: 100%;
-    text-align: center;
-  }
-
-  .readerImageContainer {
-    padding: 0.5rem;
-    position: relative;
-  }
-
-  .readerImage {
-    width: 100%;
-  }
-
-  .subtitle {
-    font-size: 0.8rem;
-    position: absolute;
-    bottom: 10px;
-    left: 0;
-    color: #fff;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 5px;
-  }
-
-  .readerImage img {
-    max-width: 100%;
-    height: auto;
-  }
-
-  .footer {
-    margin: 0.5rem 0;
-  }
-
-  .pageButton {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-    margin: 0 0.25rem;
-  }
-
-  .readerImage img {
-    max-width: 100%;
-    height: auto;
-    object-fit: contain; /* added for maintaining image aspect ratio */
+  .generatebutton {
+    padding: 8px 10px; /* Adjust the padding for mobile screens */
   }
 }

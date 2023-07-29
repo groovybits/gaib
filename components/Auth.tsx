@@ -250,7 +250,7 @@ function Auth({ }: Props): ReactElement {
 
   return (
     <>
-      <div className={`${styles.header} ${styles.center}`}>
+      <div className={`${styles.topHeader} ${styles.center}`}>
         <title>Groovy</title>
       </div>
       <Layout>
@@ -258,11 +258,16 @@ function Auth({ }: Props): ReactElement {
           <main className={styles.main}>
             <div className={styles.cloud}>
               <div className={styles.cloudform}>
-                <div className={`${styles.header} ${styles.center}`}>
+                <div className={`${styles.topHeader} ${styles.center}`}>
                   <h1>Groovy</h1>
                 </div>
+                <div className={styles.main}>
+                  {message && <div className={styles.message}>{message}</div>}
+                  <ServiceInfo /> {/* Add the ServiceInfo component */}
+                  <TermsPopup /> {/* Add the TermsPopup component */}
+                </div>
                 <div className={`${styles.header} ${styles.center}`}>
-                  <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in with Google</button>
+                  <button className={styles.generatebutton} onClick={() => signInWithGoogle()}>Sign in (Google)</button>
                 </div>
                 {loginAuth ? (
                   <div className={styles.cloudform}>
@@ -288,11 +293,6 @@ function Auth({ }: Props): ReactElement {
                     <TermsPopup /> {/* Add the TermsPopup component */}
                   </>
                 )}
-                <div className={styles.cloudform}>
-                  {message && <div className={styles.message}>{message}</div>}
-                  <ServiceInfo /> {/* Add the ServiceInfo component */}
-                  <TermsPopup /> {/* Add the TermsPopup component */}
-                </div>
               </div>
             </div>
           </main>

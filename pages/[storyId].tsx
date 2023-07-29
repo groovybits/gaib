@@ -28,6 +28,8 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const [selectedStory, setSelectedStory] = useState(initialStory);
   const [currentScene, setCurrentScene] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [leftHover, setLeftHover] = useState(false);
+  const [rightHover, setRightHover] = useState(false);
 
   useEffect(() => {
     if (storyId && typeof storyId === 'string') {
@@ -64,6 +66,16 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
     if (currentScene > 0) {
       setCurrentScene(currentScene - 1);
     }
+  };
+
+  const handleLinkedInShareClick = (storyId: string | string[]) => {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(`${baseUrl}/${storyId}`)}`, '_blank');
+  };
+
+  const handleTwitterShareClick = (storyId: string | string[]) => {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(`${baseUrl}/${storyId}`)}`, '_blank');
   };
 
   // toggle the full screen state
@@ -150,17 +162,76 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                     <div className={isFullScreen ? `${styles.subtitle}` : styles.subtitle}>
                       {scenes[currentScene].replace(/\|$/g, '')}
                     </div>
-                  </div>
-                  <div className={`${styles.footerContainer} ${styles.center}`}>
-                    <button onClick={previousPage} className={styles.pageButton}>Previous Page</button>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <button onClick={nextPage} className={styles.pageButton}>Next Page</button>
+                    <>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "10%", // adjust this value as needed to leave space for the fullscreen button
+                          bottom: 0,
+                          left: 0,
+                          width: "50%", // covers the left half of the image area
+                          cursor: "pointer", // changes the cursor to a hand when hovering over the div
+                          backgroundColor: leftHover ? "rgba(0, 0, 0, 0.2)" : "transparent",
+                        }}
+                        onClick={previousPage}
+                        onMouseEnter={() => setLeftHover(true)} // set state to true when mouse enters
+                        onMouseLeave={() => setLeftHover(false)} // set state to false when mouse leaves                      
+                      >
+                        <button
+                          style={{
+                            position: "absolute",
+                            top: "65%",
+                            left: "90px",
+                            transform: "translateY(-65%)",
+                          }}
+                          className={styles.readerPager}
+                        >
+                          Previous Page
+                        </button>
+                      </div>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "10%", // adjust this value as needed to leave space for the fullscreen button
+                          bottom: 0,
+                          right: 0,
+                          width: "50%", // covers the right half of the image area
+                          cursor: "pointer", // changes the cursor to a hand when hovering over the div
+                          backgroundColor: rightHover ? "rgba(0, 0, 0, 0.2)" : "transparent",
+                        }}
+                        onClick={nextPage} // attach the event handler to the div
+                        onMouseEnter={() => setRightHover(true)} // set state to true when mouse enters
+                        onMouseLeave={() => setRightHover(false)} // set state to false when mouse leaves    
+                      >
+                        <button
+                          style={{
+                            position: "absolute",
+                            top: "65%",
+                            right: "90px",
+                            transform: "translateY(-65%)",
+                            transition: "background-color 0.3s", // smooth transition
+                          }}
+                          className={styles.readerPager}
+                        >
+                          Next Page
+                        </button>
+                      </div>
+                    </>
                   </div>
                 </div>
               </div>
+              <>
+                <Link href="/feed" className={styles.footer}>
+                  <a>Story Board</a>
+                </Link>&nbsp;&nbsp;&nbsp;&nbsp;
+              </>
               <button className={styles.footer} onClick={() => storyId && handleShareClick(storyId)}>Copy Link</button>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => storyId && handleFacebookShareClick(storyId)}>Facebook Post</button>
+              <button className={styles.footer} onClick={() => storyId && handleFacebookShareClick(storyId)}>Share on Facebook</button>
+              &nbsp;&nbsp;&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => storyId && handleLinkedInShareClick(storyId)}>Share on LinkedIn</button>
+              &nbsp;&nbsp;&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => storyId && handleTwitterShareClick(storyId)}>Share on Twitter</button>
             </div>
             <div className={styles.feedSection}>
               <div className={styles.feed}>

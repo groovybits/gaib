@@ -2157,7 +2157,7 @@ function Home({ user }: HomeProps) {
                       type="button"
 
                     >
-                      {!stoppedManually ? 'Stop Listening' : 'Start Listening'}
+                      {!stoppedManually ? 'Voice Input Off' : 'Voice Input On'}
                     </button>&nbsp;&nbsp;&nbsp;&nbsp;
                     {isSpeaking ? (
                       <>
@@ -2201,7 +2201,10 @@ function Home({ user }: HomeProps) {
                           type="button"
                           disabled={isSpeaking}
                           className={styles.footer}
-                        >Publish and Share Story</button>
+                        >Share Story</button>&nbsp;&nbsp;&nbsp;&nbsp;
+                        <>
+                          <a className={styles.footer} href='/feed' target="_blank" rel="noopener noreferrer">Story Board</a>
+                        </>
                       </>
                     ) : (
                       <></>
