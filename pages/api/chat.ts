@@ -19,6 +19,7 @@ import {
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.DEBUG ? Boolean(process.env.DEBUG) : false;
+const sendReferences = process.env.SEND_REFERENCES ? Boolean(process.env.SEND_REFERENCES) : false;
 
 function countTokens(textString: string): number {
   let totalTokens = 0;
@@ -405,7 +406,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         }
         total_token_count = total_token_count + countTokens(response.text) + countTokens(title) + countTokens(promptString) + countTokens(condensePromptString);
         
-        if (response.sourceDocuments) {
+        if (response.sourceDocuments && sendReferences) {
           // Create a new array with only unique objects
           const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; }; }, index: any, self: { metadata: { source: any; }; }[]) =>
             index === self.findIndex((t: { metadata: { source: any; }; }) => (

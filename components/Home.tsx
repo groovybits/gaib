@@ -31,6 +31,51 @@ import GPT3Tokenizer from 'gpt3-tokenizer';
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
 
+interface StoryPart {
+  sentence: string;
+  imageUrl: string;
+}
+
+interface Sentence {
+  id: number;
+  text: string;
+  imageUrl: ImageData | string;
+  speaker: string;
+  gender: string;
+  language: string;
+  model: any;
+  audioFile: string;
+}
+
+interface Scene {
+  id: number;
+  sentences: Sentence[];
+  imageUrl: ImageData | string;
+}
+
+type Story = {
+  storyId: string;
+  prompt: string;
+  tokens: number;
+  title: string;
+  imageUrl: ImageData | string;
+  scenes: Scene[];
+  timestamp: number;
+  personality: string;
+  namespace: string;
+  references: string[];
+  isStory: boolean;
+  shareUrl: string;
+}
+
+// Define a type for an episode
+type Episode = {
+  title: string;
+  plotline: string;
+  type: string;
+  username: string;
+};
+
 type PendingMessage = {
   type: string;
   message: string;
@@ -59,7 +104,7 @@ function Home({ user }: HomeProps) {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
-  const { speakText, stopSpeaking } = useSpeakText();
+  const { speakText, stopSpeaking, speakAudioUrl } = useSpeakText();
 
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(true);
@@ -113,6 +158,8 @@ function Home({ user }: HomeProps) {
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
   const [autoSave, setAutoSave] = useState<boolean>(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [playQueue, setPlayQueue] = useState<Story[]>([]);
+  const isDisplayingRef = useRef<boolean>(false);
   const [feedNewsChannel, setFeedNewsChannel] = useState<boolean>(false);
   const [enableSpeaking, setEnableSpeaking] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_SPEAKING === 'true');
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
@@ -134,27 +181,6 @@ function Home({ user }: HomeProps) {
 
     return totalTokens;
   }
-
-  const connectToChannel = async (event: { preventDefault: () => void; }) => {
-    event.preventDefault();
-
-    // Send the channel ID to your server
-    const response = await fetch('/api/connectToChannel', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        userId: user?.uid,
-        channelId: channelId
-      })
-    });
-
-    const data = await response.json();
-
-    // Handle the response from the server
-    // This could involve updating the state of your component, showing a message to the user, etc.
-  };
 
   const postResponse = async (channel: string, message: string, userId: string | undefined) => {
     const idToken = await user?.getIdToken();
@@ -185,11 +211,6 @@ function Home({ user }: HomeProps) {
 
   // Declare a reference to the speech recognition object
   let recognition: SpeechRecognition | null = null;
-
-  interface StoryPart {
-    sentence: string;
-    imageUrl: string;
-  }
 
   const copyStory = async () => {
     copy(latestMessage.message);
@@ -238,14 +259,6 @@ function Home({ user }: HomeProps) {
       padding: '20px',
       border: '2px double #000', // Added border style
     },
-  };
-
-  // Define a type for an episode
-  type Episode = {
-    title: string;
-    plotline: string;
-    type: string;
-    username: string;
   };
 
   // This function will be passed to the EpisodePlanner component
@@ -396,6 +409,39 @@ function Home({ user }: HomeProps) {
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening]);
 
+  useEffect(() => {
+    // episode feed processing
+    const playQueueDisplay = async () => {
+      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
+        const playStory = playQueue[0];  // Get the first story
+        try {
+          console.log(`TwitchStream: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
+
+          isDisplayingRef.current = true;
+
+          // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
+          for (let scene of playStory.scenes) {
+            for (let sentence of scene.sentences) {
+              setSubtitle(sentence.text);
+              setPexelsUrl(typeof sentence.imageUrl == 'string' ? sentence.imageUrl : sentence.imageUrl.pexels_url);
+              await speakAudioUrl(sentence.audioFile);
+            }
+          }
+
+          setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
+        } catch (error) {
+          console.error('An error occurred in the processQueue function:', error); // Check for any errors
+        }
+      }
+    };
+
+    playQueueDisplay();  // Run immediately on mount
+
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(playQueueDisplay, 3000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
+  }, [playQueue, isSpeaking, isDisplayingRef]);
 
   // News fetching for automating input via a news feed
   useEffect(() => {
@@ -895,7 +941,7 @@ function Home({ user }: HomeProps) {
               await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storyId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
             }
 
-            return `${baseUrl}/${storyId}`;
+            return storyId;
           } catch (error) {
             console.error('An error occurred in the shareStory function:', error); // Check for any errors
             return '';
@@ -915,6 +961,22 @@ function Home({ user }: HomeProps) {
           setCurrentStory([]); // Clear the current story
           setLastStory(''); // Clear the last story
 
+          // setup the story structure
+          let story: Story = {
+            title: '',
+            storyId: '',
+            prompt: '',
+            tokens: 0,
+            scenes: [],
+            imageUrl: '',
+            timestamp: Date.now(),
+            personality: '',
+            namespace: '',
+            references: [],
+            isStory: isStory,
+            shareUrl: '',
+          }
+
           let voiceModels: { [key: string]: string } = {};
           let genderMarkedNames: any[] = [];
           let detectedGender: string = gender;
@@ -922,6 +984,7 @@ function Home({ user }: HomeProps) {
           let isContinuingToSpeak = false;
           let isSceneChange = false;
           let lastSpeaker = '';
+          let storyId = '';
 
           let sceneTexts: string[] = [];
           // ImageData or string
@@ -1043,6 +1106,8 @@ function Home({ user }: HomeProps) {
           if (lastImage !== '') {
             setScreenImage(lastImage);
           }
+          const titleScreen: ImageData | string = lastImage;
+          const titleScreenText = firstSentence;
 
           // Extract the scene texts from the message
           let localCurrentStory: any[] = []; // local variable
@@ -1138,7 +1203,8 @@ function Home({ user }: HomeProps) {
           setCurrentStory(localCurrentStory);
 
           // Share the story after building it before displaying it
-          shareUrl = await shareStory(localCurrentStory, isFetching);
+          storyId = await shareStory(localCurrentStory, isFetching);
+          shareUrl = baseUrl + '/' + storyId;
           if (!isFetching) {
             alert(`Story shared successfully to ${shareUrl}!`);
             copy(`${shareUrl}`);
@@ -1148,6 +1214,8 @@ function Home({ user }: HomeProps) {
           // keep track of scene and images positions
           let sceneIndex = 0;
           let imagesIndex = 0;
+          let title: string = '';
+          let summary: string = '';
 
           // Extract all unique speakers for twitch channel chat responses
           if (channelId !== '' && twitchChatEnabled) {
@@ -1160,13 +1228,12 @@ function Home({ user }: HomeProps) {
             }).join(', ');
 
             // Create a title for the story from the first sentence
-            const title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
+            title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
 
             // Create a brief introduction of the story from the second sentence
             const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
 
             // Create the summary
-            let summary: string = '';
             if (isStory) {
               summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
             } else {
@@ -1185,6 +1252,21 @@ function Home({ user }: HomeProps) {
           episodeId = uuidv4();
           setSubtitle(''); // Clear the subtitle
           setLoadingOSD('');
+
+          // Fill the story object
+          story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
+          story.title = titleScreenText;
+          story.storyId = storyId;
+          story.tokens = countTokens(sentencesToSpeak.join(' '));
+          story.imageUrl = titleScreen;
+          story.shareUrl = shareUrl;
+          story.personality = selectedPersonality; // TODO - add personality to the story object
+          story.namespace = selectedNamespace; // TODO - add namespace to the story object
+          story.isStory = isStory;
+          story.references = [];
+
+          let scene: Scene | null = null;
+          let sentenceId = 0;
 
           let count = 0;
           for (let sentence of sentencesToSpeak) {
@@ -1205,11 +1287,24 @@ function Home({ user }: HomeProps) {
               if (lastImage !== '') {
                 setScreenImage(lastImage);
               }
+
+              // If there is a previous scene, add it to the story
+              if (scene) {
+                story.scenes.push(scene);
+              }
+
+              // Start a new scene
+              scene = {
+                id: sceneIndex,
+                sentences: [],
+                imageUrl: lastImage,
+              };
             }
 
             let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
 
             // go through by sentence so we can preserve the speaker
+            let spokenLineIndex = 0;
             for (const sentence_by_character of sentences_by_character) {
               // Set the subtitle to the translated text if the text is not in English
               let translatedText = '';
@@ -1287,64 +1382,69 @@ function Home({ user }: HomeProps) {
                 isContinuingToSpeak = true;
               }
 
+              let audioFile: string = '';
+              const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
+              spokenLineIndex += 1;
+              const cleanText: string = removeMarkdownAndSpecialSymbols(sentence_by_character);
+              let translationEntry: string = '';
+
               // Speak the sentence if speech output is enabled
-              if (speechOutputEnabled) {
-                // Speak the sentence
-                if (audioLanguage === 'en-US') {
-                  // Speak the original text
-                  if (debug) {
-                    console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
-                  }
-                  const cleanText = removeMarkdownAndSpecialSymbols(sentence_by_character);
-                  if (cleanText !== '' && enableSpeaking) {
-                    await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
-                  } else {
-                    // Wait anyways even if speaking fails so that the subtitles are displayed
-                    const sentenceLength = sentence_by_character.length;
-                    const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                  }
-                } else {
-                  // Speak the translated text
-                  let translationEntry: string = '';
-                  if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
-                    // Use the previously translated text
-                    translationEntry = translatedText;
-                  } else {
-                    // Translate the text
-                    translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
-                  }
-                  if (debug) {
-                    console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", translationEntry);
-                  }
-                  try {
-                    const cleanText = removeMarkdownAndSpecialSymbols(translationEntry);
-                    if (cleanText !== '' && enableSpeaking) {
-                      await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model);
-                    } else {
-                      // Wait anyways even if speaking fails so that the subtitles are displayed
-                      const sentenceLength = sentence_by_character.length;
-                      const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                      await new Promise(resolve => setTimeout(resolve, waitTime));
-                    }
-                  } catch (e) {
-                    console.log('Error speaking text: ', e);
-                    // Wait anyways even if speaking fails so that the subtitles are displayed
-                    const sentenceLength = sentence_by_character.length;
-                    const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                  }
+              if (audioLanguage === 'en-US') {
+                // Speak the original text
+                if (debug) {
+                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
+                }
+                if (cleanText !== '') {
+                  audioFile = `audio/${storyId}/${sentenceId}.mp3`;
+                  await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
                 }
               } else {
-                // Wait for the sentence to be spoken, measure sentence length to know how long to wait for
-                const sentenceLength = sentence_by_character.length;
-                const waitTime = Math.min(Math.max(2000, sentenceLength * 100), 5000);
-                await new Promise(resolve => setTimeout(resolve, waitTime));
+                // Speak the translated text
+                if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
+                  // Use the previously translated text
+                  translationEntry = translatedText;
+                } else {
+                  // Translate the text
+                  translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
+                }
+                if (debug) {
+                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", translationEntry);
+                }
+                try {
+                  if (translationEntry != '') {
+                    audioFile = `audio/${storyId}/${sentenceId}.mp3`;
+                    await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
+                  }
+                } catch (e) {
+                  console.log('Error speaking text: ', e);
+                }
               }
+
               // Update the last speaker
               lastSpeaker = currentSpeaker;
+
+              // If there is a current scene, add the sentence to it
+              if (scene) {
+                scene.sentences.push({
+                  id: sentenceId++,
+                  text: translationEntry != '' ? translationEntry : cleanText,
+                  imageUrl: lastImage,  // or another image related to the sentence
+                  speaker: currentSpeaker,  // or another speaker related to the sentence
+                  gender: detectedGender,  // or another gender related to the sentence
+                  language: audioLanguage,  // or another language related to the sentence
+                  model: model,  // or another model related to the sentence
+                  audioFile: `https://storage.googleapis.com/${bucketName}/${audioFile}`,  // or another audio file related to the sentence
+                });
+              }
             }
           }
+
+          // If there is a last scene, add it to the story
+          if (scene) {
+            story.scenes.push(scene);
+          }
+          // Add the story to the playQueue
+          setPlayQueue(prevPlayQueue => [...prevPlayQueue, story]);
 
           // Reset the subtitle after all sentences have been spoken
           stopSpeaking();
@@ -1369,7 +1469,7 @@ function Home({ user }: HomeProps) {
     } catch (error) {
       console.error('SpeakDisplay: UseEffect had an error processing messages: ', error);
     }
-  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef]);
+  }, [messages, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
