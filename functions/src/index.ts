@@ -38,7 +38,7 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
       for (let index = 0; index < story.imageUrls.length; index++) {
         try {
           const thumbnailUrl = await createThumbnail(storyId,
-            JSON.parse(story.imageUrls[index]).url, index, uniqueImageUrls);
+            story.imageUrls[index], index, uniqueImageUrls);
           thumbnailUrls.push(thumbnailUrl);
         } catch (error) {
           console.error(
