@@ -80,7 +80,7 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
  */
 async function createThumbnail(storyId: string,
   imageUrl: string, index: number,
-  uniqueImageUrls: Set<string>): Promise<string | null> { // Return type is now string | null
+  uniqueImageUrls: Set<string>): Promise<string | null> { 
   try {
     const bucketName: string = functions.config().storage.bucket;
 
