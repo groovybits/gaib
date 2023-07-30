@@ -536,19 +536,10 @@ function Home({ user }: HomeProps) {
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
         setSubtitle('Think of a story you want to tell, or a question you want to ask.');
-        // sleep for 3 seconds
-        setTimeout(() => {
-          if (debug) {
-            console.log('PlayQueue: sleeping for 3 seconds, no new messages');
-          }
-        }, 3000);
+        
         setLoadingOSD(`Finished playing ${playStory.title}. `);
         setSubtitle('\nGroovy\nCreate your visions and dreams today');
-        setTimeout(() => {
-          if (debug) {
-            console.log('PlayQueue: sleeping for 3 seconds, no new messages');
-          }
-        }, 3000);
+        
         isRunning = false;
       }
     };
