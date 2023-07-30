@@ -12,7 +12,6 @@ import {
 } from '@/config/personalityPrompts';
 import { audioLanguages, subtitleLanguages, Language } from "@/config/textLanguages";
 import nlp from 'compromise';
-import { ImageData } from '@/types/imageData'; // Update the path if required
 import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
 import firebase from '@/config/firebaseClientInit';
 import TokensDropdown from '@/components/TokensDropdown';
@@ -27,15 +26,9 @@ import { v4 as uuidv4 } from 'uuid';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
 import GPT3Tokenizer from 'gpt3-tokenizer';
-import { set } from 'lodash';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
-
-interface StoryPart {
-  sentence: string;
-  imageUrl: string;
-}
 
 interface Sentence {
   id: number;
@@ -56,7 +49,7 @@ interface Scene {
 }
 
 type Story = {
-  storyId: string;
+  id: string;
   prompt: string;
   tokens: number;
   title: string;
@@ -77,12 +70,6 @@ type Episode = {
   plotline: string;
   type: string;
   username: string;
-};
-
-type PendingMessage = {
-  type: string;
-  message: string;
-  sourceDocs?: Document[];
 };
 
 // Add a type for the user prop
@@ -121,7 +108,7 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
-  const [subtitle, setSubtitle] = useState<string>('\n- Groovy -\nCreate your own stories!');
+  const [subtitle, setSubtitle] = useState<string>('\n- Groovy -\nCreate your own story today');
   const [loadingOSD, setLoadingOSD] = useState<string>('Waiting for your ideas...');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
@@ -133,10 +120,7 @@ function Home({ user }: HomeProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [startTime, setStartTime] = useState<Date>(new Date());
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [photographer, setPhotographer] = useState<string>('');
-  const [photographerUrl, setPhotographerUrl] = useState<string>('');
-  const [pexelsUrl, setPexelsUrl] = useState<string>('');
+  const [isFullScreen, setIsFullScreen] = useState(false); 
   const [tokensCount, setTokensCount] = useState<number>(0);
   const [isStory, setIsStory] = useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('MultiModal');
@@ -154,24 +138,20 @@ function Home({ user }: HomeProps) {
   const [feedPrompt, setFeedPrompt] = useState<string>('');
   const [feedSort, setFeedSort] = useState<string>('popularity');
   const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [currentStory, setCurrentStory] = useState<StoryPart[]>([]);
   const [customPrompt, setCustomPrompt] = useState<string>('');
   const [condensePrompt, setCondensePrompt] = useState<string>('');
   const [displayPrompt, setDisplayPrompt] = useState('');
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
-  const [autoSave, setAutoSave] = useState<boolean>(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [playQueue, setPlayQueue] = useState<Story[]>([]);
   const isDisplayingRef = useRef<boolean>(false);
   const [feedNewsChannel, setFeedNewsChannel] = useState<boolean>(false);
-  const [enableSpeaking, setEnableSpeaking] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_SPEAKING === 'true');
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
   const [newsFeedEnabled, setNewsFeedEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_NEWS_FEED === 'true');
   const [authEnabled, setAuthEnabled] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true');
   const [channelId, setChannelId] = useState(process.env.NEXT_PUBLIC_TWITCH_CHANNEL_ID || '');
   const [twitchChatEnabled, setTwitchChatEnabled] = useState(false);
   const episodeIdRef = useRef<string>(uuidv4());
-  const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_BASE_URL || '');
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
   const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 6);
@@ -527,7 +507,9 @@ function Home({ user }: HomeProps) {
               console.log(`PlayQueue: Displaying Sentence #${sentence.id}: ${sentence.text}\n${JSON.stringify(sentence)}\nImage: ${sentence.imageUrl})\n`)
               if (sentence.text != '') {
                 setSubtitle(sentence.text);
-                setLoadingOSD('Building scenes...');
+                setLoadingOSD(`Building ${playStory.scenes.length} Scenes for ${playStory.title}.`);
+              } else {
+                setLoadingOSD('');
               }
               if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
                 setImageUrl(sentence.imageUrl);
@@ -553,9 +535,20 @@ function Home({ user }: HomeProps) {
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
-        setSubtitle('');
-        setLoadingOSD('Finished playing story...');
+        setSubtitle('Think of a story you want to tell, or a question you want to ask.');
+        // sleep for 3 seconds
+        setTimeout(() => {
+          if (debug) {
+            console.log('PlayQueue: sleeping for 3 seconds, no new messages');
+          }
+        }, 3000);
+        setLoadingOSD(`Finished playing ${playStory.title}. `);
         setSubtitle('\nGroovy\nCreate your visions and dreams today');
+        setTimeout(() => {
+          if (debug) {
+            console.log('PlayQueue: sleeping for 3 seconds, no new messages');
+          }
+        }, 3000);
         isRunning = false;
       }
     };
@@ -573,8 +566,8 @@ function Home({ user }: HomeProps) {
     if (!isSpeakingRef.current) {
       isSpeakingRef.current = true;
 
+      // last message set to mark our position in the messages array
       const lastMessageIndex: number = messages.length - 1;
-      let shareUrl = '';
       if (lastMessageDisplayed != lastMessageIndex) {
         // Set the last message displayed
         setLastMessageDisplayed(lastMessageIndex);
@@ -591,7 +584,7 @@ function Home({ user }: HomeProps) {
 
       // lock speaking and avoid crashing
       try {
-        let lastImage: ImageData | string = '';
+        let lastImage: string = '';
 
         function extractKeywords(sentence: string, numberOfKeywords = 2) {
           const doc = nlp(sentence);
@@ -611,22 +604,6 @@ function Home({ user }: HomeProps) {
           return keywords;
         }
 
-        async function setScreenImage(gaibImage: ImageData | string) {
-          if (typeof gaibImage === 'string') {
-            if (gaibImage !== '') {
-              setImageUrl(gaibImage);
-            }
-            setPhotographer('Groovy');
-            setPhotographerUrl('https://groovy.org');
-            setPexelsUrl('https://gaib.groovy.org');
-          } else {
-            setImageUrl(gaibImage.url);
-            setPhotographer(gaibImage.photographer);
-            setPhotographerUrl(gaibImage.photographer_url);
-            setPexelsUrl(gaibImage.pexels_url);
-          }
-        }
-
         async function getGaib() {
           const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
           const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
@@ -644,24 +621,8 @@ function Home({ user }: HomeProps) {
           return url;
         }
 
-        /* create an image */
-        async function createImageData(lastImage: ImageData | string): Promise<ImageData | string> {
-          let image: ImageData | string = lastImage;
-          if (image && image !== '') {
-            if (typeof image === 'string') {
-              image = { url: image, photographer: 'Groovy', photographer_url: 'https://groovy.org', pexels_url: 'https://gaib.groovy.org' };
-            } else if (typeof image === 'object' && image !== null) {
-              image = { url: image.url || '', photographer: image.photographer || '', photographer_url: image.photographer_url || '', pexels_url: image.pexels_url || '' };
-            }
-            return image;
-          } else {
-            let newImage: ImageData | string = { url: '', photographer: '', photographer_url: '', pexels_url: '' };
-            return newImage;
-          }
-        }
-
         // Choose Pexles, DeepAI or local images
-        async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: ImageData | string = '', localEpisodeId = '', count = 0): Promise<ImageData | string> {
+        async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: string = '', localEpisodeId = '', count = 0): Promise<string> {
           const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
           const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
 
@@ -705,7 +666,7 @@ function Home({ user }: HomeProps) {
               } else if (imageSource === 'deepai') {
                 const idToken = await user?.getIdToken();
                 let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-                let exampleImage = '' as ImageData | string;
+                let exampleImage = '' as string;
                 if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
                   if (lastImage !== '') {
                     exampleImage = lastImage;
@@ -721,7 +682,7 @@ function Home({ user }: HomeProps) {
               } else if (imageSource === 'openai') {
                 const idToken = await user?.getIdToken();
                 let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
-                let exampleImage = '' as ImageData | string;
+                let exampleImage = '' as string;
                 if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
                   if (lastImage !== '') {
                     exampleImage = lastImage;
@@ -780,13 +741,8 @@ function Home({ user }: HomeProps) {
               const data = await response.json();
               let imageId = uuidv4();
               let duplicateImage = false;
-              if (imageSource === 'pexels' && data.photos && data.photos.length > 0) {
-                return {
-                  url: data.photos[0].src.large2x,
-                  photographer: data.photos[0].photographer,
-                  photographer_url: data.photos[0].photographer_url,
-                  pexels_url: data.photos[0].url,
-                };
+              if (imageSource === 'pexels') {
+                return data.photos[0].src.large2x;
               } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
                 const imageUrl = data.output_url;
                 if (data?.duplicate === true) {
@@ -893,7 +849,7 @@ function Home({ user }: HomeProps) {
         };
 
         // This function generates the image using the AI message from the previous function
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: ImageData | string, count: number = 0): Promise<{ image: string | ImageData, prompt: string }> => {
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0): Promise<{ image: string, prompt: string }> => {
           try {
             let prompt = imagePrompt;
             let content: string = '';
@@ -956,7 +912,7 @@ function Home({ user }: HomeProps) {
           return data.translatedText;
         }
 
-        const shareStory = async (storyToShare: any[], automated: boolean): Promise<string> => {
+        const shareStory = async (storyToShare: Story, automated: boolean): Promise<string> => {
           try {
             if (!user && authEnabled) {
               return '';
@@ -964,12 +920,9 @@ function Home({ user }: HomeProps) {
               return '';
             }
 
-            if (storyToShare.length === 0) {
-              console.log(`shareStory: No stories to share: ${JSON.stringify(storyToShare)}}`);
-              return '';
-            }
-            const storyText = storyToShare.map((item) => item.sentence).join('|');
-            const imageUrls = storyToShare.map((item) => item.imageUrl);
+            const storyText = storyToShare.scenes.map((scene) => scene.sentences.map((sentence) => sentence.text).join('|')).join('|');
+            const imageUrls: string[] = storyToShare.scenes.flatMap((scene) => scene.sentences.map((sentence) => sentence.imageUrl));
+            const audioFiles: string[] = storyToShare.scenes.flatMap((scene) => scene.sentences.map((sentence) => sentence.audioFile));
 
             if (storyText.length === 0) {
               console.log(`shareStory: No story text to share: ${JSON.stringify(storyText)}}`);
@@ -983,16 +936,28 @@ function Home({ user }: HomeProps) {
                 userId: user.uid,
                 text: storyText.replace('\n', ' '),
                 imageUrls: JSON.stringify(imageUrls),
+                timestamp: Date.now(),
+                audioFiles: JSON.stringify(audioFiles),
               });
               console.log('ID of the current user:', user.uid);
             }
 
             // Create the story object
             const story = {
+              id: episodeIdRef.current,
               userId: user.uid,
               text: storyText,
               imageUrls: imageUrls,
               timestamp: Date.now(),
+              isStory: storyToShare.isStory,
+              title: storyToShare.title,
+              titleImage: storyToShare.imageUrl,
+              prompt: storyToShare.prompt,
+              namespace: storyToShare.namespace,
+              tokens: storyToShare.tokens,
+              personality: storyToShare.personality,
+              references: storyToShare.references,
+              audioFiles: audioFiles,
             };
 
             // Send a POST request to the API endpoint
@@ -1010,15 +975,19 @@ function Home({ user }: HomeProps) {
             const data = await response.json();
 
             // Extract the story ID and URL from the response
-            const { storyId, storyUrl } = data;
+            const { storyUrl, shareUrl } = data;
 
-            console.log(`Story ${storyText.slice(0, 30)}... json stored to ${storyUrl}!`);
+            console.log(`Story ${story.title}... json shared as ${shareUrl} JSON stored as ${storyUrl}.`);
             if (twitchChatEnabled && authEnabled && channelId !== '') {
               // Post the story to the Twitch chat
-              await postResponse(channelId, `Story Manga Reader Shareable Link Created at: ${baseUrl}/${storyId} for the story: ${storyText.slice(0, 200)}.`, user.uid);
+              await postResponse(channelId,
+                `Shared ${story.isStory ?
+                  "Story" : "Question"}: ${story.title} at ${storyUrl} as personality ${story.personality} ` +
+                `with document embeddings from ${story.namespace == "groovypdf" ? "Wisdom" : "Science"} ` +
+                `Plotline: ${story.titleImage}`, user.uid);
             }
 
-            return storyId;
+            return shareUrl;
           } catch (error) {
             console.error('An error occurred in the shareStory function:', error); // Check for any errors
             return '';
@@ -1030,13 +999,10 @@ function Home({ user }: HomeProps) {
           const idToken = await user?.getIdToken();
           let sentences: string[];
 
-          // Clear the current story
-          setCurrentStory([]); // Clear the current story
-
           // setup the story structure
           let story: Story = {
             title: '',
-            storyId: '',
+            id: '',
             prompt: '',
             tokens: 0,
             scenes: [],
@@ -1060,8 +1026,7 @@ function Home({ user }: HomeProps) {
           let storyId = '';
 
           let sceneTexts: string[] = [];
-          // ImageData or string
-          let promptImages: (ImageData | string)[] = [];
+          let promptImages: (string)[] = [];
           let promptImageTexts: string[] = [];
           let promptImageText = '';
           let promptImageEpisodeText = '';
@@ -1175,12 +1140,6 @@ function Home({ user }: HomeProps) {
           // get first sentence as title or question to display
           let firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
 
-          // only if we are not currently displaying a story
-          if (isDisplayingRef.current === false) {
-            setSubtitle(firstSentence);
-          }
-          setLoadingOSD(`Generating images for ${sentences.length} sentences with ${sceneTexts.length} scenes...`);
-
           // display title screen with image and title
           const imgGenResult = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
@@ -1190,11 +1149,10 @@ function Home({ user }: HomeProps) {
               console.log(`promptImageEpisodeText: ${promptImageEpisodeText}`);
             }
           }
-          const titleScreen: ImageData | string = lastImage;
+          const titleScreen: string = lastImage;
           const titleScreenText = firstSentence;
 
           // Extract the scene texts from the message
-          let localCurrentStory: any[] = []; // local variable
           let sentencesToSpeak = [] as string[];
           for (const sentence of sentences) {
             if (sentence == '-' || (sentence.startsWith('--') && sentence.endsWith('-'))) {
@@ -1213,14 +1171,11 @@ function Home({ user }: HomeProps) {
               // When we encounter a new scene, we push the current scene text to the array
               // and start a new scene text
               let cleanSentence = sentence.replace('SCENE:', '').replace('SCENE', '');
-              let newImage: ImageData | string = '';
               if (currentSceneText !== "") {
                 // generate this scenes image
-                console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
-                setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
-                if (isDisplayingRef.current === false) {
-                  setSubtitle('');
-                }
+                console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 60)}`);
+                setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 60)}`);
+
                 const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
                 let extraPrompt = ''
                 if (imgGenResult.image !== '') {
@@ -1235,15 +1190,8 @@ function Home({ user }: HomeProps) {
                   }
                 }
 
-                // store current scene text and image generated
-                let image: ImageData | string = await createImageData(lastImage);
                 sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')} ${extraPrompt}`);
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${currentSceneText}\n${extraPrompt}`, imageUrl: JSON.stringify(image) }];
                 sceneCount++;
-              } else {
-                // store current scene text and image generated
-                let image: ImageData | string = await createImageData(lastImage);
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
               }
               // Next scene setup and increment scene counter
               currentSceneText = cleanSentence;
@@ -1252,9 +1200,6 @@ function Home({ user }: HomeProps) {
             } else {
               // If it's not a new scene, we append the sentence to the current scene text
               currentSceneText += ` ${sentence}`;
-              let image: ImageData | string = await createImageData(lastImage);
-              localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${sentence}\n`, imageUrl: JSON.stringify(image) }];
-
               sentencesToSpeak.push(sentence);
             }
           }
@@ -1262,11 +1207,6 @@ function Home({ user }: HomeProps) {
           // Don't forget to push the last scene text
           if (currentSceneText !== "") {
             sceneTexts.push(`SCENE: ${currentSceneText}`);
-
-            let image: ImageData | string = await createImageData(lastImage);
-
-            // save story and images for auto save and/or sharing
-            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${currentSceneText}\n`, imageUrl: JSON.stringify(image) }];
             sceneCount++;
           }
 
@@ -1274,7 +1214,6 @@ function Home({ user }: HomeProps) {
           if (sceneTexts.length === 0 && imageCount === 0) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
-            setSubtitle('');
             const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             let extraPrompt = ''
             if (imgGenResult.image !== '') {
@@ -1290,28 +1229,10 @@ function Home({ user }: HomeProps) {
             }
             sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')} ${extraPrompt}`);
 
-            // collect sentences to speak
-            let cleanSentence = currentSceneText.replace('SCENE:', '').replace('SCENE', '');
-            let image: ImageData | string = await createImageData(lastImage);
-
             // save story and images for auto save and/or sharing
-            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${cleanSentence}\n${extraPrompt}`, imageUrl: JSON.stringify(image) }];
             sceneCount++;
           }
-
-          // Save the current story
-          setCurrentStory(localCurrentStory);
-
-          try {
-            // Share the story after building it before displaying it
-            storyId = await shareStory(localCurrentStory, isFetching);
-            shareUrl = baseUrl + '/' + storyId;
-            if (isDisplayingRef.current === false) {
-              setSubtitle(`\nEpisode shared to: ${shareUrl}!`);
-            }
-          } catch (error) {
-            console.error(`Error sharing story: ${error}`);
-          }
+          setLoadingOSD(`Generating images for ${sentences.length} sentences with ${sceneTexts.length} scenes...`);
 
           // keep track of scene and images positions
           let sceneIndex = 0;
@@ -1351,16 +1272,16 @@ function Home({ user }: HomeProps) {
           }
 
           // Display the images and subtitles
-          episodeIdRef.current = uuidv4();
+          episodeIdRef.current = uuidv4().replace(/-/g, '');
 
           // Fill the story object
           story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
           story.title = titleScreenText;
-          story.storyId = storyId;
+          story.id = episodeIdRef.current;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
           story.imageUrl = titleScreen.toString();
           story.imagePrompt = promptImageEpisodeText;
-          story.shareUrl = shareUrl;
+          story.shareUrl = '';
           story.personality = selectedPersonality; // TODO - add personality to the story object
           story.namespace = selectedNamespace; // TODO - add namespace to the story object
           story.isStory = isStory;
@@ -1495,7 +1416,7 @@ function Home({ user }: HomeProps) {
                   console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
                 }
                 if (cleanText !== '') {
-                  audioFile = `audio/${storyId}/${sentenceId}.mp3`;
+                  audioFile = `audio/${story.id}/${sentenceId}.mp3`;
                   await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
                 }
               } else {
@@ -1512,7 +1433,7 @@ function Home({ user }: HomeProps) {
                 }
                 try {
                   if (translationEntry != '') {
-                    audioFile = `audio/${storyId}/${sentenceId}.mp3`;
+                    audioFile = `audio/${story.id}/${sentenceId}.mp3`;
                     await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
                   }
                 } catch (e) {
@@ -1543,8 +1464,25 @@ function Home({ user }: HomeProps) {
           if (scene) {
             story.scenes.push(scene);
           }
+
+          // share the story
+          try {
+            // Share the story after building it before displaying it
+            let shareUrl = await shareStory(story, isFetching);
+
+            if (shareUrl != '' && isDisplayingRef.current === false) {
+              setLoadingOSD(`\nEpisode shared to: ${shareUrl}!`);
+              story.shareUrl = shareUrl;
+            }
+          } catch (error) {
+            console.error(`Error sharing story: ${error}`);
+          }
+
           // Add the story to the playQueue
           setPlayQueue(prevPlayQueue => [...prevPlayQueue, story]);
+
+          // clear the status OSD display
+          setLoadingOSD('');
         }
 
         if (lastMessageIndex > lastSpokenMessageIndex &&
@@ -1563,7 +1501,7 @@ function Home({ user }: HomeProps) {
       }
       isSpeakingRef.current = false;
     }
-  }, [messages, isDisplayingRef.current, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, autoSave, autoSave, currentStory, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
+  }, [messages, isDisplayingRef.current, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
@@ -1849,6 +1787,7 @@ function Home({ user }: HomeProps) {
             }
             tokens = tokens + countTokens(data.data);
             setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
+            
             if (isDisplayingRef.current === false && isSpeaking === false) {
               messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             }
@@ -1863,9 +1802,6 @@ function Home({ user }: HomeProps) {
     } catch (error: any) {
       setLoading(false);
       setLoadingOSD(`System Error: ${error.message}`);
-      if (isDisplayingRef.current === false && isSpeaking === false) {
-        setSubtitle('');
-      }
       setError('An error occurred while fetching the data. Please try again.');
       if (isDisplayingRef.current === false) {
         messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
@@ -1875,9 +1811,10 @@ function Home({ user }: HomeProps) {
     isSubmittingRef.current = false;
   }
 
-  // Handle the submit event on Enter
   const handleEnter = (e: any) => {
     if (e.key === 'Enter' && !e.shiftKey && query) {
+      e.preventDefault(); // Prevent the default action
+
       let episode: Episode = {
         title: query,
         plotline: '',
@@ -2089,15 +2026,6 @@ function Home({ user }: HomeProps) {
       }
     }
   }, [listening, isSpeaking, voiceQuery, stoppedManually, startSpeechRecognition]);
-
-  // autoSave toggle
-  const handleAutoSaveToggle = () => {
-    if (!autoSave) {
-      setAutoSave(true);
-    } else {
-      setAutoSave(false);
-    }
-  };
 
   // speech toggle
   const handleSpeechToggle = () => {
@@ -2326,9 +2254,17 @@ function Home({ user }: HomeProps) {
                         </>
                       ) : (<></>)}
                     </div>
-                    <div className={styles.footer}>
-                      {loadingOSD}
-                    </div>
+                    <button
+                      className={styles.loadingOSDButton}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                      }}
+                      type="button"
+                    >
+                      {loadingOSD}{latestMessage.message ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : '[]'}
+                    </button>
                     {(imageUrl === '') ? "" : (
                       <>
                         <img
@@ -2342,11 +2278,6 @@ function Home({ user }: HomeProps) {
                     }>
                       {subtitle}
                     </div>
-                    {(imageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
-                      <div>
-                        <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className={styles.generatedTerminal}>
@@ -2666,22 +2597,6 @@ function Home({ user }: HomeProps) {
                       </div>
                     </Modal>
                     &nbsp;&nbsp;&nbsp;&nbsp;
-                    {authEnabled ? (
-                      <>
-                        <button
-                          title="Auto Save Stories"
-                          className={`${styles.footer} ${autoSave ? styles.listening : ''}`}
-                          onClick={handleAutoSaveToggle}
-                          type="button"
-
-                        >
-                          {autoSave ? 'Stop Saving Stories' : 'Save Stories'}
-                        </button>
-                        &nbsp;&nbsp;&nbsp;&nbsp;
-                      </>
-                    ) : (
-                      <></>
-                    )}
                     <EpisodePlanner episodes={episodes} onNewEpisode={handleNewEpisode} onEpisodeChange={handleEpisodeChange} />
                   </div>
                 </form>

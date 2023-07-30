@@ -118,16 +118,34 @@
   top: 10px;
   right: 10px;
   padding: 3px 8px;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.1);
   color: rgba(255, 255, 255, 0.8);
   border-radius: 8px;
   font-size: 14px;
-  z-index: 10;
+  z-index: 100;
 }
 
 .fullscreenButton:hover {
-  background-color: rgba(0, 80, 0, 0.9);
+  background-color: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
+}
+
+
+.loadingOSDButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 8px;
+  background-color: rgba(0, 0, 0, 0.0);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 1px;
+  font-size: 14px;
+  z-index: 1;
+}
+
+.loadingOSDButton:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 1px;
 }
 
 .readerPager {
@@ -583,7 +601,7 @@
 }
 
 .generatebutton {
-  background-color: #008000;
+  background-color:  rgb(12, 75, 142, 0.5);
   border: none;
   border-radius: 5px;
   color: white;
@@ -598,7 +616,7 @@
 }
 
 .generatebutton:hover {
-  background: rgb(0, 128, 0, 0.5);
+  background:  rgb(12, 75, 142, 0.5);
   border-radius: 0.2rem;
 }
 
@@ -809,7 +827,7 @@
 }
 
 .header a:hover {
-  background-color: rgba(0, 80, 0, 0.9);
+  background-color: rgba(0, 0, 0, 0.3);
   opacity: 0.8;
   border-radius: 8px;
 }
@@ -1034,7 +1052,7 @@
 .story {
   background-color: #000000;
   color: #f1ebeb;
-  border: 4px double #008000;
+  border: 4px double #ffc601;
   border-radius: 8px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
@@ -1051,7 +1069,7 @@
 .readerStory {
   background-color: #000000;
   color: #f1ebeb;
-  border: 4px double #008000;
+  border: 4px double #ffc601;
   border-radius: 8px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;

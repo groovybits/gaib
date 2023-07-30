@@ -46,6 +46,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...stories[key],
     }));
 
+    if (storiesArray === undefined || storiesArray === null || storiesArray.length === 0) {
+      res.status(404).json({ message: 'No stories found' });
+      return;
+    }
+
     // Sort the stories by timestamp in descending order
     storiesArray.sort((a, b) => b.timestamp - a.timestamp);
 

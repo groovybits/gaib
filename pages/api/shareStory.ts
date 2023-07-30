@@ -19,6 +19,7 @@ const db = admin.firestore();
 const storage = new Storage();
 const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
 const bucket = storage.bucket(bucketName as string);
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
@@ -27,7 +28,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       const story = req.body;
 
       // Generate the story ID
-      const storyId = db.collection('stories').doc().id;
+      const storyId = story.id;
 
       // Convert the story data to JSON
       const storyJson = JSON.stringify(story);
@@ -38,6 +39,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       // Get the URL of the uploaded JSON file
       const storyUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+      const shareUrl = `${baseUrl}/${storyId}`
 
       // Extract the necessary information
       const { userId, text, imageUrls, timestamp } = story;
@@ -50,10 +52,18 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         text,
         imageUrls,
         timestamp,
-        // Add other basic information about the story here
+        isStory: story.isStory,
+        title: story.title,
+        titleImage: story.titleImage,
+        prompt: story.prompt,
+        namespace: story.namespace,
+        tokens: story.tokens,
+        personality: story.personality,
+        references: story.references,
+        audioFiles: story.audioFiles,
       });
 
-      res.status(200).json({ message: 'Story shared successfully', storyId: storyId, storyUrl: storyUrl });
+      res.status(200).json({ message: 'Story shared successfully', storyUrl: storyUrl, shareUrl: shareUrl });
     } else {
       res.status(405).json({ message: 'Method not allowed' });
     }

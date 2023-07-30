@@ -108,11 +108,8 @@ export default function Feed() {
     // Remove ```bash and other similar markers
     text = text.replace(/```.*\n/g, '');
 
-    // Remove "|" pipes
-    text = text.replace(/\|/g, '');
-
-    // Split the text by the [SCENE: <number>] markers
-    const scenes = text.split(/\[SCENE: \d+\]/g);
+    // Split by "|" pipes
+    const scenes = text.split(/\|/g);
 
     // Split each scene into paragraphs and list items
     const formattedScenes = scenes.map((scene, sceneIndex) => {
@@ -155,7 +152,7 @@ export default function Feed() {
               thumbnailUrls = (thumbnailUrls as string).split(',');
             }
 
-            const thumbnailSrc = thumbnailUrls && thumbnailUrls.length > 0 ? thumbnailUrls[0] : JSON.parse(story.imageUrls[0]).url;
+            const thumbnailSrc = thumbnailUrls && thumbnailUrls.length > 0 ? thumbnailUrls[0] : story.imageUrls[0];
             const dateString = new Date(story.timestamp).toLocaleDateString();
 
             if (stories.length === index + 1) {
@@ -175,7 +172,7 @@ export default function Feed() {
                       }}
                     /> {/* Thumbnail image here */}
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}
+                      {story.text.split(/\|/g)[0]}
                     </div>
                   </a>
                   <div className={styles.shareButtons}>
@@ -206,7 +203,7 @@ export default function Feed() {
                             {story.imageUrls.map((imageUrl, index) => (
                               <img
                                 key={index} // Add this line
-                                src={thumbnailUrls && thumbnailUrls[index] ? thumbnailUrls[index] : JSON.parse(imageUrl).url}
+                                src={thumbnailUrls && thumbnailUrls[index] ? thumbnailUrls[index] : imageUrl}
                                 alt=""
                                 style={{
                                   width: '256px',  // Set the width you want
@@ -240,7 +237,7 @@ export default function Feed() {
                       }}
                     /> {/* Thumbnail image here */}
                     <div style={{ display: 'flex', flexDirection: 'column', fontSize: '18px' }}>
-                      {story.text.replace(/\[SCENE: \d+\]/g, '').split('|')[0]}
+                      {story.text.split(/\|/g)[0]}
                     </div>
                   </a>
                   <div className={styles.shareButtons}>
@@ -270,14 +267,7 @@ export default function Feed() {
                           </p>
                           <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
                             {story.imageUrls.map((imageUrl, index) => {
-                              let src;
-                              try {
-                                // Try to parse imageUrl as JSON
-                                src = JSON.parse(imageUrl).url;
-                              } catch {
-                                // If it's not JSON, use it as a string URL
-                                src = imageUrl;
-                              }
+                              let src = imageUrl;
 
                               // If thumbnailUrls exist, use them instead
                               if (story.thumbnailUrls && story.thumbnailUrls[index]) {

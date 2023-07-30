@@ -101,14 +101,8 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   if (selectedStory) {
     const scenes = selectedStory.text.split('|');
     const imageUrl = selectedStory.imageUrls[currentScene % selectedStory.imageUrls.length];
-    // Parse the JSON string to get the image details
-    const imageDetails = JSON.parse(imageUrl);
-
     // Extract the image URL and other details
-    const actualImageUrl = imageDetails.url;
-    const photographer = imageDetails.photographer;
-    const photographerUrl = imageDetails.photographer_url;
-    const pexelsUrl = imageDetails.pexels_url;
+    const actualImageUrl = imageUrl;
 
     return (
       <>
@@ -138,11 +132,6 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                   }}
                 >
                   <div className={styles.readerImage}>
-                    {(actualImageUrl === '' || (process.env.NEXT_PUBLIC_IMAGE_SERVICE != "pexels")) ? "" : (
-                      <div>
-                        <PexelsCredit photographer={photographer} photographerUrl={photographerUrl} pexelsUrl={pexelsUrl} />
-                      </div>
-                    )}
                     <button
                       type="button"
                       className={styles.fullscreenButton}
