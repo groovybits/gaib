@@ -2263,7 +2263,7 @@ function Home({ user }: HomeProps) {
                       }}
                       type="button"
                     >
-                      {loadingOSD}{latestMessage.message ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : '[]'}
+                      {loadingOSD}{(loading && latestMessage.message) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : isSpeaking ? 'Playing...' : ' - Groovy is ready to generate your vision!'}
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
