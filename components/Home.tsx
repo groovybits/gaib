@@ -354,11 +354,8 @@ function Home({ user }: HomeProps) {
 
   // News fetching for automating input via a news feed
   useEffect(() => {
-    let isRunning = false;
-
     const processNewsArticle = async () => {
-      if (isFetching && !isRunning && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= maxQueueSize) {
-        isRunning = true;
+      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= maxQueueSize) {
         isProcessingRef.current = true;
 
         let currentNews = news;
@@ -421,7 +418,6 @@ function Home({ user }: HomeProps) {
         }
 
         isProcessingRef.current = false;
-        isRunning = false;
       }
     };
 
@@ -439,11 +435,8 @@ function Home({ user }: HomeProps) {
 
   // Fetch the MediaStack News
   useEffect(() => {
-    let isRunning = false;
-
     const processQueue = async () => {
-      if (episodes.length > 0 && !isSpeaking && !loading && isFetching && !listening && !isProcessingRef.current && !isSubmittingRef.current && !isRunning) {
-        isRunning = true;
+      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current) {
         const episode = episodes.shift();
         isSubmittingRef.current = true;
         try {
@@ -470,25 +463,21 @@ function Home({ user }: HomeProps) {
           episode && episodes.unshift(episode); // Put the episode back in the queue
           isSubmittingRef.current = false;
         }
-        isRunning = false;
       }
     };
 
     processQueue();  // Run immediately on mount
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processQueue, 30000);  // Then every N seconds
+    const intervalId = setInterval(processQueue, 10000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening]);
+  }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening, handleSubmit]);
 
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
-    let isRunning = false;
-
     const playQueueDisplay = async () => {
-      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current && !isRunning) {
-        isRunning = true;
+      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
         const playStory = playQueue[0];  // Get the first story
         try {
           console.log(`PlayQueaue: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
@@ -538,9 +527,7 @@ function Home({ user }: HomeProps) {
         setSubtitle('Think of a story you want to tell, or a question you want to ask.');
         
         setLoadingOSD(`Finished playing ${playStory.title}. `);
-        setSubtitle('\nGroovy\nCreate your visions and dreams today');
-        
-        isRunning = false;
+        setSubtitle('\nGroovy\nCreate your visions and dreams today');        
       }
     };
 
@@ -1492,7 +1479,7 @@ function Home({ user }: HomeProps) {
       }
       isSpeakingRef.current = false;
     }
-  }, [messages, isDisplayingRef.current, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
+  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
   // Speech recognition
   type SpeechRecognition = typeof window.SpeechRecognition;
