@@ -836,31 +836,53 @@ function Home({ user }: HomeProps) {
             let content: string = 'random image of a robot anime AI';
             const idToken = await user?.getIdToken();
             // Send a POST request to your local API endpoint.
-            const response = await fetch('/api/gpt', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
-              },
-              body: JSON.stringify(requestBody)
-            });
+            // timeout if it takes longer than 10 seconds
+            // Create an AbortController instance
+            const controller = new AbortController();
+            const { signal } = controller;
 
-            // Parse the response.
-            const data = await response.json();
+            // Set a timeout to abort the fetch request after 10 seconds
+            const timeout = setTimeout(() => {
+              controller.abort();
+            }, 10000);
 
-            // skip if the response is not 200
-            if (!response.ok || response.status !== 200) {
-              console.error(`Error: GPT + AI generated message: ${data.error}`);
-              throw new Error(`Error: GPT + AI generated message: ${data.error}`);
+            try {
+              // Make the fetch request, passing the signal to it
+              const response = await fetch('/api/gpt', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify(requestBody),
+                signal  // Pass the abort signal to the fetch request
+              });
+
+              // Parse the response
+              const data = await response.json();
+
+              // Clear the timeout if the request completes successfully
+              clearTimeout(timeout);
+
+              // skip if the response is not 200
+              if (!response.ok || response.status !== 200) {
+                console.error(`Error: GPT + AI generated message: ${data.error}`);
+                throw new Error(`Error: GPT + AI generated message: ${data.error}`);
+              }
+
+
+              if (debug) {
+                console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
+              }
+
+              // Extract the AI generated message.
+              content = data.aiMessage.content;
+              setConvesationHistory([...conversationHistory, data])
+            } catch (error) {
+              // Handle the error
+              console.error(`Error: GPT + AI generated message: ${error}`);
+              throw new Error(`Error: GPT + AI generated message: ${error}`);
             }
-
-            if (debug) {
-              console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
-            }
-
-            // Extract the AI generated message.
-            content = data.aiMessage.content;
-            setConvesationHistory([...conversationHistory, data])
             return content;
           } catch (error) {
             console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
@@ -872,7 +894,24 @@ function Home({ user }: HomeProps) {
         const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: ImageData | string, count: number = 0): Promise<{ image: string | ImageData, prompt: string }> => {
           try {
             let prompt = imagePrompt;
-            const content = await generateAImessage(imagePrompt, personalityPrompt);
+            let content: string = '';
+            let retries = 0;
+            while (content === '') {
+              if (retries > 0) {
+                console.log(`generateAIimage: Retry #${retries} for image generation`);
+                if (retries > 2) {
+                  console.log(`generateAIimage: Too many retries for image generation, giving up`);
+                  break;
+                }
+                // sleep for 1 second
+                setTimeout(() => {
+                  if (debug) {
+                    console.log('generateAIimage: sleeping for 1 second, retrying');
+                  }
+                }, 1000);
+              }
+              content = await generateAImessage(imagePrompt, personalityPrompt);
+            }
             if (content === '') {
               prompt = imagePrompt;
             } else {
@@ -1147,7 +1186,7 @@ function Home({ user }: HomeProps) {
               promptImageEpisodeText = imgGenResult.prompt;
               console.log(`promptImageEpisodeText: ${promptImageEpisodeText}`);
             }
-          }          
+          }
           const titleScreen: ImageData | string = lastImage;
           const titleScreenText = firstSentence;
 
