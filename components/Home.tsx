@@ -982,9 +982,9 @@ function Home({ user }: HomeProps) {
               // Post the story to the Twitch chat
               await postResponse(channelId,
                 `Shared ${story.isStory ?
-                  "Story" : "Question"}: ${story.title} at ${storyUrl} as personality ${story.personality} ` +
+                  "Story" : "Question"}: ${story.title} at ${shareUrl} as personality ${story.personality} ` +
                 `with document embeddings from ${story.namespace == "groovypdf" ? "Wisdom" : "Science"} ` +
-                `Plotline: ${story.titleImage}`, user.uid);
+                `Plotline: ${story.title}`, user.uid);
             }
 
             return shareUrl;
