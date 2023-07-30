@@ -854,7 +854,7 @@ function Home({ user }: HomeProps) {
               prompt = content;
             }
             // Use the AI generated message as the prompt for generating an image URL.
-            let gaibImage = await generateImageUrl(content, true, localLastImage, episodeIdRef.current, count);
+            let gaibImage = await generateImageUrl(prompt, true, localLastImage, episodeIdRef.current, count);
             return { image: gaibImage, prompt: prompt };
           } catch (error) {
             console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);

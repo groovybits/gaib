@@ -190,8 +190,8 @@ export default function Feed() {
                         <div style={{
                           display: 'flex',
                           flexDirection: 'column',
-                          fontSize: '24px',
-                          maxHeight: '90vh', // 90% of the viewport height
+                          fontSize: '12px',
+                          maxHeight: '100%', // 90% of the viewport height
                           maxWidth: '90vw', // 90% of the viewport width
                           overflowY: 'auto', // Enable vertical scrolling if necessary
                           overflowX: 'hidden' // Prevent horizontal scrolling
@@ -207,7 +207,7 @@ export default function Feed() {
                                 alt=""
                                 style={{
                                   width: '256px',  // Set the width you want
-                                  /*height: '256px',*/  // Set the height you want
+                                  height: 'auto',  // Set the height you want
                                   padding: '4px',
                                   objectFit: 'contain',
                                   margin: '10px'
@@ -257,7 +257,7 @@ export default function Feed() {
                           display: 'flex',
                           flexDirection: 'column',
                           fontSize: '24px',
-                          maxHeight: '90vh', // 90% of the viewport height
+                          maxHeight: '100%', // 90% of the viewport height
                           maxWidth: '90vw', // 90% of the viewport width
                           overflowY: 'auto', // Enable vertical scrolling if necessary
                           overflowX: 'hidden' // Prevent horizontal scrolling
