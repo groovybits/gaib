@@ -154,7 +154,7 @@ function Home({ user }: HomeProps) {
   const episodeIdRef = useRef<string>(uuidv4());
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
-  const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 6);
+  const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 3);
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -436,7 +436,7 @@ function Home({ user }: HomeProps) {
   // Fetch the MediaStack News
   useEffect(() => {
     const processQueue = async () => {
-      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current) {
+      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current && episodes.length <= maxQueueSize) {
         const episode = episodes.shift();
         isSubmittingRef.current = true;
         try {
@@ -541,7 +541,7 @@ function Home({ user }: HomeProps) {
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
-    if (!isSpeakingRef.current) {
+    if (!isSpeakingRef.current && playQueue.length < maxQueueSize) {
       isSpeakingRef.current = true;
 
       // last message set to mark our position in the messages array
