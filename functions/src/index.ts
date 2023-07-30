@@ -39,7 +39,9 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
         try {
           const thumbnailUrl = await createThumbnail(storyId,
             story.imageUrls[index], index, uniqueImageUrls);
-          thumbnailUrls.push(thumbnailUrl);
+          if (thumbnailUrl) { // Check if thumbnailUrl is not null
+            thumbnailUrls.push(thumbnailUrl);
+          }
         } catch (error) {
           console.error(
             `Failed to create thumbnail for image at index ${index}`,
@@ -78,7 +80,7 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
  */
 async function createThumbnail(storyId: string,
   imageUrl: string, index: number,
-  uniqueImageUrls: Set<string>): Promise<string> {
+  uniqueImageUrls: Set<string>): Promise<string | null> { // Return type is now string | null
   try {
     const bucketName: string = functions.config().storage.bucket;
 
@@ -120,6 +122,14 @@ async function createThumbnail(storyId: string,
     const thumbnailFile = storage.bucket(bucketName).file(thumbnailPath);
     await thumbnailFile.save(resizedImageBuffer,
       {contentType: "image/jpeg"});
+
+    // Check if the thumbnail already exists in the bucket
+    const [exists] = await thumbnailFile.exists();
+    if (exists) {
+      // If the thumbnail exists, return its URL
+      const thumbnailUrl = `https://storage.googleapis.com/${bucketName}/${thumbnailPath}`;
+      return thumbnailUrl;
+    }
 
     // Return the public URL of the thumbnail
     const thumbnailUrl = `https://storage.googleapis.com/${bucketName}/` +
