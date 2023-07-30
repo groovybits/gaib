@@ -171,7 +171,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                           left: 0,
                           width: "50%", // covers the left half of the image area
                           cursor: "pointer", // changes the cursor to a hand when hovering over the div
-                          backgroundColor: leftHover ? "rgba(0, 0, 0, 0.2)" : "transparent",
+                          backgroundColor: leftHover ? "rgba(0, 0, 0, 0.1)" : "transparent",
                         }}
                         onClick={previousPage}
                         onMouseEnter={() => setLeftHover(true)} // set state to true when mouse enters
@@ -197,7 +197,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                           right: 0,
                           width: "50%", // covers the right half of the image area
                           cursor: "pointer", // changes the cursor to a hand when hovering over the div
-                          backgroundColor: rightHover ? "rgba(0, 0, 0, 0.2)" : "transparent",
+                          backgroundColor: rightHover ? "rgba(0, 0, 0, 0.1)" : "transparent",
                         }}
                         onClick={nextPage} // attach the event handler to the div
                         onMouseEnter={() => setRightHover(true)} // set state to true when mouse enters

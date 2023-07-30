@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
@@ -823,8 +823,8 @@ function Home({ user }: HomeProps) {
           return '';
         }
 
-        // This is the function you want to run every 60 seconds
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: ImageData | string, count: number = 0): Promise<string | ImageData> => {
+        // This function generates the AI message using GPT
+        const generateAImessage = async (imagePrompt: string, personalityPrompt: string): Promise<string> => {
           try {
             // Prepare the request body. You may need to adjust this to fit your use case.
             const requestBody = {
@@ -834,62 +834,58 @@ function Home({ user }: HomeProps) {
             };
 
             let content: string = 'random image of a robot anime AI';
-            try {
-              const idToken = await user?.getIdToken();
-              // Send a POST request to your local API endpoint.
-              const response = await fetch('/api/gpt', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${idToken}`
-                },
-                body: JSON.stringify(requestBody)
-              });
+            const idToken = await user?.getIdToken();
+            // Send a POST request to your local API endpoint.
+            const response = await fetch('/api/gpt', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+              },
+              body: JSON.stringify(requestBody)
+            });
 
-              // Parse the response.
-              const data = await response.json();
+            // Parse the response.
+            const data = await response.json();
 
-              // skip if the response is not 200
-              if (!response.ok || response.status !== 200) {
-                console.error(`Error: GPT + AI generated message: ${data.error}`);
-                throw new Error(`Error: GPT + AI generated message: ${data.error}`);
-              }
-
-              if (debug) {
-                console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
-              }
-
-              // Extract the AI generated message.
-              content = data.aiMessage.content;
-              setConvesationHistory([...conversationHistory, data])
-            } catch (error) {
-              console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
-              content = imagePrompt;
+            // skip if the response is not 200
+            if (!response.ok || response.status !== 200) {
+              console.error(`Error: GPT + AI generated message: ${data.error}`);
+              throw new Error(`Error: GPT + AI generated message: ${data.error}`);
             }
 
-            try {
-              // Use the AI generated message as the prompt for generating an image URL.
-              let gaibImage = await generateImageUrl(content, true, localLastImage, episodeIdRef.current, count);
-              return gaibImage;
-            } catch (error) {
-              console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
-              return '';
+            if (debug) {
+              console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
             }
+
+            // Extract the AI generated message.
+            content = data.aiMessage.content;
+            setConvesationHistory([...conversationHistory, data])
+            return content;
           } catch (error) {
-            console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
+            console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
+            return imagePrompt;
           }
-          return '';
         };
 
-        function splitSentence(sentence: any, maxLength = 300) {
-          const regex = new RegExp(`(.{1,${maxLength}})(\\s+|$)`, 'g');
+        // This function generates the image using the AI message from the previous function
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: ImageData | string, count: number = 0): Promise<{ image: string | ImageData, prompt: string }> => {
           try {
-            return sentence.match(regex) || [];
-          } catch (e) {
-            console.log('Error splitting sentence: ', sentence, ': ', e);
-            return [sentence];
+            let prompt = imagePrompt;
+            const content = await generateAImessage(imagePrompt, personalityPrompt);
+            if (content === '') {
+              prompt = imagePrompt;
+            } else {
+              prompt = content;
+            }
+            // Use the AI generated message as the prompt for generating an image URL.
+            let gaibImage = await generateImageUrl(content, true, localLastImage, episodeIdRef.current, count);
+            return { image: gaibImage, prompt: prompt };
+          } catch (error) {
+            console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
+            return { image: '', prompt: imagePrompt };
           }
-        }
+        };
 
         function removeMarkdownAndSpecialSymbols(text: string): string {
           // Remove markdown formatting
@@ -1024,6 +1020,9 @@ function Home({ user }: HomeProps) {
           let sceneTexts: string[] = [];
           // ImageData or string
           let promptImages: (ImageData | string)[] = [];
+          let promptImageTexts: string[] = [];
+          let promptImageText = '';
+          let promptImageEpisodeText = '';
           let currentSceneText = "";
           let imageCount = 0;
           let sceneCount = 0;
@@ -1141,12 +1140,14 @@ function Home({ user }: HomeProps) {
           setLoadingOSD(`Generating images for ${sentences.length} sentences...`);
 
           // display title screen with image and title
-          lastImage = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
-          if (isDisplayingRef.current === false) {
-            if (lastImage !== '') {
-              setScreenImage(lastImage);
+          const imgGenResult = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
+          if (imgGenResult.image !== '') {
+            lastImage = imgGenResult.image;
+            if (imgGenResult.prompt != '') {
+              promptImageEpisodeText = imgGenResult.prompt;
+              console.log(`promptImageEpisodeText: ${promptImageEpisodeText}`);
             }
-          }
+          }          
           const titleScreen: ImageData | string = lastImage;
           const titleScreenText = firstSentence;
 
@@ -1180,11 +1181,16 @@ function Home({ user }: HomeProps) {
                 if (isDisplayingRef.current === false) {
                   setSubtitle('');
                 }
-                newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-                if (newImage !== '') {
-                  lastImage = newImage;
+                const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                if (imgGenResult.image !== '') {
+                  lastImage = imgGenResult.image;
                   imageCount++;
                   promptImages.push(lastImage);
+                  if (imgGenResult.prompt != '') {
+                    promptImageText = imgGenResult.prompt;
+                    promptImageTexts.push(promptImageText);
+                    console.log(`promptImageText: ${promptImageText}`);
+                  }
                 }
 
                 // store current scene text and image generated
@@ -1228,11 +1234,16 @@ function Home({ user }: HomeProps) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
             setSubtitle('');
-            let newImage = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-            if (newImage !== '') {
-              lastImage = newImage;
+            const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            if (imgGenResult.image !== '') {
+              lastImage = imgGenResult.image;
               imageCount++;
               promptImages.push(lastImage);
+              if (imgGenResult.prompt != '') {
+                promptImageText = imgGenResult.prompt;
+                promptImageTexts.push(promptImageText);
+                console.log(`promptImageText: ${promptImageText}`);
+              }
             }
 
             // collect sentences to speak
@@ -1861,7 +1872,7 @@ function Home({ user }: HomeProps) {
   }, [chatMessages, latestMessage]);
 
   // Update the startSpeechRecognition function
-  const startSpeechRecognition = () => {
+  const startSpeechRecognition = useCallback(() => {
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       // Update the listening state
       if (listening) {
@@ -1974,7 +1985,6 @@ function Home({ user }: HomeProps) {
           } else {
             console.log(`Speech recognition timed out after 10 seconds without voiceQuery results, voiceQuery: '${voiceQuery.slice(0, 16)}...'`);
             spokenInput = '';
-            setVoiceQuery('');
           }
         }, 10000); // Timeout after finished speaking
         setTimeoutID(newTimeoutID);
@@ -1997,7 +2007,7 @@ function Home({ user }: HomeProps) {
     } else {
       console.log('Speech Recognition API is not supported in this browser.');
     }
-  };
+  }, [listening, stoppedManually, recognition, setListening, setVoiceQuery, setSpeechRecognitionComplete, timeoutDetected, startWordDetected, stopWordDetected, setTimeoutID, isSpeaking, voiceQuery]);
 
   // Add a useEffect hook to call handleSubmit whenever the query state changes
   useEffect(() => {
@@ -2022,7 +2032,7 @@ function Home({ user }: HomeProps) {
         startSpeechRecognition();
       }
     }
-  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, timeoutDetected.current, stopWordDetected.current, isStory, episodes, startSpeechRecognition]);
+  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, isStory, episodes, startSpeechRecognition]);
 
   // Add a useEffect hook to start the speech recognition when the component mounts
   useEffect(() => {
