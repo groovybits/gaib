@@ -52,6 +52,7 @@ interface Scene {
   id: number;
   sentences: Sentence[];
   imageUrl: string;
+  imagePrompt: string;
 }
 
 type Story = {
@@ -60,6 +61,7 @@ type Story = {
   tokens: number;
   title: string;
   imageUrl: string;
+  imagePrompt: string;
   scenes: Scene[];
   timestamp: number;
   personality: string;
@@ -1039,6 +1041,7 @@ function Home({ user }: HomeProps) {
             tokens: 0,
             scenes: [],
             imageUrl: '',
+            imagePrompt: '',
             timestamp: Date.now(),
             personality: '',
             namespace: '',
@@ -1067,7 +1070,7 @@ function Home({ user }: HomeProps) {
           let sceneCount = 0;
 
           // Create a title screen image for the story
-          let promptImageTitle = "Generate a prompt for ai image generation of the following text to draw an animated image representing it as the title screen of an anime show:\n\n";
+          let promptImageTitle = "Generate a prompt for ai image generation of the following text that expands and continues the text to allow it to be added. summarize keepting it short and in context to allow placment into the story.\n\n";
           let historyPrimerTitle = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the intro title screen so we can generate an image of it.";
           let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
           let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
@@ -1176,7 +1179,7 @@ function Home({ user }: HomeProps) {
           if (isDisplayingRef.current === false) {
             setSubtitle(firstSentence);
           }
-          setLoadingOSD(`Generating images for ${sentences.length} sentences...`);
+          setLoadingOSD(`Generating images for ${sentences.length} sentences with ${sceneTexts.length} scenes...`);
 
           // display title screen with image and title
           const imgGenResult = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
@@ -1212,8 +1215,6 @@ function Home({ user }: HomeProps) {
               let cleanSentence = sentence.replace('SCENE:', '').replace('SCENE', '');
               let newImage: ImageData | string = '';
               if (currentSceneText !== "") {
-                sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')}`);
-
                 // generate this scenes image
                 console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
                 setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
@@ -1221,6 +1222,7 @@ function Home({ user }: HomeProps) {
                   setSubtitle('');
                 }
                 const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                let extraPrompt = ''
                 if (imgGenResult.image !== '') {
                   lastImage = imgGenResult.image;
                   imageCount++;
@@ -1229,12 +1231,14 @@ function Home({ user }: HomeProps) {
                     promptImageText = imgGenResult.prompt;
                     promptImageTexts.push(promptImageText);
                     console.log(`promptImageText: ${promptImageText}`);
+                    extraPrompt = promptImageText;
                   }
                 }
 
                 // store current scene text and image generated
                 let image: ImageData | string = await createImageData(lastImage);
-                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${currentSceneText}\n`, imageUrl: JSON.stringify(image) }];
+                sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')} ${extraPrompt}`);
+                localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}]\n${currentSceneText}\n${extraPrompt}`, imageUrl: JSON.stringify(image) }];
                 sceneCount++;
               } else {
                 // store current scene text and image generated
@@ -1268,12 +1272,11 @@ function Home({ user }: HomeProps) {
 
           // absence of SCENE markers in the message without any images and no sceneTexts
           if (sceneTexts.length === 0 && imageCount === 0) {
-            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
-
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
             setSubtitle('');
             const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            let extraPrompt = ''
             if (imgGenResult.image !== '') {
               lastImage = imgGenResult.image;
               imageCount++;
@@ -1282,15 +1285,17 @@ function Home({ user }: HomeProps) {
                 promptImageText = imgGenResult.prompt;
                 promptImageTexts.push(promptImageText);
                 console.log(`promptImageText: ${promptImageText}`);
+                extraPrompt = promptImageText;
               }
             }
+            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')} ${extraPrompt}`);
 
             // collect sentences to speak
             let cleanSentence = currentSceneText.replace('SCENE:', '').replace('SCENE', '');
             let image: ImageData | string = await createImageData(lastImage);
 
             // save story and images for auto save and/or sharing
-            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${cleanSentence}\n`, imageUrl: JSON.stringify(image) }];
+            localCurrentStory = [...localCurrentStory, { sentence: ` [SCENE: ${sceneCount + 1}] ${cleanSentence}\n${extraPrompt}`, imageUrl: JSON.stringify(image) }];
             sceneCount++;
           }
 
@@ -1354,6 +1359,7 @@ function Home({ user }: HomeProps) {
           story.storyId = storyId;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
           story.imageUrl = titleScreen.toString();
+          story.imagePrompt = promptImageEpisodeText;
           story.shareUrl = shareUrl;
           story.personality = selectedPersonality; // TODO - add personality to the story object
           story.namespace = selectedNamespace; // TODO - add namespace to the story object
@@ -1390,6 +1396,7 @@ function Home({ user }: HomeProps) {
                 id: sceneIndex,
                 sentences: [],
                 imageUrl: lastImage.toString(),
+                imagePrompt: promptImageTexts[imagesIndex],
               };
             }
 
