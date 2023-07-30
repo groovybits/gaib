@@ -23,6 +23,13 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
       const bucketName: string = functions.config().storage.bucket;
 
       const response = await fetch(storyUrl);
+      if (!response.ok) {
+        console.error("Failed to fetch story: " +
+          `${response.status} ${response.statusText}`);
+        const text = await response.text();
+        console.error(`Response text: ${text}`);
+        return;
+      }
       const story = await response.json();
 
       if (!story || !story.imageUrls) {
@@ -35,12 +42,19 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
       // Process each image individually
       const thumbnailUrls = [];
       const uniqueImageUrls: Set<string> = new Set();
+      let uniqueIndex = 0; // Index for unique images
       for (let index = 0; index < story.imageUrls.length; index++) {
         try {
-          const thumbnailUrl = await createThumbnail(storyId,
-            story.imageUrls[index], index, uniqueImageUrls);
-          if (thumbnailUrl) { // Check if thumbnailUrl is not null
-            thumbnailUrls.push(thumbnailUrl);
+          const imageUrl = story.imageUrls[index];
+          // Check if the image URL is unique
+          if (!uniqueImageUrls.has(imageUrl)) {
+            uniqueImageUrls.add(imageUrl);
+            const thumbnailUrl = await createThumbnail(storyId,
+              imageUrl, uniqueIndex);
+            if (thumbnailUrl) { // Check if thumbnailUrl is not null
+              thumbnailUrls.push(thumbnailUrl);
+              uniqueIndex++; // Increment the unique index
+            }
           }
         } catch (error) {
           console.error(
@@ -79,23 +93,9 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
  * @return { Promise<void> }
  */
 async function createThumbnail(storyId: string,
-  imageUrl: string, index: number,
-  uniqueImageUrls: Set<string>): Promise<string | null> {
+  imageUrl: string, index: number): Promise<string | null> {
   try {
     const bucketName: string = functions.config().storage.bucket;
-
-    // Check if the image URL is unique
-    if (uniqueImageUrls.has(imageUrl)) {
-      // If the image URL is not unique,
-      // return the URL of the existing thumbnail
-      const thumbnailIndex = Array.from(uniqueImageUrls).indexOf(imageUrl);
-      const thumbnailUrl = `https://storage.googleapis.com/${bucketName}/` +
-        `thumbnails/${storyId}/${thumbnailIndex}.jpeg`;
-      return thumbnailUrl;
-    }
-
-    // If the image URL is unique, add it to the set of unique image URLs
-    uniqueImageUrls.add(imageUrl);
 
     const parsedUrl = new URL(imageUrl);
     let bucketFilePath = parsedUrl.pathname.slice(1);
@@ -119,17 +119,20 @@ async function createThumbnail(storyId: string,
       .toBuffer();
 
     const thumbnailPath = `thumbnails/${storyId}/${index}.jpeg`;
-    const thumbnailFile = storage.bucket(bucketName).file(thumbnailPath);
-    await thumbnailFile.save(resizedImageBuffer,
-      {contentType: "image/jpeg"});
+    const thumbnailFile =
+      storage.bucket(bucketName).file(thumbnailPath);
 
     // Check if the thumbnail already exists in the bucket
     const [exists] = await thumbnailFile.exists();
     if (exists) {
-      // If the thumbnail exists, return its URL
-      const thumbnailUrl = `https://storage.googleapis.com/${bucketName}/${thumbnailPath}`;
+      console.log(`Thumbnail already exists: ${thumbnailPath}`);
+      const thumbnailUrl =
+        `https://storage.googleapis.com/${bucketName}/${thumbnailPath}`;
       return thumbnailUrl;
     }
+
+    await thumbnailFile.save(resizedImageBuffer,
+      {contentType: "image/jpeg"});
 
     // Return the public URL of the thumbnail
     const thumbnailUrl = `https://storage.googleapis.com/${bucketName}/` +
