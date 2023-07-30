@@ -1173,8 +1173,8 @@ function Home({ user }: HomeProps) {
               let cleanSentence = sentence.replace('SCENE:', '').replace('SCENE', '');
               if (currentSceneText !== "") {
                 // generate this scenes image
-                console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 60)}`);
-                setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 60)}`);
+                console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
+                setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
 
                 const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
                 let extraPrompt = ''
@@ -1212,8 +1212,8 @@ function Home({ user }: HomeProps) {
 
           // absence of SCENE markers in the message without any images and no sceneTexts
           if (sceneTexts.length === 0 && imageCount === 0) {
-            console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText}`);
-            setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${lastImage}`);
+            console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
+            setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
             const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             let extraPrompt = ''
             if (imgGenResult.image !== '') {
