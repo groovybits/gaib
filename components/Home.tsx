@@ -1156,7 +1156,7 @@ function Home({ user }: HomeProps) {
                 console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
                 setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
 
-                const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                const imgGenResult = await generateAIimage(`${promptImage} ${titleScreenText} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
                 let extraPrompt = ''
                 if (imgGenResult.image !== '') {
                   lastImage = imgGenResult.image;
@@ -1195,7 +1195,7 @@ function Home({ user }: HomeProps) {
           if (sceneTexts.length === 0 && imageCount === 0) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
-            const imgGenResult = await generateAIimage(`${promptImage}${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            const imgGenResult = await generateAIimage(`${promptImage} ${titleScreenText} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             let extraPrompt = ''
             if (imgGenResult.image !== '') {
               lastImage = imgGenResult.image;
