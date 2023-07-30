@@ -1122,13 +1122,15 @@ function Home({ user }: HomeProps) {
           const imgGenResult = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
             lastImage = imgGenResult.image;
+            imageCount++;
+            promptImages.push(lastImage);
             if (imgGenResult.prompt != '') {
               promptImageEpisodeText = imgGenResult.prompt;
               console.log(`promptImageEpisodeText: ${promptImageEpisodeText}`);
             }
           }
           const titleScreen: string = lastImage;
-          const titleScreenText = firstSentence;
+          const titleScreenText: string = firstSentence;
 
           // Extract the scene texts from the message
           let sentencesToSpeak = [] as string[];
@@ -1257,7 +1259,7 @@ function Home({ user }: HomeProps) {
           story.title = titleScreenText;
           story.id = episodeIdRef.current;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
-          story.imageUrl = titleScreen.toString();
+          story.imageUrl = titleScreen;
           story.imagePrompt = promptImageEpisodeText;
           story.shareUrl = '';
           story.personality = selectedPersonality; // TODO - add personality to the story object
