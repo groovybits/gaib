@@ -328,7 +328,7 @@ function Home({ user }: HomeProps) {
       if (isProcessing) return;  // If a fetch is already in progress, do nothing
       isProcessing = true;  // Set the flag to true to block other fetches
 
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && !isSubmittingRef.current && episodes.length <= maxQueueSize) {
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && !isSubmittingRef.current) {
         isProcessingTwitchRef.current = true;
         try {
           await fetchEpisodeData();
@@ -350,7 +350,7 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(processTwitchChat, 3000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef, maxQueueSize]);
+  }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef]);
 
   // News fetching for automating input via a news feed
   useEffect(() => {
@@ -433,10 +433,10 @@ function Home({ user }: HomeProps) {
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, isSubmittingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize]);
 
-  // Fetch the MediaStack News
+  // send the  episodes from the queue to the handlesubmit function to build the story
   useEffect(() => {
     const processQueue = async () => {
-      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current && episodes.length <= maxQueueSize) {
+      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current) {
         const episode = episodes.shift();
         isSubmittingRef.current = true;
         try {
