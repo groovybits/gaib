@@ -6,7 +6,7 @@ import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
 const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 const llm = process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo';  // faster model for title/question generation
-const maxTokens = 200;
+const maxTokens = 100;
 const temperature = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.8;
 const debug = process.env.DEBUG === 'true' ? true : false;
 

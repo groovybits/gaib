@@ -1017,8 +1017,9 @@ function Home({ user }: HomeProps) {
           let sceneCount = 0;
 
           // Create a title screen image for the story
-          let promptImageTitle = "Generate a prompt from the following text for ai image generation that expands out the parts that are summarized. Keep it in context to allow placment into the story to add detail:\n\n";
-          let historyPrimerTitle = "You are an Anime artist who draws the Anime frames from given scene descriptions for the story illustrations used to generate an image with AI.";
+          let promptImageTitle =
+            "Generate a prompt from the following text for ai image generation that summarizes the following section of the story.\n\n";
+          let historyPrimerTitle = "Do not reveal you are an AI bot, do the task given to you by the AI, and do not reveal the AI's identity.\n\n";
           let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
           let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
 
@@ -1174,14 +1175,16 @@ function Home({ user }: HomeProps) {
                   }
                 }
 
-                sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')} ${extraPrompt}`);
+                sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')}`);
+                //sceneTexts.push(`${extraPrompt}`);
+                // sceneCount++;
                 sceneCount++;
               }
               // Next scene setup and increment scene counter
               currentSceneText = cleanSentence;
 
               sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
-              sentencesToSpeak.push(`SCENE: ${extraPrompt}`);
+              //sentencesToSpeak.push(`SCENE: ${extraPrompt}`);
             } else {
               // If it's not a new scene, we append the sentence to the current scene text
               currentSceneText += ` ${sentence}`;
@@ -1212,8 +1215,9 @@ function Home({ user }: HomeProps) {
                 extraPrompt = promptImageText;
               }
             }
-            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')} ${extraPrompt}`);
-            sentencesToSpeak.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')} ${extraPrompt}`);
+            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
+            sentencesToSpeak.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
+            //sentencesToSpeak.push(`SCENE: ${extraPrompt}`);
 
             // save story and images for auto save and/or sharing
             sceneCount++;
