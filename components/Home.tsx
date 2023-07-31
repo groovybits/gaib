@@ -1187,7 +1187,6 @@ function Home({ user }: HomeProps) {
           // Don't forget to push the last scene text
           if (currentSceneText !== "") {
             sceneTexts.push(`SCENE: ${currentSceneText}`);
-            sentencesToSpeak.push(`SCENE: ${currentSceneText}`);
             sceneCount++;
           }
 
@@ -1213,12 +1212,10 @@ function Home({ user }: HomeProps) {
 
             // save story and images for auto save and/or sharing
             sceneCount++;
-          }
-
-          if (sceneTexts.length === 0) {
+          } else if (sceneTexts.length === 0) {
             console.log(`No scenes found in the message: ${messages[lastMessageIndex].message}`);
-            sceneTexts.push(`SCENE: ${messages[lastMessageIndex].message}`);
-            sentencesToSpeak.push(`SCENE: ${messages[lastMessageIndex].message}`);
+            sceneTexts.push(`SCENE: ${ sentences.join(' ').replace('SCENE:', '').replace('SCENE', '') }`);
+            sentencesToSpeak.push(`SCENE: ${ sentences.join(' ').replace('SCENE:', '').replace('SCENE', '') }`);
             sceneCount++;
           }
           setLoadingOSD(`Generating images for ${sentences.length} sentences with ${sceneTexts.length} scenes...`);
