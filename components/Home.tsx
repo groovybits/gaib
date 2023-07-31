@@ -794,6 +794,11 @@ function Home({ user }: HomeProps) {
                 signal  // Pass the abort signal to the fetch request
               });
 
+              if (!response.ok) {
+                console.error(`Error: GPT + AI generated message: ${response.statusText}`);
+                return '';
+              }
+
               // Parse the response
               const data = await response.json();
 
@@ -801,11 +806,10 @@ function Home({ user }: HomeProps) {
               clearTimeout(timeout);
 
               // skip if the response is not 200
-              if (!response.ok || response.status !== 200) {
+              if (response.status !== 200) {
                 console.error(`Error: GPT + AI generated message: ${data.error}`);
-                throw new Error(`Error: GPT + AI generated message: ${data.error}`);
+                return '';
               }
-
 
               if (debug) {
                 console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
@@ -817,12 +821,12 @@ function Home({ user }: HomeProps) {
             } catch (error) {
               // Handle the error
               console.error(`Error: GPT + AI generated message: ${error}`);
-              throw new Error(`Error: GPT + AI generated message: ${error}`);
+              return '';
             }
             return content;
           } catch (error) {
             console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
-            return imagePrompt;
+            return '';
           }
         };
 
