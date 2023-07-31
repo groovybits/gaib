@@ -395,7 +395,7 @@ function Home({ user }: HomeProps) {
             let currentQuery = `${headline}\n\n${body}`;
 
             if (feedPrompt != '') {
-              currentQuery = `${feedPrompt}\n\n${currentQuery}`;
+              currentQuery = `${currentQuery}\nNews:\n${feedPrompt}\n\n`;
             }
 
             let episode: Episode = {
@@ -777,10 +777,10 @@ function Home({ user }: HomeProps) {
             const controller = new AbortController();
             const { signal } = controller;
 
-            // Set a timeout to abort the fetch request after 10 seconds
+            // Set a timeout to abort the fetch request after N / 1000 seconds
             const timeout = setTimeout(() => {
               controller.abort();
-            }, 10000);
+            }, 120000);
 
             try {
               // Make the fetch request, passing the signal to it
@@ -1017,8 +1017,8 @@ function Home({ user }: HomeProps) {
           let sceneCount = 0;
 
           // Create a title screen image for the story
-          let promptImageTitle = "Generate a prompt for ai image generation of the following text that expands and continues the text to allow it to be added. summarize keepting it short and in context to allow placment into the story.\n\n";
-          let historyPrimerTitle = "You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the intro title screen so we can generate an image of it.";
+          let promptImageTitle = "Generate a prompt from the following text for ai image generation that expands out the parts that are summarized. Keep it in context to allow placment into the story to add detail:\n\n";
+          let historyPrimerTitle = "You are an Anime artist who draws the Anime frames from given scene descriptions for the story illustrations used to generate an image with AI.";
           let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
           let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
 
@@ -1154,6 +1154,7 @@ function Home({ user }: HomeProps) {
               )) {
               // When we encounter a new scene, we push the current scene text to the array
               // and start a new scene text
+              let extraPrompt = ''
               let cleanSentence = sentence.replace('SCENE:', '').replace('SCENE', '');
               if (currentSceneText !== "") {
                 // generate this scenes image
@@ -1161,7 +1162,6 @@ function Home({ user }: HomeProps) {
                 setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
 
                 const imgGenResult = await generateAIimage(`${promptImage} ${titleScreenText} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-                let extraPrompt = ''
                 if (imgGenResult.image !== '') {
                   lastImage = imgGenResult.image;
                   imageCount++;
@@ -1181,6 +1181,7 @@ function Home({ user }: HomeProps) {
               currentSceneText = cleanSentence;
 
               sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
+              sentencesToSpeak.push(`SCENE: ${extraPrompt}`);
             } else {
               // If it's not a new scene, we append the sentence to the current scene text
               currentSceneText += ` ${sentence}`;
@@ -1195,11 +1196,11 @@ function Home({ user }: HomeProps) {
           }
 
           // absence of SCENE markers in the message without any images and no sceneTexts
+          let extraPrompt = ''
           if (sceneTexts.length === 0 && imageCount === 0) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
             const imgGenResult = await generateAIimage(`${promptImage} ${titleScreenText} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-            let extraPrompt = ''
             if (imgGenResult.image !== '') {
               lastImage = imgGenResult.image;
               imageCount++;
@@ -1407,6 +1408,7 @@ function Home({ user }: HomeProps) {
                 }
                 if (cleanText !== '') {
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
+                  setLoadingOSD(`Speech to Text line #${spokenLineIndex} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
                   await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
                 }
               } else {
@@ -1424,6 +1426,7 @@ function Home({ user }: HomeProps) {
                 try {
                   if (translationEntry != '') {
                     audioFile = `audio/${story.id}/${sentenceId}.mp3`;
+                    setLoadingOSD(`Speech to Text MP3 encoding #${spokenLineIndex} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
                     await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
                   }
                 } catch (e) {
