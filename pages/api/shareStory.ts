@@ -42,26 +42,10 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       const shareUrl = `${baseUrl}/${storyId}`
 
       // Extract the necessary information
-      const { userId, text, imageUrls, timestamp } = story;
 
       // Create a record in the Realtime Database with the URL of the JSON file and other fields
       const rtDb = admin.database();
-      await rtDb.ref('stories').child(storyId).set({
-        url: storyUrl,
-        userId,
-        text,
-        imageUrls,
-        timestamp,
-        isStory: story.isStory,
-        title: story.title,
-        titleImage: story.titleImage,
-        prompt: story.prompt,
-        namespace: story.namespace,
-        tokens: story.tokens,
-        personality: story.personality,
-        references: story.references,
-        audioFiles: story.audioFiles,
-      });
+      await rtDb.ref('stories').child(storyId).set(story);
 
       res.status(200).json({ message: 'Story shared successfully', storyUrl: storyUrl, shareUrl: shareUrl });
     } else {

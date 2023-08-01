@@ -33,6 +33,7 @@ const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 
 interface Sentence {
   id: number;
   text: string;
+  subtitle: string;
   imageUrl: string;
   speaker: string;
   gender: string;
@@ -50,6 +51,10 @@ interface Scene {
 
 type Story = {
   id: string;
+  url: string;
+  text: string;
+  imageUrls: string[];
+  UserId: string;
   prompt: string;
   tokens: number;
   title: string;
@@ -760,13 +765,14 @@ function Home({ user }: HomeProps) {
         }
 
         // This function generates the AI message using GPT
-        const generateAImessage = async (imagePrompt: string, personalityPrompt: string): Promise<string> => {
+        const generateAImessage = async (imagePrompt: string, personalityPrompt: string, maxTokens: number = 100): Promise<string> => {
           try {
             // Prepare the request body. You may need to adjust this to fit your use case.
             const requestBody = {
               message: imagePrompt,
               prompt: personalityPrompt,
-              conversationHistory: conversationHistory  // You may need to populate this with previous conversation history, if any.
+              conversationHistory: conversationHistory,  // You may need to populate this with previous conversation history, if any.
+              maxTokens: maxTokens,
             };
 
             let content: string = 'random image of a robot anime AI';
@@ -902,45 +908,10 @@ function Home({ user }: HomeProps) {
               return '';
             }
 
-            const storyText = storyToShare.scenes.map((scene) => scene.sentences.map((sentence) => sentence.text).join('|')).join('|');
-            const imageUrls: string[] = storyToShare.scenes.flatMap((scene) => scene.sentences.map((sentence) => sentence.imageUrl));
-            const audioFiles: string[] = storyToShare.scenes.flatMap((scene) => scene.sentences.map((sentence) => sentence.audioFile));
-
-            if (storyText.length === 0) {
-              console.log(`shareStory: No story text to share: ${JSON.stringify(storyText)}}`);
-              return '';
-            } else if (imageUrls.length === 0) {
-              console.log(`shareStory: No image URLs to share: ${JSON.stringify(imageUrls)}}`);
-            }
-
             if (debug) {
-              console.log('Data being written:', {
-                userId: user.uid,
-                text: storyText.replace('\n', ' '),
-                imageUrls: JSON.stringify(imageUrls),
-                timestamp: Date.now(),
-                audioFiles: JSON.stringify(audioFiles),
-              });
+              console.log('Data being written:', JSON.stringify(storyToShare));
               console.log('ID of the current user:', user.uid);
             }
-
-            // Create the story object
-            const story = {
-              id: episodeIdRef.current,
-              userId: user.uid,
-              text: storyText,
-              imageUrls: imageUrls,
-              timestamp: Date.now(),
-              isStory: storyToShare.isStory,
-              title: storyToShare.title,
-              titleImage: storyToShare.imageUrl,
-              prompt: storyToShare.prompt,
-              namespace: storyToShare.namespace,
-              tokens: storyToShare.tokens,
-              personality: storyToShare.personality,
-              references: storyToShare.references,
-              audioFiles: audioFiles,
-            };
 
             // Send a POST request to the API endpoint
             const idToken = await user?.getIdToken();
@@ -950,7 +921,7 @@ function Home({ user }: HomeProps) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${idToken}`,
               },
-              body: JSON.stringify(story),
+              body: JSON.stringify(storyToShare),
             });
 
             // Parse the response
@@ -959,14 +930,14 @@ function Home({ user }: HomeProps) {
             // Extract the story ID and URL from the response
             const { storyUrl, shareUrl } = data;
 
-            console.log(`Story ${story.title}... json shared as ${shareUrl} JSON stored as ${storyUrl}.`);
+            console.log(`Story ${storyToShare.title}... json shared as ${shareUrl} JSON stored as ${storyUrl}.`);
             if (twitchChatEnabled && authEnabled && channelId !== '') {
               // Post the story to the Twitch chat
               await postResponse(channelId,
-                `Shared ${story.isStory ?
-                  "Story" : "Question"}: ${story.title} at ${shareUrl} as personality ${story.personality} ` +
-                `with document embeddings from ${story.namespace == "groovypdf" ? "Wisdom" : "Science"} ` +
-                `Plotline: ${story.title}`, user.uid);
+                `Shared ${storyToShare.isStory ?
+                  "Story" : "Question"}: ${storyToShare.title} at ${shareUrl} as personality ${storyToShare.personality} ` +
+                `with document embeddings from ${storyToShare.namespace == "groovypdf" ? "Wisdom" : "Science"} ` +
+                `Plotline: ${storyToShare.title}`, user.uid);
             }
 
             return shareUrl;
@@ -978,13 +949,18 @@ function Home({ user }: HomeProps) {
 
         async function processImagesAndSubtitles() {
           const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
+          const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
           const idToken = await user?.getIdToken();
           let sentences: string[];
 
           // setup the story structure
           let story: Story = {
             title: '',
+            text: '',
+            url: '',
+            imageUrls: [],
             id: '',
+            UserId: '',
             prompt: '',
             tokens: 0,
             scenes: [],
@@ -1273,6 +1249,7 @@ function Home({ user }: HomeProps) {
           story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
           story.title = titleScreenText;
           story.id = episodeIdRef.current;
+          story.url = `https://storage.googleapis.com/${bucketName}/story/${episodeIdRef.current}/data.json`;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
           story.imageUrl = titleScreen;
           story.imagePrompt = promptImageEpisodeText;
@@ -1289,8 +1266,6 @@ function Home({ user }: HomeProps) {
           for (let sentence of sentencesToSpeak) {
             // get the image for the sentence
             if (sentence.startsWith('SCENE: ')) {
-              sentence = sentence.replace('[', '');
-              sentence = sentence.replace(']', '');
               sentence = sentence.replace('SCENE: ', '');
               lastImage = promptImages[imagesIndex];
               if (imagesIndex < promptImages.length - 1) {
@@ -1399,7 +1374,6 @@ function Home({ user }: HomeProps) {
               }
 
               let audioFile: string = '';
-              const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
               spokenLineIndex += 1;
               const cleanText: string = removeMarkdownAndSpecialSymbols(sentence_by_character);
               let translationEntry: string = '';
@@ -1445,14 +1419,17 @@ function Home({ user }: HomeProps) {
               if (scene && (cleanText !== '' || translationEntry !== '') && audioFile !== '') {
                 scene.sentences.push({
                   id: sentenceId++,
-                  text: translationEntry != '' ? translationEntry : cleanText,
-                  imageUrl: lastImage.toString(),  // or another image related to the sentence
+                  text: translationEntry != '' ? translationEntry : sentence_by_character,
+                  subtitle: cleanText,
+                  imageUrl: lastImage,  // or another image related to the sentence
                   speaker: currentSpeaker,  // or another speaker related to the sentence
                   gender: detectedGender,  // or another gender related to the sentence
                   language: audioLanguage,  // or another language related to the sentence
                   model: model,  // or another model related to the sentence
                   audioFile: `https://storage.googleapis.com/${bucketName}/${audioFile}`,  // or another audio file related to the sentence
                 });
+                story.text = story.text + ' |' + sentence_by_character;
+                story.imageUrls.push(lastImage);
               }
             }
           }
