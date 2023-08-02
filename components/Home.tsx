@@ -950,9 +950,12 @@ function Home({ user }: HomeProps) {
           let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
           let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
 
+          // take the story and run it thruough GPT again to expand and generate more text
+          //const improvedSentences = await generateAImessage(`Take the following output and expand it and improve it to be more rich and detailed:\n\n${messages[lastMessageIndex].message}`, buildPrompt(selectedPersonality, isStory), 0);
+
           try {
             // Split the message into paragraphs at each empty line
-            const paragraphs = messages[lastMessageIndex].message.split(/\n\s*\n/);
+            const paragraphs = /*improvedSentences ? improvedSentences.split(/\n\s*\n/) :*/ messages[lastMessageIndex].message.split(/\n\s*\n/);
             sentences = [];
             for (const paragraph of paragraphs) {
               // If the paragraph is too long, split it into sentences

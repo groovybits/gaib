@@ -168,30 +168,6 @@ client.on('message', async (channel: any, tags: {
     title = message.slice(0, promptLimit).trim();
     const isStory: any = message.toLowerCase().startsWith('!episode') ? true : false;
 
-    // make sure nothing odd is in the title or plotline that isn't a story idea and title
-    const filter = new Filter();
-
-    if (title && filter.isProfane(title)) {
-      console.log(`Profanity detected in title: ${title}, removing it.\n`);
-      client.say(channel, `Groovy Received your request, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
-      title = filter.clean(title);
-    }
-
-    if (plotline && filter.isProfane(plotline)) {
-      console.log(`Profanity detected in title: ${plotline}, removing it.\n`);
-      client.say(channel, `Groovy Received your request, ${tags.username}! Sorry it has banned words in it, cleaning them...`);
-      plotline = filter.clean(plotline);
-    }
-
-    // Story or Episode mode
-    /*if (isStory) {
-      console.log(`Groovy: ${tags.username} Creating Episode Title and Plotline: ${title} ${plotline}\n`);
-      client.say(channel, `Groovy: ${tags.username} Creating Episode Title and Plotline: ${title} ${plotline}`);
-    } else {
-      console.log(`Groovy ${tags.username} Pondering the question: ${title} ${plotline}`);
-      client.say(channel, `Groovy ${tags.username} Pondering the Question: ${title} ${plotline}`);
-    }*/
-
     // if title is defined and not empty, then add the command to Firestore
     if (title) {
       // Add the command to the Realtime Database
@@ -205,8 +181,8 @@ client.on('message', async (channel: any, tags: {
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
     } else {
-      console.log(`Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}).`);
-      client.say(channel, `Groovy Invalid Format ${tags.username} Please Use "!episode: title - plotline" (received: ${message}). See !help for more info.`);
+      console.log(`Invalid Format ${tags.username} Please Use "!episode title - plotline" (received: ${message}).`);
+      client.say(channel, `Groovy Invalid Format ${tags.username} Please Use "!episode title - plotline" (received: ${message}). See !help for more info.`);
     }
   } else  {
     let promptArray: any[] = [];
