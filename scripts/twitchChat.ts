@@ -18,7 +18,8 @@ const db = admin.database();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 300;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 800;
+const promptLimit: number = process.env.GROOVY_PROMPT_LIMIT ? parseInt(process.env.GROOVY_PROMPT_LIMIT) : 1000;
 const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
 const llm = 'gpt-4';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
 const maxTokens = 100;
@@ -129,7 +130,7 @@ client.on('message', async (channel: any, tags: {
     console.log(`${tags.username} Sending Image to Channel: ${channel}\n`);
     client.say(channel, `${tags.username} Sending Image to Channel: ${channel}`);
 
-    let imagePrompt = message.slice(0, messageLimit).trim();
+    let imagePrompt = message.slice(0, promptLimit).trim();
     if (imagePrompt) {
       // Add the command to the Realtime Database
       const newCommandRef = db.ref(`commands/${channelName}`).push();
@@ -164,8 +165,8 @@ client.on('message', async (channel: any, tags: {
     let title: any = '';
     let plotline: any = '';
 
-    title = message.slice(0, messageLimit).trim().toLowerCase().replace(/(\r\n|\n|\r)/gm, " ").replace(/^\!/, '').replace(/^(episode|question):/, '').replace(/^:/, '').trim();
-    const isStory: any = message.toLowerCase().includes('episode') ? true : false;
+    title = message.slice(0, promptLimit).trim();
+    const isStory: any = message.toLowerCase().startsWith('!episode') ? true : false;
 
     // make sure nothing odd is in the title or plotline that isn't a story idea and title
     const filter = new Filter();
