@@ -131,8 +131,8 @@ export default function Feed() {
                   </div>
                 </a>
                 <div className={styles.shareButtons}>
-                  <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
-                  <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
+                  <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">Play Story</a>
+                  <button onClick={() => handleShareClick(story.id)}>Copy Story Link</button>
                   <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
                   <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
                   <button onClick={() => handleTwitterShareClick(story.id)}>Share on Twitter</button>

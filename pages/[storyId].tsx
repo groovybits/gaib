@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import styles from '@/styles/Home.module.css';
 import Link from 'next/link';
 import copy from 'copy-to-clipboard';
@@ -24,7 +24,10 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const [currentSentence, setCurrentSentence] = useState(0); // Add this line to keep track of the current sentence
   const { stopSpeaking, speakAudioUrl } = useSpeakText();
   const [autoSpeak, setAutoSpeak] = useState(true);
-  const [autoPage, setAutoPage] = useState(true);
+  const [autoPage, setAutoPage] = useState(false);
+  const isSpeakingRef = useRef(false);
+  const [useSubtitles, setUseSubtitles] = useState(true);
+  const [viewTranscript, setViewTranscript] = useState(false);
 
   useEffect(() => {
     if (storyId && typeof storyId === 'string') {
@@ -51,12 +54,13 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const stopSpeakingText = () => {
     if (autoSpeak) {
       setAutoSpeak(false);
+      setAutoPage(false);
       stopSpeaking(); // Call the stopSpeaking function from useSpeakText
+      isSpeakingRef.current = false;
     } else {
       setAutoSpeak(true);
-      if (autoPage) {
-        nextPage();
-      }
+      setAutoPage(true);
+      nextPage();
     }
   };
 
@@ -64,8 +68,6 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const handleShareClick = (storyId: string | string[]) => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
     copy(`${baseUrl}/${storyId}`);
-    stopAutoPaging();
-    stopSpeakingText();
     alert(`Copied ${baseUrl}/${storyId} to clipboard!`);
   };
 
@@ -80,6 +82,21 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
     }
   }, [currentScene, currentSentence]);
 
+  // Reset the state when the story changes
+  const resetState = () => {
+    stopAutoPaging();
+    stopSpeakingText();
+    setCurrentScene(0);
+    setCurrentSentence(0);
+    setAutoSpeak(true);
+    setAutoPage(false);
+  };
+
+  const noPage = () => {
+    // Do nothing
+  };
+
+  // Add the nextPage function to move to the next sentence or scene
   const nextPage = async () => {
     if (selectedStory) {
       if (selectedStory.scenes) {
@@ -91,16 +108,23 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
           && selectedStory.scenes[currentScene]
           && selectedStory.scenes[currentScene].sentences
           && selectedStory.scenes[currentScene].sentences[currentSentence]
-          && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile)
-        {
-          await speakAudioUrl(selectedStory.scenes[currentScene].sentences[currentSentence].audioFile);
+          && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile) {
+          try {
+            isSpeakingRef.current = true;
+            await speakAudioUrl(selectedStory.scenes[currentScene].sentences[currentSentence].audioFile)
+              .finally(() => {
+                isSpeakingRef.current = false; // Set isSpeakingRef to false when the audio finishes playing
+              });
 
-          if (selectedStory.scenes[currentScene].sentences[currentSentence].text) {
-            spokenText = selectedStory.scenes[currentScene].sentences[currentSentence].text;
-          } else {
-            spokenText = selectedStory.prompt;
+            if (selectedStory.scenes[currentScene].sentences[currentSentence].text) {
+              spokenText = selectedStory.scenes[currentScene].sentences[currentSentence].text;
+            } else {
+              spokenText = selectedStory.prompt;
+            }
+            spoke = true;
+          } catch (error) {
+            console.log(`Error speaking text ${error}`);
           }
-          spoke = true;
         }
 
         // Sleep for the length of the spoken text if autoPage is enabled and the text was spoken
@@ -115,13 +139,21 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
         } else if (currentScene < selectedStory.scenes.length - 1) {
           setCurrentScene(prevScene => prevScene + 1);
           setCurrentSentence(0); // Reset sentence index when moving to the next scene
+        } else {
+          resetState();
+          setAutoSpeak(false);
+          setAutoPage(false);
+        }
+
+        if (!autoPage) {
+          isSpeakingRef.current = false;
         }
       }
     }
   };
 
   const previousPage = async () => {
-    if (selectedStory) {
+    if (selectedStory && !isSpeakingRef.current) {
       if (selectedStory.scenes) {
         if (currentSentence > 0) {
           setCurrentSentence(currentSentence - 1);
@@ -133,8 +165,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
           && selectedStory.scenes[currentScene]
           && selectedStory.scenes[currentScene].sentences
           && selectedStory.scenes[currentScene].sentences[currentSentence]
-          && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile)
-        {
+          && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile) {
           await speakAudioUrl(selectedStory.scenes[currentScene].sentences[currentSentence].audioFile);
         }
       }
@@ -177,7 +208,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
 
     // Get the text from the current sentence in the current scene
     let sentenceText = '';
-    
+
     if (currentSceneData &&
       currentSceneData.sentences &&
       currentSceneData && currentSceneData.sentences[currentSentence] &&
@@ -228,13 +259,27 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                     >
                       {isFullScreen ? "Exit Full Screen" : "Full Screen"}
                     </button>
-                    <img
-                      src={imageUrl}
-                      alt="Scene"
-                    />
-                    <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
-                      <p>{sentenceText}</p>
-                    </div>
+                    {!viewTranscript ? (
+                      <>
+                        <img
+                          src={imageUrl}
+                          alt="Scene"
+                        />
+                        <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
+                          <p>{useSubtitles ? sentenceText : ''}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <img
+                          src={selectedStory.imageUrl}
+                          alt="Scene"
+                        />
+                        <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
+                          <p>{selectedStory.scenes && selectedStory.scenes[currentScene].sentences && selectedStory.scenes[currentScene].sentences.length > 0 ? selectedStory.scenes[currentScene].sentences.map(sentence => sentence.text).join(' ') : selectedStory.prompt}</p>
+                        </div>
+                      </>
+                    )}
                     <>
                       <div
                         style={{
@@ -246,7 +291,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                           cursor: "pointer", // changes the cursor to a hand when hovering over the div
                           backgroundColor: leftHover ? "rgba(0, 0, 0, 0.1)" : "transparent",
                         }}
-                        onClick={previousPage}
+                        onClick={!isSpeakingRef.current ? previousPage : noPage} // attach the event handler to the div
                         onMouseEnter={() => setLeftHover(true)} // set state to true when mouse enters
                         onMouseLeave={() => setLeftHover(false)} // set state to false when mouse leaves                      
                       >
@@ -258,6 +303,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                             transform: "translateY(-65%)",
                           }}
                           className={styles.readerPager}
+                          disabled={isSpeakingRef.current}
                         >
                           {/* Previous Page Click left side of screen */}
                         </button>
@@ -272,7 +318,8 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                           cursor: "pointer", // changes the cursor to a hand when hovering over the div
                           backgroundColor: rightHover ? "rgba(0, 0, 0, 0.1)" : "transparent",
                         }}
-                        onClick={nextPage} // attach the event handler to the div
+
+                        onClick={!isSpeakingRef.current ? nextPage : noPage} // attach the event handler to the div
                         onMouseEnter={() => setRightHover(true)} // set state to true when mouse enters
                         onMouseLeave={() => setRightHover(false)} // set state to false when mouse leaves    
                       >
@@ -285,6 +332,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                             transition: "background-color 0.3s", // smooth transition
                           }}
                           className={styles.readerPager}
+                          disabled={isSpeakingRef.current}
                         >
                           {/* Previous Page Click left side of screen */}
                         </button>
@@ -301,8 +349,11 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
               <button className={styles.footer} onClick={() => { storyId && handleLinkedInShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on LinkedIn</button>&nbsp;&nbsp;|&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => { storyId && handleTwitterShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={stopAutoPaging}>{autoPage ? 'Disable Auto-Paging' : 'Enable Auto-Paging'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={stopSpeakingText}>{autoSpeak ? 'Disable Speaking' : 'Enable Speaking'}</button>
+              <button className={styles.footer} onClick={stopAutoPaging}>{autoPage ? 'Manual-Page' : 'Auto-Page'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={stopSpeakingText}>{autoSpeak ? 'Stop Playing' : 'Start Playing'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={resetState}>Reset</button>&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => setUseSubtitles(!useSubtitles)}>{useSubtitles ? 'Hide Subtitles' : 'Show Subtitles'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => setViewTranscript(!viewTranscript)}>{viewTranscript ? 'Hide Transcript' : 'Show Transcript'}</button>
             </div>
             <div className={styles.feedSection}>
               <div className={styles.feed}>
