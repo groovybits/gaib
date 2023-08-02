@@ -1199,6 +1199,7 @@ function Home({ user }: HomeProps) {
           // Fill the story object
           story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
           story.title = titleScreenText;
+          story.UserId = user?.uid || 'anonymous';
           story.id = episodeIdRef.current;
           story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
@@ -1457,13 +1458,13 @@ function Home({ user }: HomeProps) {
     // Check if the message is a story and remove the "!type:" prefix
     let isQuestion = (isStory === false);
     try {
-      if (question.startsWith('!question:')) {
+      if (question.startsWith('!question')) {
         isQuestion = true;
-        question = question.replace('!question:', '').trim();
+        question = question.replace('!question:', '').replace('!question', '').trim();
         console.log(`handleSubmit: Extracted question: with !question:`);
-      } else if (question.startsWith('!episode:')) {
+      } else if (question.startsWith('!episode')) {
         isQuestion = false;
-        question = question.replace('!episode:', '').trim();
+        question = question.replace('!episode:', '').replace('!episode', '').trim();
         console.log(`handleSubmit: Extracted episode: with !episode:`);
       }
     } catch (error) {
