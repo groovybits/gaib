@@ -109,7 +109,7 @@ export default function Feed() {
       <div className={styles.feedSection}>
         <div className={styles.feed}>
           {stories.map((story, index) => {
-            const thumbnailSrc = story.scenes[0].imageUrl; // Use the first scene's imageUrl as the thumbnail
+            const thumbnailSrc = story.thumbnailUrls && story.thumbnailUrls.length > 0 ? story.thumbnailUrls[0] : story.scenes[0].imageUrl; // Use the first thumbnailUrl if it exists, otherwise use the first scene's imageUrl
             const dateString = new Date(story.timestamp).toLocaleDateString();
 
             return (
@@ -149,11 +149,30 @@ export default function Feed() {
                   }}>
                     {story.scenes.map((scene, sceneIndex) => (
                       <div key={sceneIndex}>
-                        {scene.sentences.map((sentence, sentenceIndex) => (
-                          <pre key={sentenceIndex} style={{ whiteSpace: 'pre-wrap' }}>{sentence.text}</pre> 
-                        ))}
-                        <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
+                        <p style={{ whiteSpace: 'pre-wrap' }}>
+                          {scene.sentences.map((sentence, sentenceIndex) => sentence.text).join('\n')}
+                        </p>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
+                      {story.thumbnailUrls && story.thumbnailUrls.length > 0 ? (
+                        story.thumbnailUrls.map((thumbnailUrl, index) => (
                           <img
+                            key={index}
+                            src={thumbnailUrl}
+                            alt=""
+                            style={{
+                              width: '256px',
+                              padding: '4px',
+                              objectFit: 'contain',
+                              margin: '10px'
+                            }}
+                          />
+                        ))
+                      ) : (
+                        story.scenes.map((scene, sceneIndex) => (
+                          <img
+                            key={sceneIndex}
                             src={scene.imageUrl}
                             alt=""
                             style={{
@@ -163,9 +182,9 @@ export default function Feed() {
                               margin: '10px'
                             }}
                           />
-                        </div>
-                      </div>
-                    ))}
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
