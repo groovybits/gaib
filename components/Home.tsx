@@ -1197,6 +1197,8 @@ function Home({ user }: HomeProps) {
           episodeIdRef.current = uuidv4().replace(/-/g, '');
 
           // Fill the story object
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
+
           story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
           story.title = titleScreenText;
           story.UserId = user?.uid || 'anonymous';
@@ -1204,8 +1206,8 @@ function Home({ user }: HomeProps) {
           story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
           story.imageUrl = titleScreen;
-          story.imagePrompt = promptImageEpisodeText;
-          story.shareUrl = '';
+          story.imagePrompt = promptImageEpisodeText.replace(/^\"/, '').replace(/\"$/, '');
+          story.shareUrl = `${baseUrl}/${episodeIdRef.current}`
           story.personality = selectedPersonality; // TODO - add personality to the story object
           story.namespace = selectedNamespace; // TODO - add namespace to the story object
           story.isStory = isStory;
@@ -1393,7 +1395,6 @@ function Home({ user }: HomeProps) {
           try {
             // Share the story after building it before displaying it
             let shareUrl = await shareStory(story, isFetching);
-            story.shareUrl = shareUrl;
 
             if (shareUrl != '' && isDisplayingRef.current === false) {
               setLoadingOSD(`\nEpisode shared to: ${shareUrl}!`);

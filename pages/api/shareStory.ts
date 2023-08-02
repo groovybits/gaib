@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       // Generate the story ID
       const storyId = story.id;
+      story.shareUrl = `${baseUrl}/${storyId}`;
 
       // Convert the story data to JSON
       const storyJson = JSON.stringify(story);
