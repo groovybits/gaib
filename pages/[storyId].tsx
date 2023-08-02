@@ -49,22 +49,26 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
 
   const nextPage = () => {
     if (selectedStory) {
-      if (currentSentence < selectedStory.scenes[currentScene].sentences.length - 1) {
-        setCurrentSentence(currentSentence + 1);
-      } else if (currentScene < selectedStory.scenes.length - 1) {
-        setCurrentScene(currentScene + 1);
-        setCurrentSentence(0); // Reset sentence index when moving to the next scene
+      if (selectedStory.scenes) {
+        if (currentSentence < selectedStory.scenes[currentScene].sentences.length - 1) {
+          setCurrentSentence(currentSentence + 1);
+        } else if (currentScene < selectedStory.scenes.length - 1) {
+          setCurrentScene(currentScene + 1);
+          setCurrentSentence(0); // Reset sentence index when moving to the next scene
+        }
       }
     }
   };
 
   const previousPage = () => {
     if (selectedStory) {
-      if (currentSentence > 0) {
-        setCurrentSentence(currentSentence - 1);
-      } else if (currentScene > 0) {
-        setCurrentScene(currentScene - 1);
-        setCurrentSentence(selectedStory.scenes[currentScene - 1].sentences.length - 1); // Set sentence index to the last sentence of the previous scene
+      if (selectedStory.scenes) {
+        if (currentSentence > 0) {
+          setCurrentSentence(currentSentence - 1);
+        } else if (currentScene > 0) {
+          setCurrentScene(currentScene - 1);
+          setCurrentSentence(selectedStory.scenes[currentScene - 1].sentences.length - 1); // Set sentence index to the last sentence of the previous scene
+        }
       }
     }
   };
@@ -100,12 +104,11 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   };
 
   if (selectedStory) {
-    const currentSceneData = selectedStory.scenes[currentScene]; // Get current scene data
-    const imageUrl = currentSceneData.imageUrl; // Use image from the current scene
-    const actualImageUrl = imageUrl;
+    const currentSceneData = selectedStory.scenes ? selectedStory.scenes[currentScene] : null; // Get current scene data
+    const imageUrl = currentSceneData ? currentSceneData.imageUrl : selectedStory.imageUrl; // Use image from the current scene
 
     // Get the text from the current sentence in the current scene
-    const sentenceText = currentSceneData.sentences[currentSentence].text;
+    const sentenceText = currentSceneData ? currentSceneData.sentences[currentSentence].text : selectedStory.prompt;
 
     return (
       <>
@@ -114,7 +117,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
           <meta name="description" content={sentenceText} />
           <meta property="og:title" content={selectedStory.title} />
           <meta property="og:description" content={sentenceText} />
-          <meta property="og:image" content={imageUrl} />
+          <meta property="og:image" content={selectedStory.imageUrl} />
           <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/${storyId}`} />
           <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
         </Head>
@@ -148,7 +151,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                       {isFullScreen ? "Exit Full Screen" : "Full Screen"}
                     </button>
                     <img
-                      src={actualImageUrl}
+                      src={imageUrl}
                       alt="Scene"
                     />
                     <div className={isFullScreen ? `${styles.subtitle}` : styles.subtitle}>

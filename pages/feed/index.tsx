@@ -109,7 +109,7 @@ export default function Feed() {
       <div className={styles.feedSection}>
         <div className={styles.feed}>
           {stories.map((story, index) => {
-            const thumbnailSrc = story.thumbnailUrls && story.thumbnailUrls.length > 0 ? story.thumbnailUrls[0] : story.scenes[0].imageUrl; // Use the first thumbnailUrl if it exists, otherwise use the first scene's imageUrl
+            const thumbnailSrc = story.thumbnailUrls && story.thumbnailUrls.length > 0 ? story.thumbnailUrls[0] : story.scenes ? story.scenes[0].imageUrl : story.imageUrl; // Use the first thumbnailUrl if it exists, otherwise use the first scene's imageUrl
             const dateString = new Date(story.timestamp).toLocaleDateString();
 
             return (
@@ -127,7 +127,7 @@ export default function Feed() {
                     }}
                   />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {story.scenes[0].sentences[0].text} {/* Use the first sentence of the first scene as the title */}
+                    {story.title} {/* Use the first sentence of the first scene as the title */}
                   </div>
                 </a>
                 <div className={styles.shareButtons}>
@@ -147,13 +147,19 @@ export default function Feed() {
                     overflowY: 'auto',
                     overflowX: 'hidden'
                   }}>
-                    {story.scenes.map((scene, sceneIndex) => (
+                    {story.scenes ? story.scenes.map((scene, sceneIndex) => (
                       <div key={sceneIndex}>
                         <p style={{ whiteSpace: 'pre-wrap' }}>
                           {scene.sentences.map((sentence, sentenceIndex) => sentence.text).join('\n')}
                         </p>
                       </div>
-                    ))}
+                    )) : (
+                        <div key={0}>
+                          <p style={{ whiteSpace: 'pre-wrap' }}>
+                            {story.prompt}
+                          </p>
+                      </div>        
+                    )}
                     <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
                       {story.thumbnailUrls && story.thumbnailUrls.length > 0 ? (
                         story.thumbnailUrls.map((thumbnailUrl, index) => (
@@ -169,7 +175,7 @@ export default function Feed() {
                             }}
                           />
                         ))
-                      ) : (
+                      ) : story.scenes ? (
                         story.scenes.map((scene, sceneIndex) => (
                           <img
                             key={sceneIndex}
@@ -183,7 +189,21 @@ export default function Feed() {
                             }}
                           />
                         ))
-                      )}
+                      ) :
+                        <>
+                          <img
+                            key={0}
+                            src={story.imageUrl}
+                            alt=""
+                            style={{
+                              width: '256px',
+                              padding: '4px',
+                              objectFit: 'contain',
+                              margin: '10px'
+                            }}
+                          />
+                        </>
+                      }
                     </div>
                   </div>
                 )}
