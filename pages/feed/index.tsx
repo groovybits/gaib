@@ -1,15 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from '@/styles/Home.module.css';
-import nlp from 'compromise';
+import { Story } from '@/types/story';
 import Head from 'next/head';
-
-export type Story = {
-  id: string;
-  text: string;
-  timestamp: number;
-  imageUrls: string[];
-  thumbnailUrls: string[] | null;
-};
 
 const adSenseCode = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID ? process.env.NEXT_PUBLIC_ADSENSE_PUB_ID : '';
 const gaibImage = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE ? process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE : '';
@@ -103,33 +95,6 @@ export default function Feed() {
     window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}`, '_blank');
   };
 
-  // Helper function to format the story text
-  const formatStoryText = (text: string) => {
-    // Remove ```bash and other similar markers
-    text = text.replace(/```.*\n/g, '');
-
-    // Split by "|" pipes
-    const scenes = text.split(/\|/g);
-
-    // Split each scene into paragraphs and list items
-    const formattedScenes = scenes.map((scene, sceneIndex) => {
-      const paragraphs = scene.split(/\n\s*\n/);
-      const formattedParagraphs = paragraphs.map((paragraph, paragraphIndex) => {
-        if (paragraph.startsWith('1. ')) {
-          const listItems = paragraph.split('\n');
-          return listItems.map((item, index) => `${item}\n`).join('');
-        } else {
-          const doc = nlp(paragraph);
-          const sentences = doc.sentences().out('array');
-          return sentences.join('\n') + '\n\n';
-        }
-      });
-      return formattedParagraphs.join('');
-    });
-
-    return formattedScenes.join('');
-  };
-
   return (
     <div className={styles.container}>
       <Head>
@@ -141,161 +106,70 @@ export default function Feed() {
         <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
         <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
       </Head>
-      <div className={styles.centerImage}>
-        <img src='https://storage.googleapis.com/gaib/groovylogo.png' alt="Groovy" />
-      </div>
       <div className={styles.feedSection}>
         <div className={styles.feed}>
           {stories.map((story, index) => {
-            let thumbnailUrls = story.thumbnailUrls;
-            if (typeof thumbnailUrls === 'string') {
-              thumbnailUrls = (thumbnailUrls as string).split(',');
-            }
-
-            const thumbnailSrc = thumbnailUrls && thumbnailUrls.length > 0 ? thumbnailUrls[0] : story.imageUrls[0];
+            const thumbnailSrc = story.scenes[0].imageUrl; // Use the first scene's imageUrl as the thumbnail
             const dateString = new Date(story.timestamp).toLocaleDateString();
 
-            if (stories.length === index + 1) {
-              return (
-                <div key={story.id} className={styles.story}>
-                  <p className={styles.storyTimestamp}>{dateString}</p>
-                  <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>
-                    <img
-                      src={thumbnailSrc}
-                      alt=""
-                      className={styles.storyImageThumbnailTitle}
-                      style={{
-                        width: '128px',  // Set the width you want
-                        /*height: '128px',*/  // Set the height you want
-                        padding: '4px',
-                        objectFit: 'contain'
-                      }}
-                    /> {/* Thumbnail image here */}
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {story.text.split(/\|/g)[0]}
-                    </div>
-                  </a>
-                  <div className={styles.shareButtons}>
-                    <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
-                    <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
-                    <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
-                    <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
-                    <button onClick={() => handleTwitterShareClick(story.id)}>Share on Twitter</button>
-                    {/* Add other social media share buttons here */}
+            return (
+              <div key={story.id} className={styles.story}>
+                <p className={styles.storyTimestamp}>{dateString}</p>
+                <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>
+                  <img
+                    src={thumbnailSrc}
+                    alt=""
+                    className={styles.storyImageThumbnailTitle}
+                    style={{
+                      width: '128px',
+                      padding: '4px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {story.scenes[0].sentences[0].text} {/* Use the first sentence of the first scene as the title */}
                   </div>
-                  {expandedStoryId === story.id && (
-                    <div>
-                      {/* Add the expanded view content here */}
-                      {expandedStoryId === story.id && (
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          fontSize: '12px',
-                          maxHeight: '100%', // 90% of the viewport height
-                          maxWidth: '90vw', // 90% of the viewport width
-                          overflowY: 'auto', // Enable vertical scrolling if necessary
-                          overflowX: 'hidden' // Prevent horizontal scrolling
-                        }}>
-                          <p style={{ /* plain text white space */ whiteSpace: 'pre-wrap' }}>
-                            {formatStoryText(story.text.slice(0, 5000))} (Click on the story to read more)
-                          </p>
-                          <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
-                            {story.imageUrls.map((imageUrl, index) => (
-                              <img
-                                key={index} // Add this line
-                                src={thumbnailUrls && thumbnailUrls[index] ? thumbnailUrls[index] : imageUrl}
-                                alt=""
-                                style={{
-                                  width: '256px',  // Set the width you want
-                                  height: 'auto',  // Set the height you want
-                                  padding: '4px',
-                                  objectFit: 'contain',
-                                  margin: '10px'
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                </a>
+                <div className={styles.shareButtons}>
+                  <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
+                  <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
+                  <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
+                  <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
+                  <button onClick={() => handleTwitterShareClick(story.id)}>Share on Twitter</button>
                 </div>
-              );
-            } else {
-              return (
-                <div key={story.id} className={styles.story}>
-                  <a onClick={() => handleStoryClick(story.id)} className={styles.storyTitle}>
-                    <img
-                      src={thumbnailSrc}
-                      alt=""
-                      className={styles.storyImageThumbnailTitle}
-                      style={{
-                        width: '128px',  // Set the width you want
-                        /*height: '128px',*/  // Set the height you want
-                        padding: '4px',
-                        objectFit: 'contain'
-                      }}
-                    /> {/* Thumbnail image here */}
-                    <div style={{ display: 'flex', flexDirection: 'column', fontSize: '18px' }}>
-                      {story.text.split(/\|/g)[0]}
-                    </div>
-                  </a>
-                  <div className={styles.shareButtons}>
-                    <p className={styles.storyTimestamp}>{dateString}</p>
-                    <a href={`/${story.id}`} target="_blank" rel="noopener noreferrer">View Story</a>
-                    <button onClick={() => handleShareClick(story.id)}>Copy Link</button>
-                    <button onClick={() => handleFacebookShareClick(story.id)}>Share on Facebook</button>
-                    <button onClick={() => handleLinkedInShareClick(story.id)}>Share on LinkedIn</button>
-                    <button onClick={() => handleTwitterShareClick(story.id)}>Share on Twitter</button>
-                    {/* Add other social media share buttons here */}
+                {expandedStoryId === story.id && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    fontSize: '12px',
+                    maxHeight: '100%',
+                    maxWidth: '90vw',
+                    overflowY: 'auto',
+                    overflowX: 'hidden'
+                  }}>
+                    {story.scenes.map((scene, sceneIndex) => (
+                      <div key={sceneIndex}>
+                        {scene.sentences.map((sentence, sentenceIndex) => (
+                          <pre key={sentenceIndex} style={{ whiteSpace: 'pre-wrap' }}>{sentence.text}</pre> 
+                        ))}
+                        <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
+                          <img
+                            src={scene.imageUrl}
+                            alt=""
+                            style={{
+                              width: '256px',
+                              padding: '4px',
+                              objectFit: 'contain',
+                              margin: '10px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {expandedStoryId === story.id && (
-                    <div>
-                      {/* Add the expanded view content here */}
-                      {expandedStoryId === story.id && (
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          fontSize: '24px',
-                          maxHeight: '100%', // 90% of the viewport height
-                          maxWidth: '90vw', // 90% of the viewport width
-                          overflowY: 'auto', // Enable vertical scrolling if necessary
-                          overflowX: 'hidden' // Prevent horizontal scrolling
-                        }}>
-                          <p style={{ /* plain text white space */ whiteSpace: 'pre-wrap' }}>
-                            {formatStoryText(story.text.slice(0, 5000))} (Click on the story to read more)
-                          </p>
-                          <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'scroll' }}>
-                            {story.imageUrls.map((imageUrl, index) => {
-                              let src = imageUrl;
-
-                              // If thumbnailUrls exist, use them instead
-                              if (story.thumbnailUrls && story.thumbnailUrls[index]) {
-                                src = story.thumbnailUrls[index];
-                              }
-
-                              return (
-                                <img
-                                  key={index}
-                                  src={src}
-                                  alt=""
-                                  style={{
-                                    width: '256px',
-                                    padding: '4px',
-                                    objectFit: 'contain',
-                                    margin: '10px'
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            }
+                )}
+              </div>
+            );
           })}
         </div>
       </div>

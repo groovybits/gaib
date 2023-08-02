@@ -8,21 +8,11 @@ import Head from 'next/head';
 import PexelsCredit from '@/components/PexelsCredit';
 import { ParsedUrlQuery } from 'querystring';
 import Layout from '@/components/Layout';
-
-interface Story {
-  id: string;
-  text: string;
-  imageUrls: string[];
-  timestamp: string; // Changed from firebase.firestore.Timestamp
-}
-
-interface InitialProps {
-  initialStory: Story | null;
-}
+import { Story } from '@/types/story'; // Import the new Story type
 
 const adSenseCode = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID ? process.env.NEXT_PUBLIC_ADSENSE_PUB_ID : '';
 
-const Global: NextPage<InitialProps> = ({ initialStory }) => {
+const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const router = useRouter();
   const { storyId }: ParsedUrlQuery = router.query;
   const [selectedStory, setSelectedStory] = useState(initialStory);
@@ -30,6 +20,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [leftHover, setLeftHover] = useState(false);
   const [rightHover, setRightHover] = useState(false);
+  const [currentSentence, setCurrentSentence] = useState(0); // Add this line to keep track of the current sentence
 
   useEffect(() => {
     if (storyId && typeof storyId === 'string') {
@@ -37,8 +28,8 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
         // Fetch the story JSON data from the Google Cloud Storage bucket
         const response = await fetch(`https://storage.googleapis.com/gaib/stories/${storyId}/data.json`);
         if (response.ok) {
-          const storyData = await response.json();
-          setSelectedStory({ id: storyId, ...storyData });
+          const storyData: Story = await response.json();
+          setSelectedStory(storyData);
         }
       };
       fetchStory();
@@ -57,14 +48,24 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   };
 
   const nextPage = () => {
-    if (selectedStory && currentScene < selectedStory.text.split('|').length - 1) {
-      setCurrentScene(currentScene + 1);
+    if (selectedStory) {
+      if (currentSentence < selectedStory.scenes[currentScene].sentences.length - 1) {
+        setCurrentSentence(currentSentence + 1);
+      } else if (currentScene < selectedStory.scenes.length - 1) {
+        setCurrentScene(currentScene + 1);
+        setCurrentSentence(0); // Reset sentence index when moving to the next scene
+      }
     }
   };
 
   const previousPage = () => {
-    if (currentScene > 0) {
-      setCurrentScene(currentScene - 1);
+    if (selectedStory) {
+      if (currentSentence > 0) {
+        setCurrentSentence(currentSentence - 1);
+      } else if (currentScene > 0) {
+        setCurrentScene(currentScene - 1);
+        setCurrentSentence(selectedStory.scenes[currentScene - 1].sentences.length - 1); // Set sentence index to the last sentence of the previous scene
+      }
     }
   };
 
@@ -99,18 +100,20 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
   };
 
   if (selectedStory) {
-    const scenes = selectedStory.text.split('|');
-    const imageUrl = selectedStory.imageUrls[currentScene % selectedStory.imageUrls.length];
-    // Extract the image URL and other details
+    const currentSceneData = selectedStory.scenes[currentScene]; // Get current scene data
+    const imageUrl = currentSceneData.imageUrl; // Use image from the current scene
     const actualImageUrl = imageUrl;
+
+    // Get the text from the current sentence in the current scene
+    const sentenceText = currentSceneData.sentences[currentSentence].text;
 
     return (
       <>
         <Head>
-          <title>{scenes[0].replace(/\|$/g, '')}</title>
-          <meta name="description" content={scenes[1] ? scenes.slice(1).join(' ').slice(0, 500) : scenes[0]} />
-          <meta property="og:title" content={scenes[0].replace(/\|$/g, '')} />
-          <meta property="og:description" content={scenes[1] ? scenes.slice(1).join(' ').slice(0, 500) : scenes[0]} />
+          <title>{selectedStory.title}</title>
+          <meta name="description" content={sentenceText} />
+          <meta property="og:title" content={selectedStory.title} />
+          <meta property="og:description" content={sentenceText} />
           <meta property="og:image" content={imageUrl} />
           <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/${storyId}`} />
           <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
@@ -149,7 +152,7 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                       alt="Scene"
                     />
                     <div className={isFullScreen ? `${styles.subtitle}` : styles.subtitle}>
-                      {scenes[currentScene].replace(/\|$/g, '')}
+                      <p>{sentenceText}</p>
                     </div>
                     <>
                       <div
@@ -209,11 +212,9 @@ const Global: NextPage<InitialProps> = ({ initialStory }) => {
                   </div>
                 </div>
               </div>
-              <>
-                <Link href="/feed" className={styles.footer}>
-                  <a>Story Board</a>
-                </Link>&nbsp;&nbsp;&nbsp;&nbsp;
-              </>
+              <Link href="/feed" className={styles.footer}>
+                <a>Story Board</a>
+              </Link>&nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => storyId && handleShareClick(storyId)}>Copy Link</button>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => storyId && handleFacebookShareClick(storyId)}>Share on Facebook</button>
@@ -252,7 +253,6 @@ Global.getInitialProps = async (ctx: NextPageContext) => {
   let initialStory: Story | null = null;
 
   if (storyId && typeof storyId === 'string') {
-    // Fetch the story JSON data from the Google Cloud Storage bucket
     const response = await fetch(`https://storage.googleapis.com/gaib/stories/${storyId}/data.json`);
     if (response.ok) {
       const storyData = await response.json();

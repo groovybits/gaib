@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
+import { Story, Episode, Scene, Sentence } from '@/types/story';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
@@ -12,7 +13,6 @@ import {
 } from '@/config/personalityPrompts';
 import { audioLanguages, subtitleLanguages, Language } from "@/config/textLanguages";
 import nlp from 'compromise';
-import PexelsCredit from '@/components/PexelsCredit'; // Update the path if required
 import firebase from '@/config/firebaseClientInit';
 import TokensDropdown from '@/components/TokensDropdown';
 import ModeDropdown from '@/components/ModeDropDown';
@@ -29,53 +29,6 @@ import GPT3Tokenizer from 'gpt3-tokenizer';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
-
-interface Sentence {
-  id: number;
-  text: string;
-  subtitle: string;
-  imageUrl: string;
-  speaker: string;
-  gender: string;
-  language: string;
-  model: any;
-  audioFile: string;
-}
-
-interface Scene {
-  id: number;
-  sentences: Sentence[];
-  imageUrl: string;
-  imagePrompt: string;
-}
-
-type Story = {
-  id: string;
-  url: string;
-  text: string;
-  imageUrls: string[];
-  UserId: string;
-  prompt: string;
-  tokens: number;
-  title: string;
-  imageUrl: string;
-  imagePrompt: string;
-  scenes: Scene[];
-  timestamp: number;
-  personality: string;
-  namespace: string;
-  references: string[];
-  isStory: boolean;
-  shareUrl: string;
-}
-
-// Define a type for an episode
-type Episode = {
-  title: string;
-  plotline: string;
-  type: string;
-  username: string;
-};
 
 // Add a type for the user prop
 interface HomeProps {
@@ -956,9 +909,8 @@ function Home({ user }: HomeProps) {
           // setup the story structure
           let story: Story = {
             title: '',
-            text: '',
             url: '',
-            imageUrls: [],
+            thumbnailUrls: [],
             id: '',
             UserId: '',
             prompt: '',
@@ -981,7 +933,6 @@ function Home({ user }: HomeProps) {
           let isContinuingToSpeak = false;
           let isSceneChange = false;
           let lastSpeaker = '';
-          let storyId = '';
 
           let sceneTexts: string[] = [];
           let promptImages: (string)[] = [];
@@ -1249,7 +1200,7 @@ function Home({ user }: HomeProps) {
           story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
           story.title = titleScreenText;
           story.id = episodeIdRef.current;
-          story.url = `https://storage.googleapis.com/${bucketName}/story/${episodeIdRef.current}/data.json`;
+          story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
           story.imageUrl = titleScreen;
           story.imagePrompt = promptImageEpisodeText;
@@ -1428,8 +1379,6 @@ function Home({ user }: HomeProps) {
                   model: model,  // or another model related to the sentence
                   audioFile: `https://storage.googleapis.com/${bucketName}/${audioFile}`,  // or another audio file related to the sentence
                 });
-                story.text = story.text + ' |' + sentence_by_character;
-                story.imageUrls.push(lastImage);
               }
             }
           }
@@ -1443,10 +1392,10 @@ function Home({ user }: HomeProps) {
           try {
             // Share the story after building it before displaying it
             let shareUrl = await shareStory(story, isFetching);
+            story.shareUrl = shareUrl;
 
             if (shareUrl != '' && isDisplayingRef.current === false) {
               setLoadingOSD(`\nEpisode shared to: ${shareUrl}!`);
-              story.shareUrl = shareUrl;
             }
           } catch (error) {
             console.error(`Error sharing story: ${error}`);

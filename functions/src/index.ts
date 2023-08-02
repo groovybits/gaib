@@ -32,8 +32,8 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
       }
       const story = await response.json();
 
-      if (!story || !story.imageUrls) {
-        console.log("No story or imageUrls found");
+      if (!story || !story.scenes) {
+        console.log("No story or scenes found");
         return;
       }
 
@@ -43,23 +43,18 @@ exports.generateThumbnail = functions.database.ref("/stories/{storyId}")
       const thumbnailUrls = [];
       const uniqueImageUrls: Set<string> = new Set();
       let uniqueIndex = 0; // Index for unique images
-      for (let index = 0; index < story.imageUrls.length; index++) {
-        try {
-          const imageUrl = story.imageUrls[index];
-          // Check if the image URL is unique
-          if (!uniqueImageUrls.has(imageUrl)) {
-            uniqueImageUrls.add(imageUrl);
-            const thumbnailUrl = await createThumbnail(storyId,
-              imageUrl, uniqueIndex);
-            if (thumbnailUrl) { // Check if thumbnailUrl is not null
-              thumbnailUrls.push(thumbnailUrl);
-              uniqueIndex++; // Increment the unique index
-            }
+
+      for (let sceneIndex = 0; sceneIndex < story.scenes.length; sceneIndex++) {
+        const imageUrl = story.scenes[sceneIndex].imageUrl;
+        // Check if the image URL is unique
+        if (!uniqueImageUrls.has(imageUrl)) {
+          uniqueImageUrls.add(imageUrl);
+          const thumbnailUrl = await createThumbnail(storyId,
+            imageUrl, uniqueIndex);
+          if (thumbnailUrl) { // Check if thumbnailUrl is not null
+            thumbnailUrls.push(thumbnailUrl);
+            uniqueIndex++; // Increment the unique index
           }
-        } catch (error) {
-          console.error(
-            `Failed to create thumbnail for image at index ${index}`,
-            error);
         }
       }
 
