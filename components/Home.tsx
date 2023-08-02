@@ -1520,6 +1520,9 @@ function Home({ user }: HomeProps) {
           console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
         } else {
           console.log(`handleSubmit: No personality found in question: '${question}'`);  // Log the question
+          if (twitchChatEnabled && channelId !== '') {
+            postResponse(channelId, `Sorry, I failed a extracting the personality, please try again. Question: ${question}`, user?.uid);
+          }
         }
       }
     } catch (error) {

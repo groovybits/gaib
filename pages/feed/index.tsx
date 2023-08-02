@@ -150,7 +150,7 @@ export default function Feed() {
                     {story.scenes ? story.scenes.map((scene, sceneIndex) => (
                       <div key={sceneIndex}>
                         <p style={{ whiteSpace: 'pre-wrap' }}>
-                          {scene.sentences.map((sentence, sentenceIndex) => sentence.text).join('\n')}
+                          {scene.sentences && scene.sentences.length > 0 ? scene.sentences.map((sentence, sentenceIndex) => sentence.text).join('\n') : ''}
                         </p>
                       </div>
                     )) : (

@@ -9,6 +9,7 @@ import PexelsCredit from '@/components/PexelsCredit';
 import { ParsedUrlQuery } from 'querystring';
 import Layout from '@/components/Layout';
 import { Story } from '@/types/story'; // Import the new Story type
+import { useSpeakText } from '@/utils/speakText';
 
 const adSenseCode = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID ? process.env.NEXT_PUBLIC_ADSENSE_PUB_ID : '';
 
@@ -21,6 +22,9 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const [leftHover, setLeftHover] = useState(false);
   const [rightHover, setRightHover] = useState(false);
   const [currentSentence, setCurrentSentence] = useState(0); // Add this line to keep track of the current sentence
+  const { stopSpeaking, speakAudioUrl } = useSpeakText();
+  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [autoPage, setAutoPage] = useState(true);
 
   useEffect(() => {
     if (storyId && typeof storyId === 'string') {
@@ -36,9 +40,32 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
     }
   }, [storyId]);
 
+  const stopAutoPaging = () => {
+    if (autoPage) {
+      setAutoPage(false);
+    } else {
+      setAutoPage(true);
+    }
+  };
+
+  const stopSpeakingText = () => {
+    if (autoSpeak) {
+      setAutoSpeak(false);
+      stopSpeaking(); // Call the stopSpeaking function from useSpeakText
+    } else {
+      setAutoSpeak(true);
+      if (autoPage) {
+        nextPage();
+      }
+    }
+  };
+
+  // Modify the handleShareClick function to stop auto-paging and speaking when the link is clicked
   const handleShareClick = (storyId: string | string[]) => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
     copy(`${baseUrl}/${storyId}`);
+    stopAutoPaging();
+    stopSpeakingText();
     alert(`Copied ${baseUrl}/${storyId} to clipboard!`);
   };
 
@@ -47,20 +74,53 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${baseUrl}/${storyId}`)}`, '_blank');
   };
 
-  const nextPage = () => {
+  useEffect(() => {
+    if (autoPage) {
+      nextPage();
+    }
+  }, [currentScene, currentSentence]);
+
+  const nextPage = async () => {
     if (selectedStory) {
       if (selectedStory.scenes) {
+        let spoke = false;
+        let spokenText = '';
+
+        // Speak the text if autoSpeak is enabled and the current sentence has an audio file
+        if (autoSpeak && selectedStory.scenes
+          && selectedStory.scenes[currentScene]
+          && selectedStory.scenes[currentScene].sentences
+          && selectedStory.scenes[currentScene].sentences[currentSentence]
+          && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile)
+        {
+          await speakAudioUrl(selectedStory.scenes[currentScene].sentences[currentSentence].audioFile);
+
+          if (selectedStory.scenes[currentScene].sentences[currentSentence].text) {
+            spokenText = selectedStory.scenes[currentScene].sentences[currentSentence].text;
+          } else {
+            spokenText = selectedStory.prompt;
+          }
+          spoke = true;
+        }
+
+        // Sleep for the length of the spoken text if autoPage is enabled and the text was spoken
+        if (autoPage && !spoke) {
+          // sleep time of the spoken text would take to read
+          await new Promise((resolve) => setTimeout(resolve, spokenText.length * 100));
+        }
+
+        // Move to the next sentence if there is one, otherwise move to the next scene
         if (currentSentence < selectedStory.scenes[currentScene].sentences.length - 1) {
-          setCurrentSentence(currentSentence + 1);
+          setCurrentSentence(prevSentence => prevSentence + 1);
         } else if (currentScene < selectedStory.scenes.length - 1) {
-          setCurrentScene(currentScene + 1);
+          setCurrentScene(prevScene => prevScene + 1);
           setCurrentSentence(0); // Reset sentence index when moving to the next scene
         }
       }
     }
   };
 
-  const previousPage = () => {
+  const previousPage = async () => {
     if (selectedStory) {
       if (selectedStory.scenes) {
         if (currentSentence > 0) {
@@ -68,6 +128,14 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
         } else if (currentScene > 0) {
           setCurrentScene(currentScene - 1);
           setCurrentSentence(selectedStory.scenes[currentScene - 1].sentences.length - 1); // Set sentence index to the last sentence of the previous scene
+        }
+        if (autoSpeak && selectedStory.scenes
+          && selectedStory.scenes[currentScene]
+          && selectedStory.scenes[currentScene].sentences
+          && selectedStory.scenes[currentScene].sentences[currentSentence]
+          && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile)
+        {
+          await speakAudioUrl(selectedStory.scenes[currentScene].sentences[currentSentence].audioFile);
         }
       }
     }
@@ -108,7 +176,17 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
     const imageUrl = currentSceneData ? currentSceneData.imageUrl : selectedStory.imageUrl; // Use image from the current scene
 
     // Get the text from the current sentence in the current scene
-    const sentenceText = currentSceneData ? currentSceneData.sentences[currentSentence].text : selectedStory.prompt;
+    let sentenceText = '';
+    
+    if (currentSceneData &&
+      currentSceneData.sentences &&
+      currentSceneData && currentSceneData.sentences[currentSentence] &&
+      currentSceneData.sentences[currentSentence].text &&
+      currentSceneData.sentences[currentSentence].text) {
+      sentenceText = currentSceneData.sentences[currentSentence].text;
+    } else {
+      sentenceText = selectedStory.prompt;
+    }
 
     return (
       <>
@@ -154,7 +232,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                       src={imageUrl}
                       alt="Scene"
                     />
-                    <div className={isFullScreen ? `${styles.subtitle}` : styles.subtitle}>
+                    <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
                       <p>{sentenceText}</p>
                     </div>
                     <>
@@ -218,13 +296,13 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
               <Link href="/feed" className={styles.footer}>
                 <a>Story Board</a>
               </Link>&nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => storyId && handleShareClick(storyId)}>Copy Link</button>
-              &nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => storyId && handleFacebookShareClick(storyId)}>Share on Facebook</button>
-              &nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => storyId && handleLinkedInShareClick(storyId)}>Share on LinkedIn</button>
-              &nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => storyId && handleTwitterShareClick(storyId)}>Share on Twitter</button>
+              <button className={styles.footer} onClick={() => { storyId && handleShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Copy Link</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => { storyId && handleFacebookShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on Facebook</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => { storyId && handleLinkedInShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on LinkedIn</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => { storyId && handleTwitterShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <button className={styles.footer} onClick={stopAutoPaging}>{autoPage ? 'Disable Auto-Paging' : 'Enable Auto-Paging'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={stopSpeakingText}>{autoSpeak ? 'Disable Speaking' : 'Enable Speaking'}</button>
             </div>
             <div className={styles.feedSection}>
               <div className={styles.feed}>
@@ -238,7 +316,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                   <a href="https://github.com/groovybits/gaib">Groovy Code</a>&nbsp;&nbsp;|&nbsp;&nbsp;
                   <a href="https://twitch.tv/groovyaibot">Create Story</a>&nbsp;&nbsp;|&nbsp;&nbsp;
                   <a href="https://youtube.com/@groovyaibot">YouTube</a>&nbsp;&nbsp;|&nbsp;&nbsp;
-                  <a href="https://facebook.com/groovyorg">Facebook</a>
+                  <a href="https://facebook.com/groovyorg">Facebook</a>&nbsp;&nbsp;|&nbsp;&nbsp;
                 </div>
               </div>
             </div>

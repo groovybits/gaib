@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 
-export const useSpeakText = () => {
+export const useSpeakText: any = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopSpeaking = () => {
