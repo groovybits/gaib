@@ -1,7 +1,7 @@
 import tmi from 'tmi.js';
 import admin from 'firebase-admin';
-import Filter from 'bad-words';
 import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
+import { Episode } from '@/types/story';
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
@@ -33,18 +33,21 @@ if (!openApiKey) {
 
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
-const prompt: string = `You are the Moderator and Support on a Twitch Channel providing assistance for operating an AI story and answer playback system. 
-The commands comprise of ones prefixed with episode or question [] backeted all caps settings added for control of options. The commands are
-!episode <title> <plot", !question <question>, [wisdom] or [science], [refresh], [personality] <role>, !personalities,
-and [prompt] "<custom prompt>". You can create images with "!image: <image description>". Recommend using "!help" for full details. 
-When asked to generate or create a story or episode use "!episode: <title> <plotline>" syntax. Speak mindfully and with respect.`;
+const prompt: string = "You're the Moderator and Support on a Twitch Channel, managing an AI story and answer playback system. " +
+  "The system commands are: `!episode <title><plot>` to create a new episode, " +
+  "`!question <question>` to ask a question, `[wisdom]` or `[science]` to set the knowledge domain, " +
+  "`[refresh]` to refresh the system, `[personality]<role>` to set the AI's personality, " +
+  "`!personalities` to view available personalities, `[prompt] \" < custom prompt> \"` " +
+  "to provide a custom prompt, `!image: <image description > ` to generate an image, " +
+  "and`!help` to get detailed instructions.When asked to generate a story or episode, use`!episode: <description>`. " +
+  "Always communicate with respect.";
 
 const helpMessage: string = `
 Help: - Ask me how to generate anime or general anime questions.
 
 Commands:
-  !episode <topics> - Generate an episode based on topics from documents.
-  !question <question> - Ask a question based on topcis from documents.
+  !episode <description> - Generate an episode based on  description.
+  !question <question> - Ask a question.
   !image <prompt> - Generate an image based on prompt.
   [refresh] - Clear conversation history, forget everything.
   [personality] <role> - Change bot's personality and role.
@@ -53,9 +56,9 @@ Commands:
   !personalities - Display available personalities.
 
 Example:
-  !episode: Buddha is enlightened - the story of Buddha. [personality] Anime [refresh][wisdom] [prompt] "You are the Buddha."
+  !episode Buddha is enlightened - the story of Buddha. [personality] Anime [refresh][wisdom] [prompt] "You are the Buddha."
 
-Note: Type !episode: and !question:  in lower case. Ask any questions and our AI will answer them.
+Note: Type !episode and !question  in lower case. Ask any questions and our AI will answer them.
 `;
 
 if (!channelName) {
@@ -137,7 +140,6 @@ client.on('message', async (channel: any, tags: {
       newCommandRef.set({
         channelName: channelName,
         type: 'question',
-        plotline: '',
         title: imagePrompt,
         username: tags.username, // Add this line to record the username
         timestamp: admin.database.ServerValue.TIMESTAMP
@@ -163,7 +165,6 @@ client.on('message', async (channel: any, tags: {
   ) {
     // Parse the title and plotline from the command
     let title: any = '';
-    let plotline: any = '';
 
     title = message.slice(0, promptLimit).trim();
     const isStory: any = message.toLowerCase().startsWith('!episode') ? true : false;
@@ -176,13 +177,12 @@ client.on('message', async (channel: any, tags: {
         channelName: channelName,
         type: isStory ? 'episode' : 'question',
         title,
-        plotline,
         username: tags.username, // Add this line to record the username
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
     } else {
-      console.log(`Invalid Format ${tags.username} Please Use "!episode title - plotline" (received: ${message}).`);
-      client.say(channel, `Groovy Invalid Format ${tags.username} Please Use "!episode title - plotline" (received: ${message}). See !help for more info.`);
+      console.log(`Invalid Format ${tags.username} Please Use "!episode <description>" (received: ${message}).`);
+      client.say(channel, `Groovy Invalid Format ${tags.username} Please Use "!episode <description>" (received: ${message}). See !help for more info.`);
     }
   } else  {
     let promptArray: any[] = [];

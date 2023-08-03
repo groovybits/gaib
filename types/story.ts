@@ -38,9 +38,10 @@ export type Story = {
 // Define a type for an episode
 export type Episode = {
     title: string;
-    plotline: string;
     type: string;
     username: string;
     namespace: string;
     personality: string;
+    refresh: boolean;
+    prompt: string;
 };

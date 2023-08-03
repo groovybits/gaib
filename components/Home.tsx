@@ -270,7 +270,6 @@ function Home({ user }: HomeProps) {
 
         const newEpisodes = data.map((item: any) => ({
           title: item.title,
-          plotline: item.plotline,
           // Add any other necessary fields here
           type: item.type,
           username: item.username,
@@ -360,12 +359,13 @@ function Home({ user }: HomeProps) {
             }
 
             let episode: Episode = {
-              title: headline,
-              plotline: body,
+              title: headline + ' ' + body,
               type: isStory ? 'episode' : 'question',
               username: 'news',
               namespace: selectedNamespace,
               personality: selectedPersonality,
+              refresh: false,
+              prompt: ''
             }
             console.log(`Queing News headline #${index}: ${headline}`);
             setEpisodes([...episodes, episode]);
@@ -404,18 +404,13 @@ function Home({ user }: HomeProps) {
         isSubmittingRef.current = true;
         try {
           if (episode) {
-            const currentQuery = `${episode.title}\n\n${episode.plotline}`;
-
             // send query to handlesubmit with a mock event
             console.log(`handleSubmitQueue: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
-            let prefix = '';
-            if (episode.type != '') {
-              prefix = `!${episode.type} `;
-            }
+           
             const mockEvent = {
               preventDefault: () => { },
               target: {
-                value: `${prefix}${currentQuery}`,
+                value: episode,
               },
             };
             isSubmittingRef.current = false;
@@ -1438,31 +1433,61 @@ function Home({ user }: HomeProps) {
   async function handleSubmit(e: any) {
     e.preventDefault();
 
-    let question = e.target?.value ? e.target.value.trim() : query.trim();
+    let localIsStory = isStory;
+    let localNamespace = selectedNamespace;
+    let localPersonality = selectedPersonality;
+    let localCommandPrompt = '';
+    let titleArray: string[] = [];
+    let question: string = '';
 
-    // Don't submit if the query is empty
-    if (!question || question === '') {
-      console.log(`handleSubmit: Not submitting question: '${question}'`);
-      return;
-    }
+    // Check if the event is an input event
+    if (e.target?.value !== undefined) {
+      if (e.target.value.title !== undefined) {
+        question = e.target.value.title.trim();
+      }
 
-    // Queue the question if processing is in progress
-    if (loading) {
+      if (e.target.value.type !== undefined) {
+        localIsStory = e.target.value.type === 'story' ? true : false;
+      }
+
+      // Queue the question if processing is in progress
+      if (loading) {
+        console.log(`handleSubmit: Busy Processing, requeing input event: '${e.target.value}'`);
+        setEpisodes([...episodes, e.target.value]);
+        return;
+      }
+    } else if (loading) {
+      console.log(`handleSubmit: Busy Processing, requeing input query: '${question}'`);
       let episode: Episode = {
         title: question,
-        plotline: '',
         type: question.startsWith('!question') ? 'question' : 'episode',
         username: 'anonymous',
         namespace: selectedNamespace,
         personality: selectedPersonality,
+        refresh: false,
+        prompt: ''
       }
       setEpisodes([...episodes, episode]);
       setQuery('');
-      return; // Don't submit the question yet, let the queue do it
+      return;
+    } else {
+      question = query.trim();
+    }
+
+    // Don't submit if the query is empty
+    if (!question || question === '') {
+      console.log(`handleSubmit: Not submitting empty or undefined question! ""`);
+      return;
+    }
+
+    //let localHistory: [string, string][] = [...history];
+    let localHistory = [...messages];
+    if (debug) {
+      console.log(`handleSubmit: history is ${JSON.stringify(history, null, 2)}`);
+      console.log(`handleSubmit: localHistory is ${JSON.stringify(localHistory, null, 2)}`);
     }
 
     // Check if the message is a story and remove the "!type:" prefix
-    let localIsStory = isStory;
     try {
       if (question.startsWith('!question')) {
         localIsStory = false;
@@ -1482,7 +1507,6 @@ function Home({ user }: HomeProps) {
       }
     }
 
-    let localNamespace = selectedNamespace;
     try {
       if (question.toLowerCase().includes('[science]') || question.toLowerCase().includes('[wisdom]')) {
         if (question.toLowerCase().includes('[science]')) {
@@ -1504,15 +1528,14 @@ function Home({ user }: HomeProps) {
     }
 
     // Extract the personality from the question
-    let localPersonality = selectedPersonality;
     try {
       if (question.toLowerCase().includes('[personality]')) {
         let personalityMatch = question.toLowerCase().match(/\[personality\]\s*([\w\s]*?)(?=\s|$)/i);
         if (personalityMatch) {
-          let extractedPersonality = personalityMatch[1].toLowerCase().trim();
+          let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localPersonality = 'groovy';
+            localPersonality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
@@ -1539,7 +1562,6 @@ function Home({ user }: HomeProps) {
     }
 
     // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
-    let localCommandPrompt = '';
     try {
       if (question.toLowerCase().includes('[prompt]')) {
         let endPrompt = false;
@@ -1577,13 +1599,6 @@ function Home({ user }: HomeProps) {
       }
     }
 
-    //let localHistory: [string, string][] = [...history];
-    let localHistory = [...messages];
-    if (debug) {
-      console.log(`handleSubmit: history is ${JSON.stringify(history, null, 2)}`);
-      console.log(`handleSubmit: localHistory is ${JSON.stringify(localHistory, null, 2)}`);
-    }
-
     if (question.toLowerCase().includes('[refresh]')) {
       try {
         // Clear the shared history
@@ -1608,12 +1623,11 @@ function Home({ user }: HomeProps) {
     }
 
     // create the titles and parts of an episode
-    let titleArray: string[] = [];
     if (localIsStory) {
       titleArray.push('the episode begins, introduction and character setup of ' + question);
       //titleArray.push('the episode continues, plotline and character development...');
-      //titleArray.push('the episode continues, the plot thickens...');
-      titleArray.push('the episode continues, coming upon the peak of the story...');
+      titleArray.push('the episode continues, the plot thickens...');
+      //titleArray.push('the episode continues, coming upon the peak of the story...');
       titleArray.push('the episode continues, the climax of the story...');
       //titleArray.push('the episode continues, the story begins to resolve...');
       titleArray.push('the episode ends and finishes up with a conclusion...');
@@ -1762,23 +1776,14 @@ function Home({ user }: HomeProps) {
     if (e.key === 'Enter' && !e.shiftKey && query) {
       e.preventDefault(); // Prevent the default action
 
-      let localQuery = query;
-      let localIsStory = isStory;
-      if (query.startsWith('!question')) {
-        localIsStory = false;
-        localQuery = query.replace('!question:', '').replace('!question', '').trim();
-      } else if (query.startsWith('!episode')) {
-        localIsStory = true;
-        localQuery = query.replace('!episode:', '').replace('!episode', '').trim();
-      }
-
       let episode: Episode = {
-        title: localQuery,
-        plotline: '',
-        type: localIsStory ? 'episode' : 'question',
+        title: query,
+        type: isStory ? 'episode' : 'question',
         username: 'anonymous',
         namespace: selectedNamespace,
         personality: selectedPersonality,
+        refresh: false,
+        prompt: ''
       }
       setEpisodes([...episodes, episode]);
       setQuery('');
@@ -1957,11 +1962,12 @@ function Home({ user }: HomeProps) {
       console.log(`useEffect: Queing voiceQuery: '${voiceQuery.slice(0, 80)}...'`);
       let episode: Episode = {
         title: voiceQuery,
-        plotline: '',
         type: isStory ? 'episode' : 'question',
         username: 'voice',
         namespace: selectedNamespace,
         personality: selectedPersonality,
+        refresh: false,
+        prompt: ''
       }
       if (debug) {
         console.log(`Queing episode: ${JSON.stringify(episode, null, 2)}`);
@@ -2045,11 +2051,12 @@ function Home({ user }: HomeProps) {
   const handleReplay = () => {
     let episode: Episode = {
       title: `REPLAY: ${latestMessage.message}`,
-      plotline: '',
       type: isStory ? 'episode' : 'question',
       username: 'voice',
       namespace: '',
       personality: "passthrough",
+      refresh: false,
+      prompt: ''
     }
     if (debug) {
       console.log(`Replay is queing episode: ${JSON.stringify(episode, null, 2)}`);
@@ -2204,10 +2211,10 @@ function Home({ user }: HomeProps) {
                                 {[...episodes].reverse().map((episode, index) => (
                                   <tr key={index}>
                                     <td>
-                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
+                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title.slice(0,30)}&quot;</p>
                                     </td>
                                     <td>
-                                      <p className={`${styles.footer} ${styles.episodeListDescription}`}>{episode.plotline}</p>
+                                      <p className={`${styles.footer} ${styles.episodeListDescription}`}>{episode.title.slice(30)}</p>
                                     </td>
                                   </tr>
                                 ))}

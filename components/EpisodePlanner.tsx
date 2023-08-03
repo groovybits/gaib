@@ -18,29 +18,29 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
   }, [episodesProp]);
 
   const [title, setTitle] = useState('');
-  const [plotline, setPlotline] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [type, setType] = useState('');
   const [username, setUsername] = useState('');
   const [namespace, setNamespace] = useState('');
   const [personality, setPersonality] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [refresh, setRefresh] = useState(false);
 
   const handleAddEpisode = () => {
     const newEpisodes: Episode[] = [...episodes];
-    const index = newEpisodes.findIndex(episode => episode.title === title && episode.plotline === plotline);
+    const index = newEpisodes.findIndex(episode => episode.title === title);
     if (index !== -1) {
-      newEpisodes[index] = { title, plotline, type, username, namespace, personality };
+      newEpisodes[index] = { title, type, username, namespace, personality, refresh, prompt };
       // Call onEpisodeChange with the new list of episodes
       onEpisodeChange(newEpisodes);
     } else {
-      const newEpisode = { title, plotline, type, username, namespace, personality };
+      const newEpisode = { title, type, username, namespace, personality, refresh, prompt };
       newEpisodes.push(newEpisode);
       // Call onNewEpisode with the new episode
       onNewEpisode(newEpisode);
     }
     setEpisodes(newEpisodes);
     setTitle('');
-    setPlotline('');
     setShowModal(false);
     setType('');
     setUsername('');
@@ -63,14 +63,6 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
               />
             </div>
             <div className={styles.cloudform}>
-            <textarea
-              className={styles.textarea}
-              value={plotline}
-              onChange={(e) => setPlotline(e.target.value)}
-              placeholder="Episode Plotline"
-              />
-            </div>
-            <div className={styles.cloudform}>
               <button className={styles.header} onClick={handleAddEpisode}>Add</button>&nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.header} onClick={() => setShowModal(false)}>Cancel</button>
             </div>
@@ -83,9 +75,6 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
           <tr key={index}>
             <td>
               <p className={`${styles.footer} ${styles.episodeList}`}>Episode {index + 1}: &quot;{episode.title}&quot;</p>
-            </td><tr></tr>
-            <td>
-              <p className={`${styles.footer} ${styles.episodeList}`}>{episode.plotline}</p>
             </td>
           </tr>
         ))}
