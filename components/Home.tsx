@@ -1572,6 +1572,20 @@ function Home({ user }: HomeProps) {
       }
     }
 
+    // confirm all fields are filled out
+    if (localEpisode.title == '') {
+      console.error(`handleSubmit: Error extracting question: '${localEpisode.title}'`);  // Log the question
+    }
+    if (localEpisode.namespace == '') {
+      localEpisode.namespace = selectedNamespace;
+    }
+    if (localEpisode.personality == '') {
+      localEpisode.personality = selectedPersonality;
+    }
+    if (localEpisode.prompt == '') {
+      localEpisode.prompt = localCommandPrompt;
+    }
+
     return localEpisode;
   }
 
