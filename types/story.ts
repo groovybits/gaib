@@ -1,7 +1,6 @@
 export interface Sentence {
     id: number;
     text: string;
-    subtitle: string;
     imageUrl: string;
     speaker: string;
     gender: string;

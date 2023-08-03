@@ -269,7 +269,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                           <p>{useSubtitles ? sentenceText : ''}</p>
                         </div>
                       </>
-                    ) : (
+                    ) : selectedStory.scenes && selectedStory.scenes[currentScene] && selectedStory.scenes[currentScene].sentences && selectedStory.scenes[currentScene].sentences.length > 0  ? (
                       <>
                         <img
                           src={selectedStory.imageUrl}
@@ -279,7 +279,11 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                           <p>{selectedStory.scenes && selectedStory.scenes[currentScene].sentences && selectedStory.scenes[currentScene].sentences.length > 0 ? selectedStory.scenes[currentScene].sentences.map(sentence => sentence.text).join(' ') : selectedStory.prompt}</p>
                         </div>
                       </>
-                    )}
+                      ) :
+                        <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
+                          <p>selectedStory.prompt</p>
+                        </div>
+                    }
                     <>
                       <div
                         style={{

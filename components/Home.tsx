@@ -153,6 +153,9 @@ function Home({ user }: HomeProps) {
   // Declare a reference to the speech recognition object
   let recognition: SpeechRecognition | null = null;
 
+  // Speech recognition
+  type SpeechRecognition = typeof window.SpeechRecognition;
+
   const copyStory = async () => {
     copy(latestMessage.message);
     alert('Story copied to clipboard!');
@@ -1202,7 +1205,7 @@ function Home({ user }: HomeProps) {
           // Fill the story object
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
 
-          story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message;
+          story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message.replace('!question:,', '').replace('!story:,', '').replace('!question', '').replace('!story', '').replace('!image', '').replace('!image:', '');
           story.title = titleScreenText;
           story.UserId = user?.uid || 'anonymous';
           story.id = episodeIdRef.current;
@@ -1377,7 +1380,6 @@ function Home({ user }: HomeProps) {
                 scene.sentences.push({
                   id: sentenceId++,
                   text: translationEntry != '' ? translationEntry : sentence_by_character,
-                  subtitle: cleanText,
                   imageUrl: lastImage,  // or another image related to the sentence
                   speaker: currentSpeaker,  // or another speaker related to the sentence
                   gender: detectedGender,  // or another gender related to the sentence
@@ -1430,9 +1432,6 @@ function Home({ user }: HomeProps) {
       isSpeakingRef.current = false;
     }
   }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
-
-  // Speech recognition
-  type SpeechRecognition = typeof window.SpeechRecognition;
 
   // Modify the handleSubmit function
   async function handleSubmit(e: any) {
