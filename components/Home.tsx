@@ -1056,12 +1056,12 @@ function Home({ user }: HomeProps) {
           // add to the beginning of the scentences to speek the query and the title if it is a question
           if (isStory) {
             sentencesToSpeak.push(`SCENE: Direction: ${query}`);
-            sentencesToSpeak.push(`Title: ${firstSentence}`);
+            //sentencesToSpeak.push(`Title: ${firstSentence}`);
           } else {
             sentencesToSpeak.push(`SCENE: Question: ${query}`);
-            sentencesToSpeak.push(`Answer: ${firstSentence}`);
+            //sentencesToSpeak.push(`Answer: ${firstSentence}`);
           }
-          currentSceneText = query + "\n\n" + firstSentence + "\n\n";
+          currentSceneText = query + "\n\n" /*+ firstSentence + "\n\n"*/;
           sceneCount++;
           sceneTexts.push(currentSceneText);
           currentSceneText = "";
