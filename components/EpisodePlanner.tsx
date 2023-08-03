@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from '@/styles/Home.module.css';
-
-// Define a type for an episode
-type Episode = {
-  title: string;
-  plotline: string;
-  type: string;
-  username: string;
-};
+import { Episode } from '@/types/story';
 
 // Add the Episode type to the EpisodePlannerProps interface
 type EpisodePlannerProps = {
@@ -29,16 +22,18 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
   const [showModal, setShowModal] = useState(false);
   const [type, setType] = useState('');
   const [username, setUsername] = useState('');
+  const [namespace, setNamespace] = useState('');
+  const [personality, setPersonality] = useState('');
 
   const handleAddEpisode = () => {
-    const newEpisodes = [...episodes];
+    const newEpisodes: Episode[] = [...episodes];
     const index = newEpisodes.findIndex(episode => episode.title === title && episode.plotline === plotline);
     if (index !== -1) {
-      newEpisodes[index] = { title, plotline, type, username };
+      newEpisodes[index] = { title, plotline, type, username, namespace, personality };
       // Call onEpisodeChange with the new list of episodes
       onEpisodeChange(newEpisodes);
     } else {
-      const newEpisode = { title, plotline, type, username };
+      const newEpisode = { title, plotline, type, username, namespace, personality };
       newEpisodes.push(newEpisode);
       // Call onNewEpisode with the new episode
       onNewEpisode(newEpisode);

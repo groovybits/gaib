@@ -41,4 +41,6 @@ export type Episode = {
     plotline: string;
     type: string;
     username: string;
+    namespace: string;
+    personality: string;
 };

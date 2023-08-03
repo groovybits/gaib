@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
-import { Story, Episode, Scene, Sentence } from '@/types/story';
+import { Story, Episode, Scene } from '@/types/story';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
@@ -364,6 +364,8 @@ function Home({ user }: HomeProps) {
               plotline: body,
               type: isStory ? 'episode' : 'question',
               username: 'news',
+              namespace: selectedNamespace,
+              personality: selectedPersonality,
             }
             console.log(`Queing News headline #${index}: ${headline}`);
             setEpisodes([...episodes, episode]);
@@ -502,7 +504,11 @@ function Home({ user }: HomeProps) {
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
-    if (!isSpeakingRef.current && playQueue.length < maxQueueSize) {
+    if (!isSpeakingRef.current
+      && messages.length > 0
+      && (messages.length - 1) > lastSpokenMessageIndex
+      && messages[messages.length - 1].type === 'apiMessage')
+    {
       isSpeakingRef.current = true;
 
       // last message set to mark our position in the messages array
@@ -520,6 +526,8 @@ function Home({ user }: HomeProps) {
         isSpeakingRef.current = false;
         return;
       }
+      let lastMessage: string = messages[lastMessageIndex].message;
+      let lastQuery: string = messages[lastMessageIndex - 1].message;
 
       // lock speaking and avoid crashing
       try {
@@ -903,7 +911,7 @@ function Home({ user }: HomeProps) {
           }
         };
 
-        async function processImagesAndSubtitles() {
+        async function processImagesAndSubtitles(query: string, message: string) {
           const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
           const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
           const idToken = await user?.getIdToken();
@@ -953,12 +961,9 @@ function Home({ user }: HomeProps) {
           let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
           let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
 
-          // take the story and run it thruough GPT again to expand and generate more text
-          //const improvedSentences = await generateAImessage(`Take the following output and expand it and improve it to be more rich and detailed:\n\n${messages[lastMessageIndex].message}`, buildPrompt(selectedPersonality, isStory), 0);
-
           try {
             // Split the message into paragraphs at each empty line
-            const paragraphs = /*improvedSentences ? improvedSentences.split(/\n\s*\n/) :*/ messages[lastMessageIndex].message.split(/\n\s*\n/);
+            const paragraphs = message.split(/\n\s*\n/);
             sentences = [];
             for (const paragraph of paragraphs) {
               // If the paragraph is too long, split it into sentences
@@ -971,8 +976,8 @@ function Home({ user }: HomeProps) {
               }
             }
           } catch (e) {
-            console.log('Error splitting sentences: ', messages[lastMessageIndex].message, ': ', e);
-            sentences = [messages[lastMessageIndex].message];
+            console.log('Error splitting sentences: ',  message, ': ', e);
+            sentences = [message];
           }
 
           let maleVoiceModels = {
@@ -1016,7 +1021,7 @@ function Home({ user }: HomeProps) {
           let model = defaultModel;
 
           // Extract gender markers from the entire message
-          const genderMarkerMatches = messages[lastMessageIndex].message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
+          const genderMarkerMatches = message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
           if (genderMarkerMatches) {
             let name: string;
             for (const match of genderMarkerMatches) {
@@ -1054,10 +1059,10 @@ function Home({ user }: HomeProps) {
           }
 
           // get first sentence as title or question to display
-          let firstSentence = nlp(messages[lastMessageIndex].message).sentences().out('array')[0];
+          let firstSentence = nlp(message).sentences().out('array')[0];
 
           // display title screen with image and title
-          const imgGenResult = await generateAIimage(`${promptImageTitle}${messages[lastMessageIndex].message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
+          const imgGenResult = await generateAIimage(`${promptImageTitle}${message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
             lastImage = imgGenResult.image;
             imageCount++;
@@ -1155,7 +1160,7 @@ function Home({ user }: HomeProps) {
             // save story and images for auto save and/or sharing
             sceneCount++;
           } else if (sceneTexts.length === 0) {
-            console.log(`No scenes found in the message: ${messages[lastMessageIndex].message}`);
+            console.log(`No scenes found in the message: ${message}`);
             sceneTexts.push(`SCENE: ${ sentences.join(' ').replace('SCENE:', '').replace('SCENE', '') }`);
             sentencesToSpeak.push(`SCENE: ${ sentences.join(' ').replace('SCENE:', '').replace('SCENE', '') }`);
             sceneCount++;
@@ -1205,7 +1210,7 @@ function Home({ user }: HomeProps) {
           // Fill the story object
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
 
-          story.prompt = messages[lastMessageIndex > 0 ? lastMessageIndex - 1 : 0].message.replace('!question:,', '').replace('!story:,', '').replace('!question', '').replace('!story', '').replace('!image', '').replace('!image:', '');
+          story.prompt = query.replace('!question:,', '').replace('!story:,', '').replace('!question', '').replace('!story', '').replace('!image', '').replace('!image:', '');
           story.title = titleScreenText;
           story.UserId = user?.uid || 'anonymous';
           story.id = episodeIdRef.current;
@@ -1415,16 +1420,12 @@ function Home({ user }: HomeProps) {
           setLoadingOSD('');
         }
 
-        if (lastMessageIndex > lastSpokenMessageIndex &&
-          messages[lastMessageIndex].type === 'apiMessage'
-        ) {
-          // Multi Modal theme
-          try {
-            processImagesAndSubtitles();
-            setLastSpokenMessageIndex(lastMessageIndex);
-          } catch (error) {
-            console.error('Error displaying images and subtitles: ', error);
-          }
+        // Multi Modal theme
+        try {
+          processImagesAndSubtitles(lastQuery, lastMessage);
+          setLastSpokenMessageIndex(lastMessageIndex);
+        } catch (error) {
+          console.error('Error displaying images and subtitles: ', error);
         }
       } catch (error) {
         console.error('SpeakDisplay: UseEffect had an error processing messages: ', error);
@@ -1452,6 +1453,8 @@ function Home({ user }: HomeProps) {
         plotline: '',
         type: question.startsWith('!question') ? 'question' : 'episode',
         username: 'anonymous',
+        namespace: selectedNamespace,
+        personality: selectedPersonality,
       }
       setEpisodes([...episodes, episode]);
       setQuery('');
@@ -1774,6 +1777,8 @@ function Home({ user }: HomeProps) {
         plotline: '',
         type: localIsStory ? 'episode' : 'question',
         username: 'anonymous',
+        namespace: selectedNamespace,
+        personality: selectedPersonality,
       }
       setEpisodes([...episodes, episode]);
       setQuery('');
@@ -1955,6 +1960,8 @@ function Home({ user }: HomeProps) {
         plotline: '',
         type: isStory ? 'episode' : 'question',
         username: 'voice',
+        namespace: selectedNamespace,
+        personality: selectedPersonality,
       }
       if (debug) {
         console.log(`Queing episode: ${JSON.stringify(episode, null, 2)}`);
@@ -2041,6 +2048,8 @@ function Home({ user }: HomeProps) {
       plotline: '',
       type: isStory ? 'episode' : 'question',
       username: 'voice',
+      namespace: '',
+      personality: "passthrough",
     }
     if (debug) {
       console.log(`Replay is queing episode: ${JSON.stringify(episode, null, 2)}`);
