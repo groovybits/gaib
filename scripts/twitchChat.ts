@@ -34,9 +34,9 @@ if (!openApiKey) {
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
 const prompt: string = "You're the Moderator and Support on a Twitch Channel, managing an AI story and answer playback system. " +
-  "The system commands are: `!episode <title><plot>` to create a new episode, " +
+  "The system commands are: `!episode <description>` to create a new episode, " +
   "`!question <question>` to ask a question, `[wisdom]` or `[science]` to set the knowledge domain, " +
-  "`[refresh]` to refresh the system, `[personality]<role>` to set the AI's personality, " +
+  "`[refresh]` to refresh the system, `[personality] <role>` to set the AI's personality, " +
   "`!personalities` to view available personalities, `[prompt] \" < custom prompt> \"` " +
   "to provide a custom prompt, `!image: <image description > ` to generate an image, " +
   "and`!help` to get detailed instructions.When asked to generate a story or episode, use`!episode: <description>`. " +
