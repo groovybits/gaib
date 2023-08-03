@@ -308,7 +308,7 @@ function Home({ user }: HomeProps) {
     }
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processTwitchChat, 3000);  // Then every N seconds
+    const intervalId = setInterval(processTwitchChat, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef]);
@@ -389,7 +389,7 @@ function Home({ user }: HomeProps) {
       isProcessingRef.current = false;
     }
 
-    const intervalId = setInterval(processNewsArticle, 10000);  // Then every N seconds
+    const intervalId = setInterval(processNewsArticle, 60000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, isSubmittingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize]);
@@ -408,7 +408,7 @@ function Home({ user }: HomeProps) {
             console.log(`handleSubmitQueue: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
             let prefix = '';
             if (episode.type != '') {
-              prefix = `!${episode.type}: `;
+              prefix = `!${episode.type} `;
             }
             const mockEvent = {
               preventDefault: () => { },
@@ -430,7 +430,7 @@ function Home({ user }: HomeProps) {
     processQueue();  // Run immediately on mount
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processQueue, 10000);  // Then every N seconds
+    const intervalId = setInterval(processQueue, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening, handleSubmit]);
@@ -495,7 +495,7 @@ function Home({ user }: HomeProps) {
     playQueueDisplay();  // Run immediately on mount
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(playQueueDisplay, 10000);  // Then every N seconds
+    const intervalId = setInterval(playQueueDisplay, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD, setImageUrl, setLastStory]);
@@ -1459,14 +1459,14 @@ function Home({ user }: HomeProps) {
     }
 
     // Check if the message is a story and remove the "!type:" prefix
-    let isQuestion = (isStory === false);
+    let localIsStory = isStory;
     try {
       if (question.startsWith('!question')) {
-        isQuestion = true;
+        localIsStory = false;
         question = question.replace('!question:', '').replace('!question', '').trim();
         console.log(`handleSubmit: Extracted question: with !question:`);
       } else if (question.startsWith('!episode')) {
-        isQuestion = false;
+        localIsStory = true;
         question = question.replace('!episode:', '').replace('!episode', '').trim();
         console.log(`handleSubmit: Extracted episode: with !episode:`);
       }
@@ -1478,7 +1478,6 @@ function Home({ user }: HomeProps) {
         postResponse(channelId, `Sorry, I failed a extracting the !episode: or !question:, please try again.`, user?.uid);
       }
     }
-    let localIsStory = (isQuestion === false);
 
     let localNamespace = selectedNamespace;
     try {
@@ -1605,6 +1604,20 @@ function Home({ user }: HomeProps) {
       }
     }
 
+    // create the titles and parts of an episode
+    let titleArray: string[] = [];
+    if (localIsStory) {
+      titleArray.push('the episode begins, introduction and character setup of ' + question);
+      //titleArray.push('the episode continues, plotline and character development...');
+      //titleArray.push('the episode continues, the plot thickens...');
+      titleArray.push('the episode continues, coming upon the peak of the story...');
+      titleArray.push('the episode continues, the climax of the story...');
+      //titleArray.push('the episode continues, the story begins to resolve...');
+      titleArray.push('the episode ends and finishes up with a conclusion...');
+    } else {
+      titleArray.push(question);
+    }
+
     console.log(`handleSubmit: Submitting question: '${question.slice(0, 1000)}...'`);
 
     // Clear the timeout
@@ -1630,7 +1643,7 @@ function Home({ user }: HomeProps) {
     // Reset the state
     setError(null);
     setLoading(true);
-    setLoadingOSD(`Recieved ${isQuestion ? 'question' : 'story'}: ${question.slice(0, 50).replace(/\n/g, ' ')}...`);
+    setLoadingOSD(`Recieved ${!localIsStory ? 'question' : 'story'}: ${question.slice(0, 50).replace(/\n/g, ' ')}...`);
     setQuery('');
     setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
@@ -1660,6 +1673,7 @@ function Home({ user }: HomeProps) {
           tokensCount,
           documentCount,
           episodeCount,
+          titleArray,
           history: localHistory,
         }),
         signal: ctrl.signal,
@@ -1745,10 +1759,20 @@ function Home({ user }: HomeProps) {
     if (e.key === 'Enter' && !e.shiftKey && query) {
       e.preventDefault(); // Prevent the default action
 
+      let localQuery = query;
+      let localIsStory = isStory;
+      if (query.startsWith('!question')) {
+        localIsStory = false;
+        localQuery = query.replace('!question:', '').replace('!question', '').trim();
+      } else if (query.startsWith('!episode')) {
+        localIsStory = true;
+        localQuery = query.replace('!episode:', '').replace('!episode', '').trim();
+      }
+
       let episode: Episode = {
-        title: query,
+        title: localQuery,
         plotline: '',
-        type: query.startsWith('!question') ? 'question' : 'episode',
+        type: localIsStory ? 'episode' : 'question',
         username: 'anonymous',
       }
       setEpisodes([...episodes, episode]);

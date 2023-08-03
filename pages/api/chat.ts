@@ -115,6 +115,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       tokensCount,
       documentCount,
       episodeCount,
+      titleArray,
       history
     } = req.body;
 
@@ -319,36 +320,36 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     const chains = [];
     const titles: string[] = [];
 
+    let localEpisodeCount:number = episodeCount;
+    if (titleArray.length > 0) {
+      for (let i = 0; i < titleArray.length; i++) {
+        titles.push(titleArray[i]);
+      }
+      localEpisodeCount = titles.length;
+    } else {
+      titles.push(question);
+      if (localEpisodeCount > 1) {
+        for (let i = 2; i < localEpisodeCount + 1; i++) {
+          if (isStory && episodeCount === (i + 1)) {
+            titles.push(`Last episode of ${episodeCount} episodes, the conclusion.`);
+          } else if (isStory) {
+            titles.push(`Episode ${i + 1} of ${episodeCount} next episode...`);
+          } else {
+            titles.push(`Answer ${i + 1} of ${episodeCount} next answer...`);
+          }
+        }
+      }
+    }
+
     // Create a chain for each episode
-    for (let i = 0; i < episodeCount; i++) {
+    for (let i = 0; i < localEpisodeCount; i++) {
       try {
         console.log(`ChatAPI: Creating Chain for Episode #${i+1} of ${episodeCount} episodes.`);
         const chain = await createChain(i, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory);
-        let title: string = question;
+        let title: string = titles[i];
 
-        // Check if it's not the first episode and chatHistory is not empty
-        if (i > 0) {
-          // Check if it's a story
-          if (isStory) {
-            // If it's the last episode
-            if (episodeCount === (i + 1)) {
-              title = `Last episode continuing as episode ${i + 1} of ${episodeCount}.`;
-            } else {
-              title = `Next episode continuing as episode ${i + 1} of ${episodeCount}`;
-            }
-          } else {
-            // If it's the last episode
-            if (episodeCount === (i + 1)) {
-              title = `In context of the previous questions and answers, end the conversation with a final answer.`;
-            } else {
-              title = `Keeping context of the previous questions and answers, continue the conversation with a follow up question to the previous answer.`;
-            }
-          }
-          chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
-        } else {
-          // If it's the first episode or single episode
-          chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
-        }
+        // Add the title to the chat history
+        chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
 
         // Add the chain to the array
         chains.push(chain);

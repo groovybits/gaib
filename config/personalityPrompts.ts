@@ -1,44 +1,42 @@
 // personalityPrompts.ts
 //
 
-export const CONDENSE_PROMPT_STORY = `If the follow up direction is of the same topic as the history, 
-then take the previous episode history and condense it into a follow up direction for the next episode,
-If there is no history, or asked to ignore, or if off topic, 
-then just use the follow up direction to derive an episode title and plotline.
-Do not output the episode itself, just the title and plotline with new lines neatly formatted like a screenplay. write as if a text to speech would read it.
+export const CONDENSE_PROMPT_STORY = `Based on the follow-up direction, if it aligns with the topic of the previous episode history,
+condense the history into a direction for the next episode. If there's no history, or if instructed to disregard it, 
+or if the direction is off-topic, use the follow-up direction to generate an episode title and plotline. 
+Do not produce the full episode, but provide the title and plotline neatly formatted like a screenplay, written for text-to-speech readability.
 
 Episode History:
 {chat_history}
 Follow Up Direction: {question}
-Next episode Title and Plotline:`;
+Next Episode Title and Plotline:`;
 
-export const CONDENSE_PROMPT_QUESTION = `Given the following conversation and a follow up question, 
-rephrase the follow up question to be a standalone question if not asked to change topics or off topic from history.
-If there is no chat history then just rephrase the follow up input as an initial standalone question.
+export const CONDENSE_PROMPT_QUESTION = `Rephrase the follow-up question from a given conversation to function as an independent question,
+unless it's a request to change topics or deviates from the subject of history. 
+If there's no chat history, simply reformat the follow-up input into an initial standalone question.
 
 Chat History:
 {chat_history}
 Follow Up Input: {question}
-Standalone question:`;
+Rephrased standalone question:`;
 
-export const CONDENSE_PROMPT_NEWS_STORY = `Given the previous news articles and the follow up article,
-sumarize the news articles to help create a relevant title and summary for the next article.
-If there is no history then just use the follow up article to derive an article title and summary.
-Do not output the article itself, just the title and summary in a news report format. write as if a text to speech would read it.
+export const CONDENSE_PROMPT_NEWS_STORY = `Based on the previous news articles and the follow-up article, 
+summarize the articles to generate a pertinent title and summary for the upcoming article. 
+If there's no article history, use the follow-up article alone to create an article title and summary. 
+Do not produce the full article, but provide the title and summary in a news report format, written for text-to-speech readability.
 
 Article History:
 {chat_history}
 Follow Up Direction: {question}
-Next article Title and Summary:`;
+Next Article Title and Summary:`;
 
-export const CONDENSE_PROMPT_NEWS_QUESTION = `Given the following news articles and a follow up question,
-rephrase the follow up question to be a standalone question.
-If there is no chat history then just rephrase the follow up input as an initial standalone question.
+export const CONDENSE_PROMPT_NEWS_QUESTION = `Rephrase the follow-up question from a given set of news articles to function as an independent question. 
+If there's no article history, simply reformat the follow-up input into an initial standalone question.
 
 Article History:
 {chat_history}
 Follow Up Input: {question}
-Standalone question:`;
+Rephrased standalone question:`;
 
 export const STORY_FOOTER = `
 
@@ -86,24 +84,27 @@ Context: {context}
 Question: {question}
 Answer:`;
 
-export const ROLE_ENFORCER = `Do not mention your an AI Language model or that you can't access current information,
-stick to the role. Instead of simply stating facts or telling the reader what's happening,
-you should aim to evoke the scene or emotion in the reader's mind by providing enough details and nuances.
-Talk as the first person in the roles unless the narratator parts of a story.`;
+export const ROLE_ENFORCER = `Maintain your role without revealing that you're an AI Language model 
+or your inability to access real-time information.`;
 
-export const SCENE_MARKER = `Add narrator style lines every new character or change of topic that start with the string "[SCENE:...]"
-that fills in the ... with a full detailed description of the current scene in a prompt style format for image generation through stable diffusion.
-include with the scene description the context of characters and environment giving a visual representation in words summarizing the upcoming scene.`;
+export const SCENE_MARKER = `Compose a screenplay that includes detailed scene descriptions for image generation. 
+Begin each new character introduction or topic change with a narrator-style line starting with "[SCENE:...]",
+filling in the "..." with a comprehensive description of the current scene in a format suitable for stable diffusion image generation.
+The scene description should provide context about the characters and environment,
+offering a word-based visual representation that summarizes the forthcoming scene.`;
 
-export const GENDER_MARKER = `Add gender markers in the format of [m] or [f] or [n] after each characters name, 
-starting all lines like "Name[gender]: Dialogue Line..." filling in Dialogue line... with the speakers line, using an extra new line after each speakers line. 
-Make sure it is exactly like "Name[gender]:" prefixing each speaker line.
-Do not include spaces between first and last names, give a list of names with gender markers one per line at the start of the script.`;
+export const GENDER_MARKER = `Create a script where each character's dialogue is preceded by their name and gender marker in the format "Name[gender]:", 
+without spaces between first and last names. The gender markers should be [m], [f], or [n]. After each line of dialogue,
+insert a new line. At the beginning of the script, provide a list of all characters with their respective gender markers,
+each on a separate line.`;
 
-export const STORY_PROMPT = `Create a screenplay for an Episode using the story title to create a screenplay using the context as inspiration.
-Format the story as a screenplay script for a TV show nicely formatted with the story title and script body.
-Make up music and sound effects for the story and display them along with the story in subtitle style.  
-Do not mention if there is no context or the context is not applicable, in that case use the title for inspiration alone.`;
+export const STORY_PROMPT = `Develop a screenplay for a TV show episode, drawing inspiration from the story title and context. 
+Format the output as a professional screenplay script, complete with the story title and script body.
+Invent music and sound effects to accompany the story, and present them in a subtitle-like style within the script.
+If the context is absent or irrelevant, solely use the story title as your source of inspiration, without mentioning the lack of context.
+Rather than merely presenting facts or narrating events,
+strive to create vivid imagery or evoke emotions in the reader's mind through detailed and nuanced descriptions.
+Use first-person perspective when in character roles, except during narrative sections of the story.`;
 
 export const PERSONALITY_PROMPTS = {
   // General
