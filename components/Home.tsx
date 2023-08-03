@@ -641,7 +641,6 @@ function Home({ user }: HomeProps) {
                 const idToken = await user?.getIdToken();
                 let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v1-5';
                 let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
-                let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
                 let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 704;
                 let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
                 let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
@@ -662,7 +661,7 @@ function Home({ user }: HomeProps) {
                   },
                   body: JSON.stringify({
                     model: model,
-                    prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
+                    prompt: `${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
                     negativePrompt: negativePrompt,
                     width: width,
                     height: height,
@@ -1053,6 +1052,20 @@ function Home({ user }: HomeProps) {
 
           // Extract the scene texts from the message
           let sentencesToSpeak = [] as string[];
+
+          // add to the beginning of the scentences to speek the query and the title if it is a question
+          if (isStory) {
+            sentencesToSpeak.push(`SCENE: Direction: ${query}`);
+            sentencesToSpeak.push(`Title: ${firstSentence}`);
+          } else {
+            sentencesToSpeak.push(`SCENE: Question: ${query}`);
+            sentencesToSpeak.push(`Answer: ${firstSentence}`);
+          }
+          currentSceneText = query + "\n\n" + firstSentence + "\n\n";
+          sceneCount++;
+          sceneTexts.push(currentSceneText);
+          currentSceneText = "";
+
           for (const sentence of sentences) {
             if (sentence == '-' || (sentence.startsWith('--') && sentence.endsWith('-'))) {
               continue;
@@ -1109,7 +1122,6 @@ function Home({ user }: HomeProps) {
           // Don't forget to push the last scene text
           if (currentSceneText !== "") {
             sceneTexts.push(`SCENE: ${currentSceneText}`);
-            sentencesToSpeak.push(`SCENE: ${currentSceneText}`);
             sceneCount++;
           }
 
@@ -1328,7 +1340,7 @@ function Home({ user }: HomeProps) {
                 }
                 if (cleanText !== '') {
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                  setLoadingOSD(`Speech to Text line #${spokenLineIndex} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
+                  setLoadingOSD(`Speech to Text line #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
                   await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
                 }
               } else {
@@ -1346,7 +1358,7 @@ function Home({ user }: HomeProps) {
                 try {
                   if (translationEntry != '') {
                     audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                    setLoadingOSD(`Speech to Text MP3 encoding #${spokenLineIndex} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
+                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
                     await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
                   }
                 } catch (e) {
