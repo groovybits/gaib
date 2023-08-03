@@ -910,7 +910,6 @@ function Home({ user }: HomeProps) {
           const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
           const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
           const idToken = await user?.getIdToken();
-          let sentences: string[];
 
           // setup the story structure
           let story: Story = {
@@ -955,25 +954,6 @@ function Home({ user }: HomeProps) {
           let historyPrimerTitle = "Do not reveal you are an AI bot, do the task given to you by the AI, and do not reveal the AI's identity.\n\n";
           let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
           let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
-
-          try {
-            // Split the message into paragraphs at each empty line
-            const paragraphs = message.split(/\n\s*\n/);
-            sentences = [];
-            for (const paragraph of paragraphs) {
-              // If the paragraph is too long, split it into sentences
-              if (paragraph.length > 800) { // 10 lines of 80 characters
-                const doc = nlp(paragraph);
-                const paragraphSentences = doc.sentences().out('array');
-                sentences.push(...paragraphSentences);
-              } else {
-                sentences.push(paragraph);
-              }
-            }
-          } catch (e) {
-            console.log('Error splitting sentences: ',  message, ': ', e);
-            sentences = [message];
-          }
 
           let maleVoiceModels = {
             'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
@@ -1054,7 +1034,8 @@ function Home({ user }: HomeProps) {
           }
 
           // get first sentence as title or question to display
-          let firstSentence = nlp(message).sentences().out('array')[0];
+          const sentences: string[] = nlp(message).sentences().out('array');
+          let firstSentence = sentences.length > 0 ? sentences[0] : query;
 
           // display title screen with image and title
           const imgGenResult = await generateAIimage(`${promptImageTitle}${message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
@@ -1067,7 +1048,7 @@ function Home({ user }: HomeProps) {
               console.log(`promptImageEpisodeText: ${promptImageEpisodeText}`);
             }
           }
-          const titleScreen: string = lastImage;
+          const titleScreenImage: string = lastImage;
           const titleScreenText: string = firstSentence;
 
           // Extract the scene texts from the message
@@ -1128,6 +1109,7 @@ function Home({ user }: HomeProps) {
           // Don't forget to push the last scene text
           if (currentSceneText !== "") {
             sceneTexts.push(`SCENE: ${currentSceneText}`);
+            sentencesToSpeak.push(`SCENE: ${currentSceneText}`);
             sceneCount++;
           }
 
@@ -1211,7 +1193,7 @@ function Home({ user }: HomeProps) {
           story.id = episodeIdRef.current;
           story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
           story.tokens = countTokens(sentencesToSpeak.join(' '));
-          story.imageUrl = titleScreen;
+          story.imageUrl = titleScreenImage;
           story.imagePrompt = promptImageEpisodeText.replace(/^\"/, '').replace(/\"$/, '');
           story.shareUrl = `${baseUrl}/${episodeIdRef.current}`
           story.personality = selectedPersonality; // TODO - add personality to the story object
