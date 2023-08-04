@@ -1447,10 +1447,10 @@ function Home({ user }: HomeProps) {
   // take an Episode and parse the question and return the Episode with the parts filled out from the question
   function parseQuestion(episode: Episode): Episode {
     let localEpisode = episode;
-    let localIsStory = localEpisode.type != '' ? localEpisode.type == 'episode' ? true : false : isStory;
-    let localNamespace = localEpisode.namespace != '' ? localEpisode.namespace : selectedNamespace;
-    let localPersonality = localEpisode.personality != '' ? localEpisode.personality : selectedPersonality;
-    let localCommandPrompt = localEpisode.prompt != '' ? localEpisode.prompt : '';
+    let localIsStory = localEpisode.type ? localEpisode.type == 'episode' ? true : false : isStory;
+    let localNamespace = localEpisode.namespace ? localEpisode.namespace : selectedNamespace;
+    let localPersonality = localEpisode.personality ? localEpisode.personality : selectedPersonality;
+    let localCommandPrompt = localEpisode.prompt ? localEpisode.prompt : '';
 
     // fill in the parts of localEpisode with the variables above
     localEpisode.type = localIsStory ? 'episode' : 'question';
@@ -1727,7 +1727,7 @@ function Home({ user }: HomeProps) {
           isStory: localEpisode.type === 'episode' ? true : false,
           customPrompt,
           condensePrompt,
-          commandPrompt: localEpisode.prompt,
+          commandPrompt: localEpisode.prompt ? localEpisode.prompt : '',
           tokensCount,
           documentCount,
           episodeCount,
