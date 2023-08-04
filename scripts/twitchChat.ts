@@ -133,6 +133,33 @@ client.on('message', async (channel: any, tags: {
     console.log(`${tags.username} Sending Image to Channel: ${channel}\n`);
     client.say(channel, `${tags.username} Sending Image to Channel: ${channel}`);
 
+    let namespace = 'groovypdf';
+    if (message.toLowerCase().includes('[wisdom]')) {
+      namespace = 'groovypdf';
+      message.replace('[wisdom]', '');
+    } else if (message.toLowerCase().includes('[science]')) {
+      namespace = 'videoengineer';
+      message.replace('[science]', '');
+    }
+
+    let personality = '';
+    if (message.toLowerCase().includes('[personality]')) {
+      personality = message.toLowerCase().split('[personality]')[1].trim();
+      if (personality) {
+        // remove the personality from the message
+        message = message.toLowerCase().replace(`[personality] ${personality}`, '').trim();
+      }
+    }
+
+    let prompt = '';
+    if (message.toLowerCase().includes('[prompt]')) {
+      prompt = message.toLowerCase().split('[prompt]')[1].trim();
+      if (prompt) {
+        // remove the prompt from the message
+        message = message.toLowerCase().replace(`[prompt] ${prompt}`, '').trim();
+      }
+    }
+
     let imagePrompt = message.slice(0, promptLimit).trim();
     if (imagePrompt) {
       // Add the command to the Realtime Database
@@ -141,10 +168,10 @@ client.on('message', async (channel: any, tags: {
         channelName: channelName,
         type: 'question',
         title: imagePrompt,
-        personality: '',
-        namespace: '',
+        personality: 'passthrough',
+        namespace: namespace,
         refresh: false,
-        prompt: '',
+        prompt: prompt,
         username: tags.username, // Add this line to record the username
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
@@ -170,6 +197,33 @@ client.on('message', async (channel: any, tags: {
     // Parse the title and plotline from the command
     let title: any = '';
 
+    let namespace = 'groovypdf';
+    if (message.toLowerCase().includes('[wisdom]')) {
+      namespace = 'groovypdf';
+      message.replace('[wisdom]', '');
+    } else if (message.toLowerCase().includes('[science]')) {
+      namespace = 'videoengineer';
+      message.replace('[science]', '');
+    }
+
+    let personality = '';
+    if (message.toLowerCase().includes('[personality]')) {
+      personality = message.toLowerCase().split('[personality]')[1].trim();
+      if (personality) {
+        // remove the personality from the message
+        message = message.toLowerCase().replace(`[personality] ${personality}`, '').trim();
+      }
+    }
+
+    let prompt = '';
+    if (message.toLowerCase().includes('[prompt]')) {
+      prompt = message.toLowerCase().split('[prompt]')[1].trim();
+      if (prompt) {
+        // remove the prompt from the message
+        message = message.toLowerCase().replace(`[prompt] ${prompt}`, '').trim();
+      }
+    }
+
     title = message.slice(0, promptLimit).trim();
     const isStory: any = message.toLowerCase().startsWith('!episode') ? true : false;
 
@@ -182,10 +236,10 @@ client.on('message', async (channel: any, tags: {
         type: isStory ? 'episode' : 'question',
         title,
         username: tags.username, // Add this line to record the username
-        personality: '',
-        namespace: '',
+        personality: personality,
+        namespace: namespace,
         refresh: false,
-        prompt: '',
+        prompt: prompt,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
     } else {

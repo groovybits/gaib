@@ -621,7 +621,6 @@ function Home({ user }: HomeProps) {
             try {
               let response;
               if (imageSource === 'pexels') {
-                const idToken = await user?.getIdToken();
                 let extracted_keywords = extractKeywords(sentence, 32).join(' ');
                 console.log('Extracted keywords: [', extracted_keywords, ']');
                 keywords = encodeURIComponent(extracted_keywords);
@@ -631,7 +630,6 @@ function Home({ user }: HomeProps) {
                   body: JSON.stringify({ keywords }),
                 });
               } else if (imageSource === 'deepai') {
-                const idToken = await user?.getIdToken();
                 let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
                 let exampleImage = '' as string;
                 if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
@@ -647,8 +645,6 @@ function Home({ user }: HomeProps) {
                   body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
                 });
               } else if (imageSource === 'openai') {
-                const idToken = await user?.getIdToken();
-                let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
                 let exampleImage = '' as string;
                 if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
                   if (lastImage !== '') {
@@ -660,7 +656,7 @@ function Home({ user }: HomeProps) {
                 response = await fetchWithAuth('/api/openai', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
+                  body: JSON.stringify({ prompt: `${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
                 });
               } else if (imageSource === 'getimgai') {
                 const idToken = await user?.getIdToken();
