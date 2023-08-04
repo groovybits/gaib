@@ -178,6 +178,10 @@ client.on('message', async (channel: any, tags: {
         type: isStory ? 'episode' : 'question',
         title,
         username: tags.username, // Add this line to record the username
+        personality: '',
+        namespace: '',
+        refresh: false,
+        prompt: '',
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
     } else {
