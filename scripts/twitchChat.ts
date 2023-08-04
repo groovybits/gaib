@@ -142,22 +142,40 @@ client.on('message', async (channel: any, tags: {
       message.replace('[science]', '');
     }
 
-    let personality = '';
-    if (message.toLowerCase().includes('[personality]')) {
-      personality = message.toLowerCase().split('[personality]')[1].trim();
-      if (personality) {
-        // remove the personality from the message
-        message = message.toLowerCase().replace(`[personality] ${personality}`, '').trim();
-      }
-    }
-
+    // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
     let prompt = '';
-    if (message.toLowerCase().includes('[prompt]')) {
-      prompt = message.toLowerCase().split('[prompt]')[1].trim();
-      if (prompt) {
-        // remove the prompt from the message
-        message = message.toLowerCase().replace(`[prompt] ${prompt}`, '').trim();
+    try {
+      if (message.toLowerCase().includes('[prompt]')) {
+        let endPrompt = false;
+        let customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
+        if (customPromptMatch) {
+          // try with quotes around the prompt
+          prompt = customPromptMatch[1].trim();
+        } else {
+          // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
+          customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
+          if (customPromptMatch) {
+            prompt = customPromptMatch[1].trim();
+            endPrompt = true;
+          }
+        }
+        if (prompt) {
+          console.log(`handleSubmit: Extracted commandPrompt: '${prompt}'`);  // Log the extracted customPrompt
+          // remove prompt from from question with [PROMPT] "<question>" removed
+          if (endPrompt) {
+            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*' + prompt, 'i'), '').trim();
+          } else {
+            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + prompt + '\"', 'i'), '').trim();
+          }
+          console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
+        } else {
+          console.log(`handleSubmit: No Command Prompt found in question: '${message}'`);  // Log the question
+        }
       }
+    } catch (error) {
+      console.error(`handleSubmit: Error extracting command Prompt: '${error}'`);  // Log the question  
+
+      client.say(channel, `Sorry, I failed a extracting the command Prompt, please try again.`);
     }
 
     let imagePrompt = message.slice(0, promptLimit).trim();
@@ -206,22 +224,69 @@ client.on('message', async (channel: any, tags: {
       message.replace('[science]', '');
     }
 
-    let personality = '';
-    if (message.toLowerCase().includes('[personality]')) {
-      personality = message.toLowerCase().split('[personality]')[1].trim();
-      if (personality) {
-        // remove the personality from the message
-        message = message.toLowerCase().replace(`[personality] ${personality}`, '').trim();
+    let personality = 'groovy';
+    try {
+      if (message.toLowerCase().includes('[personality]')) {
+        let personalityMatch = message.toLowerCase().match(/\[personality\]\s*([\w\s]*?)(?=\s|$)/i);
+        if (personalityMatch) {
+          let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
+          if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
+            console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
+            personality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
+            
+            client.say(channel, `Sorry, personality "${extractedPersonality}" does not exist in my database.`);
+          }
+          personality = extractedPersonality;
+          console.log(`handleSubmit: Extracted personality: "${personality}"`);  // Log the extracted personality
+          message = message.toLowerCase().replace(new RegExp('\\[personality\\]\\s*' + extractedPersonality, 'i'), '').trim();
+          message = message.toLowerCase().replace(new RegExp('\\[personality\\]', 'i'), '').trim();
+          console.log(`handleSubmit: Updated question: '${message}'`);  // Log the updated question
+        } else {
+          console.log(`handleSubmit: No personality found in question: '${message}'`);  // Log the question
+          
+          client.say(channel, `Sorry, I failed a extracting the personality, please try again. Question: ${message}`);
+        }
       }
+    } catch (error) {
+      console.error(`handleSubmit: Error extracting personality: '${error}'`);  // Log the question
+      
+      client.say(channel, `Sorry, I failed a extracting the personality, please try again.`);
     }
 
+    // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
     let prompt = '';
-    if (message.toLowerCase().includes('[prompt]')) {
-      prompt = message.toLowerCase().split('[prompt]')[1].trim();
-      if (prompt) {
-        // remove the prompt from the message
-        message = message.toLowerCase().replace(`[prompt] ${prompt}`, '').trim();
+    try {
+      if (message.toLowerCase().includes('[prompt]')) {
+        let endPrompt = false;
+        let customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
+        if (customPromptMatch) {
+          // try with quotes around the prompt
+          prompt = customPromptMatch[1].trim();
+        } else {
+          // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
+          customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
+          if (customPromptMatch) {
+            prompt = customPromptMatch[1].trim();
+            endPrompt = true;
+          }
+        }
+        if (prompt) {
+          console.log(`handleSubmit: Extracted commandPrompt: '${prompt}'`);  // Log the extracted customPrompt
+          // remove prompt from from question with [PROMPT] "<question>" removed
+          if (endPrompt) {
+            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*' + prompt, 'i'), '').trim();
+          } else {
+            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + prompt + '\"', 'i'), '').trim();
+          }
+          console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
+        } else {
+          console.log(`handleSubmit: No Command Prompt found in question: '${message}'`);  // Log the question
+        }
       }
+    } catch (error) {
+      console.error(`handleSubmit: Error extracting command Prompt: '${error}'`);  // Log the question  
+      
+      client.say(channel, `Sorry, I failed a extracting the command Prompt, please try again.`);
     }
 
     title = message.slice(0, promptLimit).trim();
