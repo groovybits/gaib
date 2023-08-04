@@ -1722,8 +1722,8 @@ function Home({ user }: HomeProps) {
         body: JSON.stringify({
           question: localEpisode.title,
           userId: user?.uid,
-          localPersonality: localEpisode.personality,
-          selectedNamespace: localEpisode.namespace,
+          localPersonality: localEpisode.personality ? localEpisode.personality : selectedPersonality,
+          selectedNamespace: localEpisode.namespace ? localEpisode.namespace : selectedNamespace,
           isStory: localEpisode.type === 'episode' ? true : false,
           customPrompt,
           condensePrompt,
