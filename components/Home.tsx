@@ -274,15 +274,28 @@ function Home({ user }: HomeProps) {
           type: item.type,
           username: item.username,
           timestamp: item.timestamp,
+          namespace: item.namespace,
+          personality: item.personality,
+          refresh: item.refresh,
         }));
 
         // Add the new episodes to the episodes array
         console.log(`fetchEpisodeData: Adding ${newEpisodes.length} new episodes to the episodes array...`);
         // fix up each episode
-        let filledEpisodes = newEpisodes
+        let filledEpisodes: Episode[] = [];
         newEpisodes.forEach((episode: Episode) => {
           episode = parseQuestion(episode); // parse the question
-          filledEpisodes.push(episode);
+          if (episode.title != '') {
+            if (episode.personality == '') {
+              episode.personality = selectedPersonality;
+            }
+            if (episode.namespace == '') {
+              episode.namespace = selectedNamespace;
+            }
+            filledEpisodes.push(episode);
+          } else {
+            console.log(`fetchEpisodeData: Skipping empty episode: ${JSON.stringify(episode)}`);
+          }
         });
           
         setEpisodes([...episodes, ...filledEpisodes]);
