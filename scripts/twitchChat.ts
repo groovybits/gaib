@@ -141,6 +141,10 @@ client.on('message', async (channel: any, tags: {
         channelName: channelName,
         type: 'question',
         title: imagePrompt,
+        personality: '',
+        namespace: '',
+        refresh: false,
+        prompt: '',
         username: tags.username, // Add this line to record the username
         timestamp: admin.database.ServerValue.TIMESTAMP
       });

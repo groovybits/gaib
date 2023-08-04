@@ -276,6 +276,7 @@ function Home({ user }: HomeProps) {
           timestamp: item.timestamp,
           namespace: item.namespace,
           personality: item.personality,
+          prompt: item.prompt,
           refresh: item.refresh,
         }));
 
@@ -342,7 +343,6 @@ function Home({ user }: HomeProps) {
         let index = currentNewsIndex;
 
         const fetchNews = async () => {
-          const idToken = await user?.getIdToken();
           const res = await fetchWithAuth(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
             headers: {
               'Content-Type': 'application/json',            },
