@@ -1,4 +1,6 @@
 import { useRef } from 'react';
+import firebase from 'firebase/app';
+import { fetchWithAuth } from '@/utils/fetchWithAuth';
 
 export const useSpeakText: any = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -12,7 +14,6 @@ export const useSpeakText: any = () => {
 
   const speakText = async (
     text: string,
-    idToken: string,
     rate: number = 1,
     ssmlGender: string = 'FEMALE',
     languageCode: string = 'en-US',
@@ -35,16 +36,16 @@ export const useSpeakText: any = () => {
         let response = null;
         if (name === '') {
           //console.log(`Synthesizing speech ${ssmlGender} ${languageCode} for text: ${text}`);
-          response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
+          response = await fetchWithAuth(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`, },
+            headers: { 'Content-Type': 'application/json', },
             body: JSON.stringify({ text, rate, ssmlGender, languageCode }),
           });
         } else {
           //console.log(`Synthesizing speech ${ssmlGender} ${name} ${languageCode} for text: ${text}`);
-          response = await fetch(`${apiBaseUrl}/api/synthesizeSpeech`, {
+          response = await fetchWithAuth(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`, },
+            headers: { 'Content-Type': 'application/json', },
             body: JSON.stringify({ text, rate, ssmlGender, languageCode, name, audioFile }),
           });
         }

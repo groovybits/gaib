@@ -3,7 +3,6 @@ import Layout from '@/components/Layout';
 import styles from '@/styles/Home.module.css';
 import { Message } from '@/types/chat';
 import { Story, Episode, Scene } from '@/types/story';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import {
@@ -26,6 +25,7 @@ import { v4 as uuidv4 } from 'uuid';
 import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
 import GPT3Tokenizer from 'gpt3-tokenizer';
+import { fetchEventSourceWithAuth, fetchWithAuth } from '@/utils/fetchWithAuth';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -114,6 +114,7 @@ function Home({ user }: HomeProps) {
   const [lastStory, setLastStory] = useState<string>('');
   const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 3);
 
+
   function countTokens(textString: string): number {
     let totalTokens = 0;
 
@@ -124,12 +125,10 @@ function Home({ user }: HomeProps) {
   }
 
   const postResponse = async (channel: string, message: string, userId: string | undefined) => {
-    const idToken = await user?.getIdToken();
-    const response = await fetch('/api/addResponse', {
+    const response = await fetchWithAuth('/api/addResponse', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
       },
       body: JSON.stringify({ channel, message, userId }),
     });
@@ -207,6 +206,7 @@ function Home({ user }: HomeProps) {
 
   // This function will be passed to the EpisodePlanner component
   const handleNewEpisode = (episode: Episode) => {
+    episode = parseQuestion(episode); // parse the question
     setEpisodes([...episodes, episode]);
   };
 
@@ -238,10 +238,10 @@ function Home({ user }: HomeProps) {
         if (debug) {
           console.log(`fetchEpisodeData: Fetching documents for channel ${channelId} and user ${user?.uid}...`);
         }
-        const res = await fetch(`/api/commands?channelName=${channelId}&userId=${user?.uid}`,
+        const res = await fetchWithAuth(`/api/commands?channelName=${channelId}&userId=${user?.uid}`,
           {
             headers: {
-              Authorization: `Bearer ${idToken}`,
+              'Content-Type': 'application/json',
             },
           });
 
@@ -274,11 +274,32 @@ function Home({ user }: HomeProps) {
           type: item.type,
           username: item.username,
           timestamp: item.timestamp,
+          namespace: item.namespace,
+          personality: item.personality,
+          prompt: item.prompt,
+          refresh: item.refresh,
         }));
 
         // Add the new episodes to the episodes array
         console.log(`fetchEpisodeData: Adding ${newEpisodes.length} new episodes to the episodes array...`);
-        setEpisodes([...episodes, ...newEpisodes]);
+        // fix up each episode
+        let filledEpisodes: Episode[] = [];
+        newEpisodes.forEach((episode: Episode) => {
+          episode = parseQuestion(episode); // parse the question
+          if (episode.title != '') {
+            if (episode.personality == '') {
+              episode.personality = selectedPersonality;
+            }
+            if (episode.namespace == '') {
+              episode.namespace = selectedNamespace;
+            }
+            filledEpisodes.push(episode);
+          } else {
+            console.log(`fetchEpisodeData: Skipping empty episode: ${JSON.stringify(episode)}`);
+          }
+        });
+          
+        setEpisodes([...episodes, ...filledEpisodes]);
       } catch (error) {
         console.error('fetchEpisodeData: An error occurred in the fetchEpisodeData function:', error);
       }
@@ -322,11 +343,9 @@ function Home({ user }: HomeProps) {
         let index = currentNewsIndex;
 
         const fetchNews = async () => {
-          const idToken = await user?.getIdToken();
-          const res = await fetch(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
+          const res = await fetchWithAuth(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
             headers: {
-              Authorization: `Bearer ${idToken}`,
-            },
+              'Content-Type': 'application/json',            },
           });
           if (!res.ok) {
             console.log('Error fetching news: ', res.statusText);
@@ -368,6 +387,7 @@ function Home({ user }: HomeProps) {
               prompt: ''
             }
             console.log(`Queing News headline #${index}: ${headline}`);
+            episode = parseQuestion(episode); // parse the question
             setEpisodes([...episodes, episode]);
 
             setCurrentNewsIndex(index + 1);
@@ -400,7 +420,12 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     const processQueue = async () => {
       if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current) {
-        const episode = episodes.shift();
+        let episode = episodes.shift();
+        if (episode) {
+          episode = parseQuestion(episode); // parse the question
+        } else {
+          return; // empty episode
+        }
         isSubmittingRef.current = true;
         try {
           if (episode) {
@@ -600,9 +625,9 @@ function Home({ user }: HomeProps) {
                 let extracted_keywords = extractKeywords(sentence, 32).join(' ');
                 console.log('Extracted keywords: [', extracted_keywords, ']');
                 keywords = encodeURIComponent(extracted_keywords);
-                response = await fetch('/api/pexels', {
+                response = await fetchWithAuth('/api/pexels', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ keywords }),
                 });
               } else if (imageSource === 'deepai') {
@@ -616,9 +641,9 @@ function Home({ user }: HomeProps) {
                     exampleImage = await getGaib();
                   }
                 }
-                response = await fetch('/api/deepai', {
+                response = await fetchWithAuth('/api/deepai', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
                 });
               } else if (imageSource === 'openai') {
@@ -632,9 +657,9 @@ function Home({ user }: HomeProps) {
                     exampleImage = await getGaib();
                   }
                 }
-                response = await fetch('/api/openai', {
+                response = await fetchWithAuth('/api/openai', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ prompt: `${context} ${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
                 });
               } else if (imageSource === 'getimgai') {
@@ -653,11 +678,10 @@ function Home({ user }: HomeProps) {
                 width = Math.floor(width / 64) * 64;
                 height = Math.floor(height / 64) * 64;
 
-                response = await fetch('/api/getimgai', {
+                response = await fetchWithAuth('/api/getimgai', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`,
                   },
                   body: JSON.stringify({
                     model: model,
@@ -692,9 +716,9 @@ function Home({ user }: HomeProps) {
                 if (saveImages === 'true' && !duplicateImage && authEnabled) {
                   const idToken = await user?.getIdToken();
                   // Store the image and index it
-                  await fetch('/api/storeImage', {
+                  await fetchWithAuth('/api/storeImage', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
                   });
                 }
@@ -748,11 +772,10 @@ function Home({ user }: HomeProps) {
 
             try {
               // Make the fetch request, passing the signal to it
-              const response = await fetch('/api/gpt', {
+              const response = await fetchWithAuth('/api/gpt', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${idToken}`
                 },
                 body: JSON.stringify(requestBody),
                 signal  // Pass the abort signal to the fetch request
@@ -833,7 +856,11 @@ function Home({ user }: HomeProps) {
         function removeMarkdownAndSpecialSymbols(text: string): string {
           // Remove markdown formatting
           const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
-          const cleanedText = text.replace(markdownRegex, '');
+          let cleanedText = text.replace(markdownRegex, '');
+
+          // remove any lines of just dashes like --- or ===
+          const dashRegex = /^[-=]{3,}$/g;
+          cleanedText = cleanedText.replace(dashRegex, '');
 
           // Remove special symbols (including periods)
           const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
@@ -844,9 +871,9 @@ function Home({ user }: HomeProps) {
 
         async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
           const idToken = await user?.getIdToken();
-          const response = await fetch('/api/translate', {
+          const response = await fetchWithAuth('/api/translate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text, targetLanguage }),
           });
 
@@ -872,12 +899,10 @@ function Home({ user }: HomeProps) {
             }
 
             // Send a POST request to the API endpoint
-            const idToken = await user?.getIdToken();
-            const response = await fetch('/api/shareStory', {
+            const response = await fetchWithAuth('/api/shareStory', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
               },
               body: JSON.stringify(storyToShare),
             });
@@ -1055,11 +1080,9 @@ function Home({ user }: HomeProps) {
 
           // add to the beginning of the scentences to speek the query and the title if it is a question
           if (isStory) {
-            sentencesToSpeak.push(`SCENE: Direction: ${query}`);
-            //sentencesToSpeak.push(`Title: ${firstSentence}`);
+            sentencesToSpeak.push(`SCENE: \n\n${query}`);
           } else {
-            sentencesToSpeak.push(`SCENE: Question: ${query}`);
-            //sentencesToSpeak.push(`Answer: ${firstSentence}`);
+            sentencesToSpeak.push(`SCENE: \n\n${query}`);
           }
           currentSceneText = query + "\n\n" /*+ firstSentence + "\n\n"*/;
           sceneCount++;
@@ -1067,9 +1090,6 @@ function Home({ user }: HomeProps) {
           currentSceneText = "";
 
           for (const sentence of sentences) {
-            if (sentence == '-' || (sentence.startsWith('--') && sentence.endsWith('-'))) {
-              continue;
-            }
             // check if we need to change the scene
             const allowList = ['Title', 'Question', 'Answer', 'Begins', 'Plotline', 'Scene', 'SCENE', 'SCENE:'];
 
@@ -1336,12 +1356,12 @@ function Home({ user }: HomeProps) {
               if (audioLanguage === 'en-US') {
                 // Speak the original text
                 if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', sentence_by_character);
+                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', cleanText.slice(0, 30));
                 }
                 if (cleanText !== '') {
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
                   setLoadingOSD(`Speech to Text line #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
-                  await speakText(cleanText, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
+                  await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
                 }
               } else {
                 // Speak the translated text
@@ -1352,14 +1372,15 @@ function Home({ user }: HomeProps) {
                   // Translate the text
                   translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
                 }
+                const cleanTranslation = removeMarkdownAndSpecialSymbols(translationEntry);
                 if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", translationEntry);
+                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", cleanTranslation);
                 }
                 try {
-                  if (translationEntry != '') {
+                  if (cleanTranslation != '') {
                     audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
-                    await speakText(translationEntry, idToken ? idToken : '', 1, detectedGender, audioLanguage, model, audioFile);
+                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanTranslation.slice(0, 10)}`);
+                    await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
                   }
                 } catch (e) {
                   console.log('Error speaking text: ', e);
@@ -1423,74 +1444,30 @@ function Home({ user }: HomeProps) {
     }
   }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
-  // Modify the handleSubmit function
-  async function handleSubmit(e: any) {
-    e.preventDefault();
+  // take an Episode and parse the question and return the Episode with the parts filled out from the question
+  function parseQuestion(episode: Episode): Episode {
+    let localEpisode = episode;
+    let localIsStory = localEpisode.type ? localEpisode.type == 'episode' ? true : false : isStory;
+    let localNamespace = localEpisode.namespace ? localEpisode.namespace : selectedNamespace;
+    let localPersonality = localEpisode.personality ? localEpisode.personality : selectedPersonality;
+    let localCommandPrompt = localEpisode.prompt ? localEpisode.prompt : '';
 
-    let localIsStory = isStory;
-    let localNamespace = selectedNamespace;
-    let localPersonality = selectedPersonality;
-    let localCommandPrompt = '';
-    let titleArray: string[] = [];
-    let question: string = '';
-
-    // Check if the event is an input event
-    if (e.target?.value !== undefined) {
-      if (e.target.value.title !== undefined) {
-        question = e.target.value.title.trim();
-      }
-
-      if (e.target.value.type !== undefined) {
-        localIsStory = e.target.value.type === 'story' ? true : false;
-      }
-
-      // Queue the question if processing is in progress
-      if (loading) {
-        console.log(`handleSubmit: Busy Processing, requeing input event: '${e.target.value}'`);
-        setEpisodes([...episodes, e.target.value]);
-        return;
-      }
-    } else if (loading) {
-      console.log(`handleSubmit: Busy Processing, requeing input query: '${question}'`);
-      let episode: Episode = {
-        title: question,
-        type: question.startsWith('!question') ? 'question' : 'episode',
-        username: 'anonymous',
-        namespace: selectedNamespace,
-        personality: selectedPersonality,
-        refresh: false,
-        prompt: ''
-      }
-      setEpisodes([...episodes, episode]);
-      setQuery('');
-      return;
-    } else {
-      question = query.trim();
-    }
-
-    // Don't submit if the query is empty
-    if (!question || question === '') {
-      console.log(`handleSubmit: Not submitting empty or undefined question! ""`);
-      return;
-    }
-
-    //let localHistory: [string, string][] = [...history];
-    let localHistory = [...messages];
-    if (debug) {
-      console.log(`handleSubmit: history is ${JSON.stringify(history, null, 2)}`);
-      console.log(`handleSubmit: localHistory is ${JSON.stringify(localHistory, null, 2)}`);
-    }
+    // fill in the parts of localEpisode with the variables above
+    localEpisode.type = localIsStory ? 'episode' : 'question';
+    localEpisode.namespace = localNamespace;
+    localEpisode.personality = localPersonality;
+    localEpisode.prompt = localCommandPrompt;
 
     // Check if the message is a story and remove the "!type:" prefix
     try {
-      if (question.startsWith('!question')) {
-        localIsStory = false;
-        question = question.replace('!question:', '').replace('!question', '').trim();
-        console.log(`handleSubmit: Extracted question: with !question:`);
-      } else if (question.startsWith('!episode')) {
-        localIsStory = true;
-        question = question.replace('!episode:', '').replace('!episode', '').trim();
-        console.log(`handleSubmit: Extracted episode: with !episode:`);
+      if (localEpisode.title.startsWith('!question')) {
+        localEpisode.type = 'question';
+        localEpisode.title = localEpisode.title.replace('!question:', '').replace('!question', '').trim();
+        console.log(`handleSubmit: Extracted question: with !question `);
+      } else if (localEpisode.title.startsWith('!episode')) {
+        localEpisode.type = 'episode';
+        localEpisode.title = localEpisode.title.replace('!episode:', '').replace('!episode', '').trim();
+        console.log(`handleSubmit: Extracted episode: with !episode `);
       }
     } catch (error) {
       console.error(`handleSubmit: Error extracting question: '${error}'`);  // Log the question
@@ -1502,15 +1479,15 @@ function Home({ user }: HomeProps) {
     }
 
     try {
-      if (question.toLowerCase().includes('[science]') || question.toLowerCase().includes('[wisdom]')) {
-        if (question.toLowerCase().includes('[science]')) {
-          localNamespace = 'videoengineer';
-          question = question.toLowerCase().replace('[science]', '').trim();
-        } else if (question.toLowerCase().includes('wisdom')) {
-          localNamespace = 'groovypdf';
-          question = question.toLowerCase().replace('[wisdom]', '').trim();
+      if (localEpisode.title.toLowerCase().includes('[science]') || localEpisode.title.toLowerCase().includes('[wisdom]')) {
+        if (localEpisode.title.toLowerCase().includes('[science]')) {
+          localEpisode.namespace = 'videoengineer';
+          localEpisode.title = localEpisode.title.toLowerCase().replace('[science]', '').trim();
+        } else if (localEpisode.title.toLowerCase().includes('wisdom')) {
+          localEpisode.namespace = 'groovypdf';
+          localEpisode.title = localEpisode.title.toLowerCase().replace('[wisdom]', '').trim();
         }
-        console.log(`handleSubmit: Extracting namespace from question: as ${localNamespace}`);  // Log the question
+        console.log(`handleSubmit: Extracting namespace from question: as ${localEpisode.namespace}`);  // Log the question
       }
     } catch (error) {
       console.error(`handleSubmit: Error extracting namespace: '${error}'`);  // Log the question
@@ -1523,26 +1500,26 @@ function Home({ user }: HomeProps) {
 
     // Extract the personality from the question
     try {
-      if (question.toLowerCase().includes('[personality]')) {
-        let personalityMatch = question.toLowerCase().match(/\[personality\]\s*([\w\s]*?)(?=\s|$)/i);
+      if (localEpisode.title.toLowerCase().includes('[personality]')) {
+        let personalityMatch = localEpisode.title.toLowerCase().match(/\[personality\]\s*([\w\s]*?)(?=\s|$)/i);
         if (personalityMatch) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localPersonality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
+            localEpisode.personality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
           }
-          localPersonality = extractedPersonality;
-          console.log(`handleSubmit: Extracted personality: "${localPersonality}"`);  // Log the extracted personality
-          question = question.toLowerCase().replace(new RegExp('\\[personality\\]\\s*' + extractedPersonality, 'i'), '').trim();
-          question = question.toLowerCase().replace(new RegExp('\\[personality\\]', 'i'), '').trim();
-          console.log(`handleSubmit: Updated question: '${question}'`);  // Log the updated question
+          localEpisode.personality = extractedPersonality;
+          console.log(`handleSubmit: Extracted personality: "${localEpisode.personality }"`);  // Log the extracted personality
+          localEpisode.title = localEpisode.title.toLowerCase().replace(new RegExp('\\[personality\\]\\s*' + extractedPersonality, 'i'), '').trim();
+          localEpisode.title = localEpisode.title.toLowerCase().replace(new RegExp('\\[personality\\]', 'i'), '').trim();
+          console.log(`handleSubmit: Updated question: '${localEpisode.title}'`);  // Log the updated question
         } else {
-          console.log(`handleSubmit: No personality found in question: '${question}'`);  // Log the question
+          console.log(`handleSubmit: No personality found in question: '${localEpisode.title}'`);  // Log the question
           if (twitchChatEnabled && channelId !== '') {
-            postResponse(channelId, `Sorry, I failed a extracting the personality, please try again. Question: ${question}`, user?.uid);
+            postResponse(channelId, `Sorry, I failed a extracting the personality, please try again. Question: ${localEpisode.title}`, user?.uid);
           }
         }
       }
@@ -1557,31 +1534,31 @@ function Home({ user }: HomeProps) {
 
     // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
     try {
-      if (question.toLowerCase().includes('[prompt]')) {
+      if (localEpisode.title.toLowerCase().includes('[prompt]')) {
         let endPrompt = false;
-        let customPromptMatch = question.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
+        let customPromptMatch = localEpisode.title.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
         if (customPromptMatch) {
           // try with quotes around the prompt
-          localCommandPrompt = customPromptMatch[1].trim();
+          localEpisode.prompt = customPromptMatch[1].trim();
         } else {
           // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
-          customPromptMatch = question.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
+          customPromptMatch = localEpisode.title.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
           if (customPromptMatch) {
-            localCommandPrompt = customPromptMatch[1].trim();
+            localEpisode.prompt = customPromptMatch[1].trim();
             endPrompt = true;
           }
         }
-        if (localCommandPrompt) {
-          console.log(`handleSubmit: Extracted commandPrompt: '${localCommandPrompt}'`);  // Log the extracted customPrompt
+        if (localEpisode.prompt) {
+          console.log(`handleSubmit: Extracted commandPrompt: '${localEpisode.prompt}'`);  // Log the extracted customPrompt
           // remove prompt from from question with [PROMPT] "<question>" removed
           if (endPrompt) {
-            question = question.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*' + localCommandPrompt, 'i'), '').trim();
+            localEpisode.title = localEpisode.title.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*' + localEpisode.prompt, 'i'), '').trim();
           } else {
-            question = question.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + localCommandPrompt + '\"', 'i'), '').trim();
+            localEpisode.title = localEpisode.title.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + localEpisode.prompt + '\"', 'i'), '').trim();
           }
-          console.log(`handleSubmit: Command Prompt removed from question: '${question}' as ${localCommandPrompt}`);  // Log the updated question
+          console.log(`handleSubmit: Command Prompt removed from question: '${localEpisode.title}' as ${localEpisode.prompt}`);  // Log the updated question
         } else {
-          console.log(`handleSubmit: No Command Prompt found in question: '${question}'`);  // Log the question
+          console.log(`handleSubmit: No Command Prompt found in question: '${localEpisode.title}'`);  // Log the question
         }
       }
     } catch (error) {
@@ -1593,19 +1570,11 @@ function Home({ user }: HomeProps) {
       }
     }
 
-    if (question.toLowerCase().includes('[refresh]')) {
+    if (localEpisode.title.toLowerCase().includes('[refresh]')) {
       try {
-        // Clear the shared history
-        console.log(`handleSubmit: Clearing the shared history`);
-        setMessageState((state) => {
-          return {
-            ...state,
-            messages: [],
-          };
-        });
-
-        question = question.toLowerCase().replace('[refresh]', '').trim();
-        console.log(`handleSubmit: [REFRESH] Cleared history and Updated question: '${question}'\nhistory is ${JSON.stringify(localHistory, null, 2)}`);
+        localEpisode.refresh = true;  // Set the refresh flag
+        localEpisode.title = localEpisode.title.toLowerCase().replace('[refresh]', '').trim();
+        console.log(`handleSubmit: [REFRESH] Cleared history and Updated question: '${localEpisode.title}'}`);
       } catch (error) {
         console.error(`handleSubmit: Error clearing history: '${error}'`);  // Log the question
         if (!twitchChatEnabled) {
@@ -1616,20 +1585,100 @@ function Home({ user }: HomeProps) {
       }
     }
 
-    // create the titles and parts of an episode
-    if (localIsStory) {
-      titleArray.push('the episode begins, introduction and character setup of ' + question);
-      //titleArray.push('the episode continues, plotline and character development...');
-      titleArray.push('the episode continues, the plot thickens...');
-      //titleArray.push('the episode continues, coming upon the peak of the story...');
-      titleArray.push('the episode continues, the climax of the story...');
-      //titleArray.push('the episode continues, the story begins to resolve...');
-      titleArray.push('the episode ends and finishes up with a conclusion...');
-    } else {
-      titleArray.push(question);
+    // confirm all fields are filled out
+    if (localEpisode.title == '') {
+      console.error(`handleSubmit: Error extracting question: '${localEpisode.title}'`);  // Log the question
+    }
+    if (localEpisode.namespace == '') {
+      localEpisode.namespace = selectedNamespace;
+    }
+    if (localEpisode.personality == '') {
+      localEpisode.personality = selectedPersonality;
+    }
+    if (localEpisode.prompt == '') {
+      localEpisode.prompt = localCommandPrompt;
     }
 
-    console.log(`handleSubmit: Submitting question: '${question.slice(0, 1000)}...'`);
+    return localEpisode;
+  }
+
+  // Modify the handleSubmit function
+  async function handleSubmit(e: any) {
+    e.preventDefault();
+
+    let localEpisode: Episode = {
+      title: query,
+      type: isStory ? 'episode' : 'question',
+      username: 'anonymous',
+      namespace: selectedNamespace,
+      personality: selectedPersonality,
+      refresh: false,
+      prompt: '',
+    }
+
+    // Use messages as history
+    let localHistory = [...messages];
+    let titleArray: string[] = [];
+    let question: string = query;
+
+    // Check if the event is an input event
+    if (e.target?.value !== undefined) {
+      localEpisode = parseQuestion(e.target.value as Episode); // parse the question
+
+      // History refresh request
+      if (localEpisode.refresh !== undefined && localEpisode.refresh == true) {
+        localHistory = [];
+      }
+
+      // Queue the question if processing is in progress
+      if (loading) {
+        console.log(`handleSubmit: Busy Processing, requeing input event: '${JSON.stringify(localEpisode)}'`);
+        setEpisodes([...episodes, localEpisode]);
+        return;
+      }
+    } else if (loading) {
+      // Queue the question if processing is in progress and not an Episode Event
+      if (question == '') {
+        console.log(`handleSubmit: Question is empty, discarding bad input query: '${question}'`);
+        return;
+      }
+      console.log(`handleSubmit: Busy Processing, requeing input query: '${question}'`);
+      let episode: Episode = {
+        title: question,
+        type: question.startsWith('!question') ? 'question' : question.startsWith('!episode') ? 'episode' : isStory ? 'episode' : 'question',
+        username: 'anonymous',
+        namespace: '',
+        personality: '',
+        refresh: false,
+        prompt: '',
+      }
+      episode = parseQuestion(episode); // parse the question
+      setEpisodes([...episodes, episode]);
+      setQuery('');
+      return;
+    } else {
+      if (question == '') {
+        console.log(`handleSubmit: Question is empty, discarding bad input query: '${question}'`);
+        return;
+      }
+      localEpisode.title = question;
+      localEpisode = parseQuestion(localEpisode); // parse the question
+    }
+
+    // create the titles and parts of an episode
+    if (localEpisode.type == 'episode') {
+      titleArray.push('The episode begins, introduction and character setup of the plotline...' + localEpisode.title);
+      //titleArray.push('the episode continues, plotline and character development...');
+      //titleArray.push('the episode continues, coming upon the peak of the story...');
+      titleArray.push('The episode continues, the climax of the story, do not repeat character introductions...' + localEpisode.title);
+      //titleArray.push('the episode continues, the story begins to resolve...');
+      titleArray.push('The episode ends and finishes up with a conclusion, do not repeat character introductions...' + localEpisode.title);
+    } else {
+      titleArray.push(localEpisode.title);
+    }
+
+    console.log(`handleSubmit: history is ${JSON.stringify(localHistory.length > 0 ? localHistory[localHistory.length - 1]: localHistory, null, 2)}`);
+    console.log(`handleSubmit: Submitting question: '${localEpisode.title.slice(0, 1000)}...'`);
 
     // Clear the timeout
     if (timeoutID) {
@@ -1644,8 +1693,8 @@ function Home({ user }: HomeProps) {
         ...state.messages,
         {
           type: 'userMessage',
-          localPersonality: localPersonality,
-          message: question,
+          localPersonality: localEpisode.personality,
+          message: localEpisode.title,
         },
       ],
       pending: undefined,
@@ -1654,7 +1703,7 @@ function Home({ user }: HomeProps) {
     // Reset the state
     setError(null);
     setLoading(true);
-    setLoadingOSD(`Recieved ${!localIsStory ? 'question' : 'story'}: ${question.slice(0, 50).replace(/\n/g, ' ')}...`);
+    setLoadingOSD(`Recieved ${localEpisode.type}: ${localEpisode.title.slice(0, 50).replace(/\n/g, ' ')}...`);
     setQuery('');
     setVoiceQuery('');
     setMessageState((state) => ({ ...state, pending: '' }));
@@ -1664,23 +1713,21 @@ function Home({ user }: HomeProps) {
     // Send the question to the server
     const ctrl = new AbortController();
     try {
-      const idToken = await user?.getIdToken();
-      fetchEventSource('/api/chat', {
+      fetchEventSourceWithAuth('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
           'Retry-After': '5',
         },
         body: JSON.stringify({
-          question,
+          question: localEpisode.title,
           userId: user?.uid,
-          localPersonality,
-          selectedNamespace: localNamespace,
-          isStory: localIsStory,
+          localPersonality: localEpisode.personality ? localEpisode.personality : selectedPersonality,
+          selectedNamespace: localEpisode.namespace ? localEpisode.namespace : selectedNamespace,
+          isStory: localEpisode.type === 'episode' ? true : false,
           customPrompt,
           condensePrompt,
-          commandPrompt: localCommandPrompt,
+          commandPrompt: localEpisode.prompt ? localEpisode.prompt : '',
           tokensCount,
           documentCount,
           episodeCount,
@@ -1767,7 +1814,7 @@ function Home({ user }: HomeProps) {
   }
 
   const handleEnter = (e: any) => {
-    if (e.key === 'Enter' && !e.shiftKey && query) {
+    if (e.key === 'Enter' && !e.shiftKey && query.trim() != '') {
       e.preventDefault(); // Prevent the default action
 
       let episode: Episode = {
@@ -1779,6 +1826,7 @@ function Home({ user }: HomeProps) {
         refresh: false,
         prompt: ''
       }
+      episode = parseQuestion(episode); // parse the question
       setEpisodes([...episodes, episode]);
       setQuery('');
     }
@@ -2055,6 +2103,7 @@ function Home({ user }: HomeProps) {
     if (debug) {
       console.log(`Replay is queing episode: ${JSON.stringify(episode, null, 2)}`);
     }
+    episode = parseQuestion(episode); // parse the question
     setEpisodes([...episodes, episode]);
   };
 

@@ -59,7 +59,7 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Episode Title"
+              placeholder="Episode Description and Plotline"
               />
             </div>
             <div className={styles.cloudform}>

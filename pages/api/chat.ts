@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import { PineconeStore } from 'langchain/vectorstores/pinecone';
 import { makeChain } from '@/utils/makechain';
@@ -28,27 +28,6 @@ function countTokens(textString: string): number {
   totalTokens += encoded.bpe.length;
   
   return totalTokens;
-}
-
-async function generateText(userMessage: string, conversationHistory: any[]) {
-  const response = await fetch('/api/openai', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: userMessage,
-      conversationHistory: conversationHistory
-    }),
-  });
-
-  const data = await response.json();
-
-  if (response.ok) {
-    return data;
-  } else {
-    throw new Error(data.error);
-  }
 }
 
 async function getValidNamespace(namespaces: any) {
@@ -261,7 +240,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
     if (debug) {
       console.log('ChatAPI: Pinecone using namespace:', namespaceResult.validNamespace);
-      console.log('ChatAPI: Question:', question);
+      console.log(`ChatAPI: ${isStory ? "Episode" : "Question"} - ${question}`);
       console.log('ChatAPI: Requested tokens:', requestedTokens);
       console.log('ChatAPI: Documents returned:', documentsReturned);
       console.log('ChatAPI: Episode count:', episodeCount);
@@ -274,7 +253,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       console.log('ChatAPI: promptString: ', promptString, ' tokens: ', countTokens(promptString));
       console.log('ChatAPI: condensePromptString: ', condensePromptString, ' tokens: ', countTokens(condensePromptString));
     } else {
-      console.log(`ChatAPI: Question [${question.slice(0, 20)}...] ${localPersonality} ${isStory ? 'Story' : 'Answer'} ${requestedTokens} tokens ${documentsReturned} documents ${episodeCount} episodes.`);
+      console.log(`ChatAPI: ${isStory ? "Episode" : "Question"} [${question.slice(0, 20)}...] ${localPersonality} ${isStory ? 'Story' : 'Answer'} ${requestedTokens} tokens ${documentsReturned} documents ${episodeCount} ${isStory ? "episodes" : "answers"}.`);
     }
 
     // Set headers before starting the chain
@@ -286,11 +265,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     sendData(JSON.stringify({ data: '' }));
 
     // Function to create a single chain
-    async function createChain(i: number, namespaceResult: any, localPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
+    async function createChain(i: number, title: string, namespaceResult: any, localPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
       let token_count = 0;
-      if (debug) {
-        console.log(`createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${episodeCount} episodes. Question: "${question}"`);
-      }
+      console.log(`createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${localEpisodeCount} ${isStory ? "episodes" : "answers"}. ${isStory ? "Plotline" : "Question"}: "${title}"`);
       return await makeChain(namespaceResult.vectorStore,
         localPersonality,
         requestedTokens,
@@ -320,33 +297,47 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     const chains = [];
     const titles: string[] = [];
 
-    let localEpisodeCount:number = episodeCount;
+    let localEpisodeCount: number = episodeCount;
+    console.log(`ChatAPI: Episode Count: ${localEpisodeCount}`);
     if (titleArray.length > 0) {
       for (let i = 0; i < titleArray.length; i++) {
         titles.push(titleArray[i]);
-      }
-      localEpisodeCount = titles.length;
-    } else {
-      titles.push(question);
-      if (localEpisodeCount > 1) {
-        for (let i = 2; i < localEpisodeCount + 1; i++) {
-          if (isStory && episodeCount === (i + 1)) {
-            titles.push(`Last episode of ${episodeCount} episodes, the conclusion.`);
-          } else if (isStory) {
-            titles.push(`Episode ${i + 1} of ${episodeCount} next episode...`);
-          } else {
-            titles.push(`Answer ${i + 1} of ${episodeCount} next answer...`);
+        if (localEpisodeCount > 1) {
+          for (let j = 1; j < localEpisodeCount; j++) {
+            if (isStory) {
+              titles.push(`Continue episode next scene...`);
+            } else {
+              titles.push(`Next answer iteration...`);
+            }
           }
         }
       }
+    } else {
+      titles.push(question);
+      if (localEpisodeCount > 1) {
+        for (let i = 1; i < localEpisodeCount; i++) {
+          if (isStory && localEpisodeCount === (i + 1)) {
+            titles.push(`Last episode of ${localEpisodeCount} episodes, the conclusion.`);
+          } else if (isStory) {
+            titles.push(`Episode ${i + 1} of ${localEpisodeCount} next episode scene...`);
+          } else {
+            titles.push(`Answer ${i + 1} of ${localEpisodeCount} next answer iteration...`);
+          }
+        }
+      }
+    }
+    localEpisodeCount = titles.length;
+
+    if (true || debug) {
+      console.log(`ChatAPI: Creating ${localEpisodeCount} titles ${JSON.stringify(titles, null, 2)}.`);
     }
 
     // Create a chain for each episode
     for (let i = 0; i < localEpisodeCount; i++) {
       try {
-        console.log(`ChatAPI: Creating Chain for Episode #${i+1} of ${episodeCount} episodes.`);
-        const chain = await createChain(i, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory);
+        console.log(`ChatAPI: Creating Chain for ${isStory ? "Episode" : "Answer"} #${i + 1} of ${localEpisodeCount} ${isStory ? "episodes" : "answers"}.`);
         let title: string = titles[i];
+        const chain = await createChain(i, title, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory);
 
         // Add the title to the chat history
         chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
@@ -355,7 +346,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         chains.push(chain);
         titles.push(title);
       } catch (error: any) {
-        console.error(`ChatAPI: Error creating chain ${i + 1} of ${episodeCount} episodes: ${error.message}`);
+        console.error(`ChatAPI: Error creating chain ${i + 1} of ${localEpisodeCount} ${isStory ? "episodes" : "answers"}: ${error.message}`);
         sendData(JSON.stringify({ data: 'Error creating chain' }));
         sendData(JSON.stringify({ data: error.message }));
       }
@@ -370,9 +361,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       let title = titles[i];
       const episodeNumber = i + 1;
 
-      if (debug) {
-        console.info(`=== ChatAPI: Starting Episode #${episodeNumber} of ${episodeCount} episodes.`);
-      }
+      console.info(`=== ChatAPI: Chain #${i} Starting  ${isStory ? "Episode" : "Answer"} #${episodeNumber} of ${localEpisodeCount}  ${isStory ? "episodes" : "answers"}.`);
 
       let histories: BaseMessage[] = [];
       chatHistory.forEach((hist: { [x: string]: string; }) => {
@@ -386,11 +375,11 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           let sysmsg: BaseMessage = new AIMessage(hist.message);
           histories.push(sysmsg);
         } else {
-          console.error(`ChatAPI: Invalid history type: ${hist.type} for ${hist.message}\nActually is: ${JSON.stringify(hist, null, 2)}\n}`);
+          console.error(`ChatAPI: #${i} Invalid history type: ${hist.type} for ${hist.message}\nActually is: ${JSON.stringify(hist, null, 2)}\n}`);
         }
       });
       if (debug) {
-        console.log(`ChatAPI: Converted History:\n${JSON.stringify(histories, null, 2)}\n`)
+        console.log(`ChatAPI: #${i} Converted History:\n${JSON.stringify(histories, null, 2)}\n`)
       }
 
       try {
@@ -399,7 +388,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           chat_history: histories,
         });
         if (!response || !response.text || response.text.length === 0 || response.text.startsWith('Error: ')) {
-          console.error('ChatAPI: GPT API Error, Not enough tokens available to generate a response!!!');
+          console.error(`ChatAPI: #${i} GPT API Error, Not enough tokens available to generate a response!!!`);
           sendData(JSON.stringify({ data: 'Out of tokens, please request more.' }));
           if (response && response.text) {
             sendData(JSON.stringify({ data: response.text }));
@@ -407,7 +396,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         }
         total_token_count = total_token_count + countTokens(response.text) + countTokens(title) + countTokens(promptString) + countTokens(condensePromptString);
         
-        if (response.sourceDocuments && sendReferences) {
+        if (response.sourceDocuments) {
           // Create a new array with only unique objects
           const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; }; }, index: any, self: { metadata: { source: any; }; }[]) =>
             index === self.findIndex((t: { metadata: { source: any; }; }) => (
@@ -421,25 +410,28 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
               references = references + `[Reference: ${path.basename(reference.metadata.source)}]\n`;
             }
           }
-          sendData(JSON.stringify({ data: `\n\nReferences: ${references}\n` }));
+          if (sendReferences) {
+            sendData(JSON.stringify({ data: `\n\nReferences: ${references}\n` }));
+          }
         } else {
-          console.error(`ChatAPI: No reference documents.`);
+          console.error(`ChatAPI: #${i} No reference documents.`);
         }
-        console.log(`ChatAPI: Total Chat Token count: ${total_token_count}`);
+        console.log(`ChatAPI: #${i} Total Chat Token count: ${total_token_count}`);
 
         if (debug) {
-          console.log(`ChatAPI: Raw Response: ` + JSON.stringify(response, null, 2) + '\n');
+          console.log(`ChatAPI: #${i} Raw Response: ` + JSON.stringify(response, null, 2) + '\n');
         }
         chatHistory = [...chatHistory, { "type": "apiMessage", "message": response.text }];
       } catch (error: any) {
         if (error.message) {
-          console.error(`ChatAPI: Error generating response for Episode #${episodeNumber}:`, error.message);
+          console.error(`ChatAPI: #${i} Error generating response for Episode #${episodeNumber}:`, error.message);
           sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error.message}.` }));
         } else {
-          console.error(`ChatAPI: Error generating response for Episode #${episodeNumber}:`, error);
+          console.error(`ChatAPI: #${i} Error generating response for Episode #${episodeNumber}:`, error);
           sendData(JSON.stringify({ data: `Error generating response for Episode #${episodeNumber}:\n${error}.` }));
         }
       }
+      sendData(JSON.stringify({ data: "\n\n" }));
     }
 
     sendData('[DONE]');

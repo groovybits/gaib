@@ -17,7 +17,6 @@ if (!admin.apps.length) {
 const db = admin.database();
 
 const allowedUserId = process.env.TWITCH_ALLOWED_USER_ID ? process.env.TWITCH_ALLOWED_USER_ID : '';
-const debug = process.env.DEBUG === 'true' ? true : false;
 
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
@@ -55,9 +54,6 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
             // Send the commands to the client
             return res.status(200).json(commands);
           } else {
-            if (debug) {
-              console.log(`${new Date().toLocaleString()} CommandAPI: No Twitch Chat Commands found for channel ${channelName}`);
-            }
             // No commands found
             return res.status(200).json([]);
           }
