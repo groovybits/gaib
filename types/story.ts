@@ -44,4 +44,5 @@ export type Episode = {
     personality: string;
     refresh: boolean;
     prompt: string;
+    sourceDocs: string[];
 };

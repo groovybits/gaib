@@ -384,7 +384,8 @@ function Home({ user }: HomeProps) {
               namespace: selectedNamespace,
               personality: selectedPersonality,
               refresh: false,
-              prompt: ''
+              prompt: '',
+              sourceDocs: [],
             }
             console.log(`Queing News headline #${index}: ${headline}`);
             episode = parseQuestion(episode); // parse the question
@@ -1089,7 +1090,8 @@ function Home({ user }: HomeProps) {
             // check if we need to change the scene
             const allowList = ['Title', 'Question', 'Answer', 'Begins', 'Plotline', 'Scene', 'SCENE', 'SCENE:'];
 
-            if (allowList.some(word => sentence.includes(word))
+            if (currentSceneText.length > 500
+              || allowList.some(word => sentence.includes(word))
               || (!sentence.startsWith('References: ')
                 && sentence !== ''
                 && (imageSource == 'pexels'
@@ -1610,6 +1612,7 @@ function Home({ user }: HomeProps) {
       personality: selectedPersonality,
       refresh: false,
       prompt: '',
+      sourceDocs: [],
     }
 
     // Use messages as history
@@ -1647,6 +1650,7 @@ function Home({ user }: HomeProps) {
         personality: '',
         refresh: false,
         prompt: '',
+        sourceDocs: [],
       }
       episode = parseQuestion(episode); // parse the question
       setEpisodes([...episodes, episode]);
@@ -1820,7 +1824,8 @@ function Home({ user }: HomeProps) {
         namespace: selectedNamespace,
         personality: selectedPersonality,
         refresh: false,
-        prompt: ''
+        prompt: '',
+        sourceDocs: [],
       }
       episode = parseQuestion(episode); // parse the question
       setEpisodes([...episodes, episode]);
@@ -2005,7 +2010,8 @@ function Home({ user }: HomeProps) {
         namespace: selectedNamespace,
         personality: selectedPersonality,
         refresh: false,
-        prompt: ''
+        prompt: '',
+        sourceDocs: [],
       }
       if (debug) {
         console.log(`Queing episode: ${JSON.stringify(episode, null, 2)}`);
@@ -2094,7 +2100,8 @@ function Home({ user }: HomeProps) {
       namespace: '',
       personality: "passthrough",
       refresh: false,
-      prompt: ''
+      prompt: '',
+      sourceDocs: [],
     }
     if (debug) {
       console.log(`Replay is queing episode: ${JSON.stringify(episode, null, 2)}`);
