@@ -336,7 +336,7 @@ function Home({ user }: HomeProps) {
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= maxQueueSize) {
+      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= 0) {
         isProcessingRef.current = true;
 
         let currentNews = news;
@@ -420,7 +420,7 @@ function Home({ user }: HomeProps) {
   // send the  episodes from the queue to the handlesubmit function to build the story
   useEffect(() => {
     const processQueue = async () => {
-      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current) {
+      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current && !isSpeaking && !isProcessingRef.current) {
         let episode = episodes.shift();
         if (episode) {
           episode = parseQuestion(episode); // parse the question
