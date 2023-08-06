@@ -106,6 +106,9 @@ export default function Feed() {
         <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
         <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
       </Head>
+      <div className={styles.centerImage}>
+        <img src='https://storage.googleapis.com/gaib/groovylogo.png' alt="Groovy" />
+      </div>
       <div className={styles.feedSection}>
         <div className={styles.feed}>
           {stories.map((story, index) => {

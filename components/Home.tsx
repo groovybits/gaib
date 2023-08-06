@@ -78,7 +78,7 @@ function Home({ user }: HomeProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [startTime, setStartTime] = useState<Date>(new Date());
-  const [isFullScreen, setIsFullScreen] = useState(false); 
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [tokensCount, setTokensCount] = useState<number>(0);
   const [isStory, setIsStory] = useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('MultiModal');
@@ -298,7 +298,7 @@ function Home({ user }: HomeProps) {
             console.log(`fetchEpisodeData: Skipping empty episode: ${JSON.stringify(episode)}`);
           }
         });
-          
+
         setEpisodes([...episodes, ...filledEpisodes]);
       } catch (error) {
         console.error('fetchEpisodeData: An error occurred in the fetchEpisodeData function:', error);
@@ -345,7 +345,8 @@ function Home({ user }: HomeProps) {
         const fetchNews = async () => {
           const res = await fetchWithAuth(`/api/mediastack?offset=${currentOffset}&sort=${feedSort}&category=${feedCategory}&keywords=${feedKeywords}`, {
             headers: {
-              'Content-Type': 'application/json',            },
+              'Content-Type': 'application/json',
+            },
           });
           if (!res.ok) {
             console.log('Error fetching news: ', res.statusText);
@@ -432,7 +433,7 @@ function Home({ user }: HomeProps) {
           if (episode) {
             // send query to handlesubmit with a mock event
             console.log(`handleSubmitQueue: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
-           
+
             const mockEvent = {
               preventDefault: () => { },
               target: {
@@ -474,28 +475,44 @@ function Home({ user }: HomeProps) {
           setLastStory(playStory.shareUrl);
           setImageUrl(playStory.imageUrl);
 
-          // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
-          for (let scene of playStory.scenes) {
-            for (let sentence of scene.sentences) {
-              console.log(`PlayQueue: Displaying Sentence #${sentence.id}: ${sentence.text}\n${JSON.stringify(sentence)}\nImage: ${sentence.imageUrl})\n`)
-              if (sentence.text != '') {
-                setSubtitle(sentence.text);
-                setLoadingOSD(`Building ${playStory.scenes.length} Scenes for ${playStory.title}.`);
-              } else {
-                setLoadingOSD('');
-              }
-              if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
-                setImageUrl(sentence.imageUrl);
-              }
-              if (sentence.audioFile != '' && sentence.audioFile.match(/\.mp3$/)) {
-                try {
-                  await speakAudioUrl(sentence.audioFile);
-                } catch (error) {
-                  console.error(`PlaybackDisplay: An error with speakAudioUrl ${sentence.audioFile}:\n${error}`); // Check for any errors
+          // This function needs to be async to use await inside
+          async function playScenes() {
+            // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
+            for (let scene of playStory.scenes) {
+              for (let sentence of scene.sentences) {
+                console.log(`PlayQueue: Displaying Sentence #${sentence.id}: ${sentence.text}\n${JSON.stringify(sentence)}\nImage: ${sentence.imageUrl})\n`)
+                if (sentence.text != '') {
+                  setSubtitle(sentence.text);
+                  setLoadingOSD(`Building ${playStory.scenes.length} Scenes for ${playStory.title}.`);
+                } else {
+                  setLoadingOSD('');
+                }
+                if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
+                  setImageUrl(sentence.imageUrl);
+                }
+                if (sentence.audioFile != '' && sentence.audioFile.match(/\.mp3$/)) {
+                  try {
+                    const response = await fetch(sentence.audioFile, { method: 'HEAD' });
+                    if (response.ok) {
+                      try {
+                        await speakAudioUrl(sentence.audioFile);
+                        console.log("Audio played successfully");
+                      } catch (error) {
+                        console.error(`PlaybackDisplay: An error occurred while playing ${sentence.audioFile}:\n${error}`);
+                      }
+                    } else {
+                      console.error(`File not found at ${sentence.audioFile}`);
+                    }
+                  } catch (error) {
+                    console.error(`PlaybackDisplay: An error occurred while fetching ${sentence.audioFile}:\n${error}`);
+                  }
                 }
               }
             }
           }
+
+          // Call the function
+          playScenes();
 
           setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
 
@@ -509,9 +526,9 @@ function Home({ user }: HomeProps) {
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
         setSubtitle('Think of a story you want to tell, or a question you want to ask.');
-        
+
         setLoadingOSD(`Finished playing ${playStory.title}. `);
-        setSubtitle('\nGroovy\nCreate your visions and dreams today');        
+        setSubtitle('\nGroovy\nCreate your visions and dreams today');
       }
     };
 
@@ -528,8 +545,7 @@ function Home({ user }: HomeProps) {
     if (!isSpeakingRef.current
       && messages.length > 0
       && (messages.length - 1) > lastSpokenMessageIndex
-      && messages[messages.length - 1].type === 'apiMessage')
-    {
+      && messages[messages.length - 1].type === 'apiMessage') {
       isSpeakingRef.current = true;
 
       // last message set to mark our position in the messages array
@@ -1168,8 +1184,8 @@ function Home({ user }: HomeProps) {
             sceneCount++;
           } else if (sceneTexts.length === 0) {
             console.log(`No scenes found in the message: ${message}`);
-            sceneTexts.push(`SCENE: ${ sentences.join(' ').replace('SCENE:', '').replace('SCENE', '') }`);
-            sentencesToSpeak.push(`SCENE: ${ sentences.join(' ').replace('SCENE:', '').replace('SCENE', '') }`);
+            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
+            sentencesToSpeak.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
             sceneCount++;
           }
           setLoadingOSD(`Generating images for ${sentences.length} sentences with ${sceneTexts.length} scenes...`);
@@ -1356,11 +1372,43 @@ function Home({ user }: HomeProps) {
                 if (debug) {
                   console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', cleanText.slice(0, 30));
                 }
-                if (cleanText !== '') {
-                  audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                  setLoadingOSD(`Speech to Text line #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
-                  await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
+                try {
+                  if (cleanText != '') {
+                    audioFile = `audio/${story.id}/${sentenceId}.mp3`;
+                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
+
+                    // Try to run speakText to create the audio file
+                    try {
+                      await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
+
+                      // Check if the audio file exists
+                      const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
+                      if (!response.ok) {
+                        throw new Error(`File not found at ${audioFile}`);
+                      }
+                    } catch (e) {
+                      console.log('Error speaking text on first attempt or file not found: ', e);
+
+                      // If the first attempt fails or the file doesn't exist, try to run speakText again
+                      console.log(`Trying to run speakText again...`);
+                      try {
+                        await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
+
+                        // Check if the audio file exists
+                        const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
+                        if (!response.ok) {
+                          throw new Error(`File not found at ${audioFile}`);
+                        }
+                      } catch (e) {
+                        console.log('Error speaking text on second attempt or file not found: ', e);
+                        audioFile = '';  // Unset the audioFile variable
+                      }
+                    }
+                  }
+                } catch (e) {
+                  console.log('Error speaking text: ', e);
                 }
+
               } else {
                 // Speak the translated text
                 if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
@@ -1378,7 +1426,34 @@ function Home({ user }: HomeProps) {
                   if (cleanTranslation != '') {
                     audioFile = `audio/${story.id}/${sentenceId}.mp3`;
                     setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanTranslation.slice(0, 10)}`);
-                    await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
+
+                    // Try to run speakText to create the audio file
+                    try {
+                      await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
+
+                      // Check if the audio file exists
+                      const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
+                      if (!response.ok) {
+                        throw new Error(`File not found at ${audioFile}`);
+                      }
+                    } catch (e) {
+                      console.log('Error speaking text on first attempt or file not found: ', e);
+
+                      // If the first attempt fails or the file doesn't exist, try to run speakText again
+                      console.log(`Trying to run speakText again...`);
+                      try {
+                        await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
+
+                        // Check if the audio file exists
+                        const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
+                        if (!response.ok) {
+                          throw new Error(`File not found at ${audioFile}`);
+                        }
+                      } catch (e) {
+                        console.log('Error speaking text on second attempt or file not found: ', e);
+                        audioFile = '';  // Unset the audioFile variable
+                      }
+                    }
                   }
                 } catch (e) {
                   console.log('Error speaking text: ', e);
@@ -1510,7 +1585,7 @@ function Home({ user }: HomeProps) {
             }
           }
           localEpisode.personality = extractedPersonality;
-          console.log(`handleSubmit: Extracted personality: "${localEpisode.personality }"`);  // Log the extracted personality
+          console.log(`handleSubmit: Extracted personality: "${localEpisode.personality}"`);  // Log the extracted personality
           localEpisode.title = localEpisode.title.toLowerCase().replace(new RegExp('\\[personality\\]\\s*' + extractedPersonality, 'i'), '').trim();
           localEpisode.title = localEpisode.title.toLowerCase().replace(new RegExp('\\[personality\\]', 'i'), '').trim();
           console.log(`handleSubmit: Updated question: '${localEpisode.title}'`);  // Log the updated question
@@ -1678,7 +1753,7 @@ function Home({ user }: HomeProps) {
       titleArray.push(localEpisode.title);
     }
 
-    console.log(`handleSubmit: history is ${JSON.stringify(localHistory.length > 0 ? localHistory[localHistory.length - 1]: localHistory, null, 2)}`);
+    console.log(`handleSubmit: history is ${JSON.stringify(localHistory.length > 0 ? localHistory[localHistory.length - 1] : localHistory, null, 2)}`);
     console.log(`handleSubmit: Submitting question: '${localEpisode.title.slice(0, 1000)}...'`);
 
     // Clear the timeout
@@ -1790,7 +1865,7 @@ function Home({ user }: HomeProps) {
             }
             tokens = tokens + countTokens(data.data);
             setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
-            
+
             if (isDisplayingRef.current === false && isSpeaking === false) {
               messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
             }
@@ -2258,7 +2333,7 @@ function Home({ user }: HomeProps) {
                                 {[...episodes].reverse().map((episode, index) => (
                                   <tr key={index}>
                                     <td>
-                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title.slice(0,30)}&quot;</p>
+                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title.slice(0, 30)}&quot;</p>
                                     </td>
                                     <td>
                                       <p className={`${styles.footer} ${styles.episodeListDescription}`}>{episode.title.slice(30)}</p>

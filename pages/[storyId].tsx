@@ -110,18 +110,26 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
           && selectedStory.scenes[currentScene].sentences[currentSentence]
           && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile) {
           try {
-            isSpeakingRef.current = true;
-            await speakAudioUrl(selectedStory.scenes[currentScene].sentences[currentSentence].audioFile)
-              .finally(() => {
-                isSpeakingRef.current = false; // Set isSpeakingRef to false when the audio finishes playing
-              });
+            const audioFileUrl = selectedStory.scenes[currentScene].sentences[currentSentence].audioFile;
 
-            if (selectedStory.scenes[currentScene].sentences[currentSentence].text) {
-              spokenText = selectedStory.scenes[currentScene].sentences[currentSentence].text;
+            // Check if the audio file exists
+            const response = await fetch(audioFileUrl, { method: 'HEAD' });
+            if (!response.ok) {
+              console.error(`File not found at ${audioFileUrl}`);
             } else {
-              spokenText = selectedStory.prompt;
+              isSpeakingRef.current = true;
+              await speakAudioUrl(audioFileUrl)
+                .finally(() => {
+                  isSpeakingRef.current = false; // Set isSpeakingRef to false when the audio finishes playing
+                });
+
+              if (selectedStory.scenes[currentScene].sentences[currentSentence].text) {
+                spokenText = selectedStory.scenes[currentScene].sentences[currentSentence].text;
+              } else {
+                spokenText = selectedStory.prompt;
+              }
+              spoke = true;
             }
-            spoke = true;
           } catch (error) {
             console.log(`Error speaking text ${error}`);
           }
@@ -153,23 +161,41 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   };
 
   const previousPage = async () => {
-    if (selectedStory && !isSpeakingRef.current) {
-      if (selectedStory.scenes) {
-        if (currentSentence > 0) {
-          setCurrentSentence(currentSentence - 1);
-        } else if (currentScene > 0) {
-          setCurrentScene(currentScene - 1);
-          setCurrentSentence(selectedStory.scenes[currentScene - 1].sentences.length - 1); // Set sentence index to the last sentence of the previous scene
+    // Speak the text if autoSpeak is enabled and the current sentence has an audio file
+    if (selectedStory && autoSpeak && selectedStory.scenes
+      && selectedStory.scenes[currentScene]
+      && selectedStory.scenes[currentScene].sentences
+      && selectedStory.scenes[currentScene].sentences[currentSentence]
+      && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile) {
+      try {
+        const audioFileUrl = selectedStory.scenes[currentScene].sentences[currentSentence].audioFile;
+        let spoke = false;
+        let spokenText = '';
+
+        // Check if the audio file exists
+        const response = await fetch(audioFileUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          console.error(`File not found at ${audioFileUrl}`);
+        } else {
+
+          isSpeakingRef.current = true;
+          await speakAudioUrl(audioFileUrl)
+            .finally(() => {
+              isSpeakingRef.current = false; // Set isSpeakingRef to false when the audio finishes playing
+            });
+
+          if (selectedStory.scenes[currentScene].sentences[currentSentence].text) {
+            spokenText = selectedStory.scenes[currentScene].sentences[currentSentence].text;
+          } else {
+            spokenText = selectedStory.prompt;
+          }
+          spoke = true;
         }
-        if (autoSpeak && selectedStory.scenes
-          && selectedStory.scenes[currentScene]
-          && selectedStory.scenes[currentScene].sentences
-          && selectedStory.scenes[currentScene].sentences[currentSentence]
-          && selectedStory.scenes[currentScene].sentences[currentSentence].audioFile) {
-          await speakAudioUrl(selectedStory.scenes[currentScene].sentences[currentSentence].audioFile);
-        }
+      } catch (error) {
+        console.log(`Error speaking text ${error}`);
       }
     }
+
   };
 
   const handleLinkedInShareClick = (storyId: string | string[]) => {
