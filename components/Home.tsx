@@ -512,7 +512,7 @@ function Home({ user }: HomeProps) {
           }
 
           // Call the function
-          playScenes();
+          await playScenes();
 
           setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
 
