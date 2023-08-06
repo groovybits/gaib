@@ -244,7 +244,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       console.log('ChatAPI: Requested tokens:', requestedTokens);
       console.log('ChatAPI: Documents returned:', documentsReturned);
       console.log('ChatAPI: Episode count:', episodeCount);
-      console.log('ChatAPI: History:', JSON.stringify(chatHistory, null, 2));
+      console.log('ChatAPI: History:', JSON.stringify(history, null, 2));
       console.log('ChatAPI: Local Personality:', localPersonality);
       console.log('ChatAPI: Custom Prompt:', customPrompt);
       console.log('ChatAPI: Condense Prompt:', condensePrompt);
@@ -363,6 +363,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       console.info(`=== ChatAPI: Chain #${i} Starting  ${isStory ? "Episode" : "Answer"} #${episodeNumber} of ${localEpisodeCount}  ${isStory ? "episodes" : "answers"}.`);
 
+      let tokenCount = 0;
       let histories: BaseMessage[] = [];
       chatHistory.forEach((hist: { [x: string]: string; }) => {
         if (hist.type === 'userMessage') {
@@ -377,9 +378,16 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         } else {
           console.error(`ChatAPI: #${i} Invalid history type: ${hist.type} for ${hist.message}\nActually is: ${JSON.stringify(hist, null, 2)}\n}`);
         }
+        // count tokens and break after we hit 2k tokens
+        tokenCount = tokenCount + countTokens(hist.message);
+        if (tokenCount > 2000) {
+          return;
+        }
       });
+      console.log(`ChatAPI: #${i} Converted History of ${tokenCount} tokens.`);
+
       if (debug) {
-        console.log(`ChatAPI: #${i} Converted History:\n${JSON.stringify(histories, null, 2)}\n`)
+        console.log(`History: ${JSON.stringify(histories, null, 2)}`);
       }
 
       try {

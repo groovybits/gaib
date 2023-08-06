@@ -25,16 +25,17 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
   const [personality, setPersonality] = useState('');
   const [prompt, setPrompt] = useState('');
   const [refresh, setRefresh] = useState(false);
+  const [sourceDocs, setSourceDocs] = useState([]);
 
   const handleAddEpisode = () => {
     const newEpisodes: Episode[] = [...episodes];
     const index = newEpisodes.findIndex(episode => episode.title === title);
     if (index !== -1) {
-      newEpisodes[index] = { title, type, username, namespace, personality, refresh, prompt };
+      newEpisodes[index] = { title, type, username, namespace, personality, refresh, prompt, sourceDocs };
       // Call onEpisodeChange with the new list of episodes
       onEpisodeChange(newEpisodes);
     } else {
-      const newEpisode = { title, type, username, namespace, personality, refresh, prompt };
+      const newEpisode = { title, type, username, namespace, personality, refresh, prompt, sourceDocs };
       newEpisodes.push(newEpisode);
       // Call onNewEpisode with the new episode
       onNewEpisode(newEpisode);
