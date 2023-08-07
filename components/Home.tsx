@@ -831,7 +831,7 @@ function Home({ user }: HomeProps) {
         };
 
         // This function generates the image using the AI message from the previous function
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = false): Promise<{ image: string, prompt: string }> => {
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = true): Promise<{ image: string, prompt: string }> => {
           try {
             let prompt = imagePrompt;
             let content: string = '';
@@ -1743,12 +1743,12 @@ function Home({ user }: HomeProps) {
     // create the titles and parts of an episode
     if (localEpisode.type == 'episode') {
       titleArray.push(localEpisode.title);
-      //titleArray.push('The episode begins, introduction and character setup of the plotline...' + localEpisode.title);
-      //titleArray.push('the episode continues, plotline and character development...');
-      //titleArray.push('the episode continues, coming upon the peak of the story...');
-      ///titleArray.push('The episode continues, the climax of the story, do not repeat character introductions...' + localEpisode.title);
-      //titleArray.push('the episode continues, the story begins to resolve...');
-      //titleArray.push('The episode ends and finishes up with a conclusion...');
+      /*titleArray.push('The episode begins, introduction and character setup of the plotline...' + localEpisode.title);
+      titleArray.push('the episode continues, plotline and character development...');
+      titleArray.push('the episode continues, coming upon the peak of the story...');
+      titleArray.push('The episode continues, the climax of the story, do not repeat character introductions...');
+      titleArray.push('the episode continues, the story begins to resolve...');
+      titleArray.push('The episode ends and finishes up with a conclusion...');*/
     } else {
       titleArray.push(localEpisode.title);
     }
