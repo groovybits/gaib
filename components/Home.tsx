@@ -26,6 +26,8 @@ import copy from 'copy-to-clipboard';
 import EpisodePlanner from '@/components/EpisodePlanner';
 import GPT3Tokenizer from 'gpt3-tokenizer';
 import { fetchEventSourceWithAuth, fetchWithAuth } from '@/utils/fetchWithAuth';
+import ModelNameDropdown from '@/components/ModelNameDropdown';
+import FastModelNameDropdown from '@/components/FastModelNameDropdown';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -113,7 +115,8 @@ function Home({ user }: HomeProps) {
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
   const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 3);
-
+  const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-3.5-turbo');
+  const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo');
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -766,6 +769,7 @@ function Home({ user }: HomeProps) {
             const requestBody = {
               message: imagePrompt,
               prompt: personalityPrompt,
+              llm: fastModelName,
               conversationHistory: conversationHistory,  // You may need to populate this with previous conversation history, if any.
               maxTokens: maxTokens,
             };
@@ -1803,6 +1807,8 @@ function Home({ user }: HomeProps) {
           customPrompt,
           condensePrompt,
           commandPrompt: localEpisode.prompt ? localEpisode.prompt : '',
+          modelName: modelName,
+          fastModelName: fastModelName,
           tokensCount,
           documentCount,
           episodeCount,
@@ -2271,6 +2277,16 @@ function Home({ user }: HomeProps) {
     setSelectedTheme(value);
   };
 
+  const handleModelNameChange = (newModelName: string) => {
+    setModelName(newModelName);
+    // You can add any additional logic you need when the model name changes
+  };
+
+  const handleFastModelNameChange = (newFastModelName: string) => {
+    setFastModelName(newFastModelName);
+    // You can add any additional logic you need when the fast model name changes
+  };
+
   useEffect(() => {
     autoResize();
     autoResizeCondense();
@@ -2518,6 +2534,11 @@ function Home({ user }: HomeProps) {
                       <DocumentDropdown onChange={handleDocumentsChange} />
                       &nbsp;&nbsp;
                       <EpisodeDropdown onChange={handleEpisodesChange} />
+                    </div>
+                    <div className={styles.cloudform}>
+                      <ModelNameDropdown onChange={handleModelNameChange} />
+                      &nbsp;&nbsp;
+                      <FastModelNameDropdown onChange={handleFastModelNameChange} />
                     </div>
                   </div>
                   {/* Question/Topic text entry box */}

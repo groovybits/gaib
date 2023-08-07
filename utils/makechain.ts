@@ -11,8 +11,6 @@ import isUserPremium from '@/config/isUserPremium';
 import { BaseLanguageModel } from 'langchain/dist/base_language';
 
 const RETURN_SOURCE_DOCUMENTS = process.env.RETURN_SOURCE_DOCUMENTS === undefined ? true : Boolean(process.env.RETURN_SOURCE_DOCUMENTS);
-const modelName = process.env.MODEL_NAME || 'gpt-4';  //change this to gpt-4 if you have access
-const fasterModelName = process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k';  // faster model for title/question generation
 const presence = process.env.PRESENCE_PENALTY !== undefined ? parseFloat(process.env.PRESENCE_PENALTY) : 0.0;
 const frequency = process.env.FREQUENCY_PENALTY !== undefined ? parseFloat(process.env.FREQUENCY_PENALTY) : 0.0;
 const temperatureStory = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.7;
@@ -29,10 +27,6 @@ if (authEnabled) {
   firebaseFunctions = await import('@/config/firebaseAdminInit');
 }
 
-const fasterModel = new OpenAI({
-  modelName: fasterModelName,
-});
-
 export const makeChain = async (
   vectorstore: PineconeStore,
   personality: keyof typeof PERSONALITY_PROMPTS,
@@ -43,10 +37,16 @@ export const makeChain = async (
   customPrompt: string,
   condensePrompt: string,
   commandPrompt: string,
+  modelName: string,
+  fastModelName: string,
   onTokenStream?: (token: string) => void,
 ) => {
   // Condense Prompt depending on a question or a story
   let condensePromptString = (condensePrompt != '') ? condensePrompt : buildCondensePrompt(personality, storyMode);
+
+  const fasterModel = new OpenAI({
+    modelName: fastModelName,
+  });
 
   // Create the prompt using the personality and the footer depending on a question or a story
   let prompt: string = '';

@@ -5,7 +5,6 @@ import fetch from 'node-fetch';
 import { authCheck, NextApiRequestWithUser } from '@/utils/authCheck';
 
 const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
-const llm = process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo';  // faster model for title/question generation
 const temperature = process.env.TEMPERATURE_STORY !== undefined ? parseFloat(process.env.TEMPERATURE_STORY) : 0.8;
 const debug = process.env.DEBUG === 'true' ? true : false;
 
@@ -54,7 +53,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     switch (method) {
       case 'POST':
         try {
-          const { message, prompt, conversationHistory = [], maxTokens = 0 } = req.body;
+          const { message, prompt, llm, conversationHistory = [], maxTokens = 0 } = req.body;
 
           let promptArray: any[] = []; // array of messages to send to OpenAI
           promptArray.push({ "role": "system", "content": prompt }); // add system role

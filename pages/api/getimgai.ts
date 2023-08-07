@@ -23,6 +23,19 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         console.log(`getimgaiHandler: model: ${model}\nprompt: ${prompt}\nnegativePrompt: ${negativePrompt}\nwidth: ${width}\nheight: ${height}\nsteps: ${steps}\nguidance: ${guidance}\nseed: ${seed}\nscheduler: ${scheduler}\noutputFormat: ${outputFormat}`);
       }
 
+      let requestBody = JSON.stringify({
+        model: model,
+        prompt,
+        negative_prompt: negativePrompt,
+        width,
+        height,
+        steps,
+        guidance,
+        seed,
+        scheduler,
+        output_format: outputFormat,
+      })
+
       let getImgResponse: any;
       try {
         getImgResponse = await fetch('https://api.getimg.ai/v1/stable-diffusion/text-to-image', {
@@ -31,18 +44,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model: model,
-            prompt,
-            negative_prompt: negativePrompt,
-            width,
-            height,
-            steps,
-            guidance,
-            seed,
-            scheduler,
-            output_format: outputFormat,
-          }),
+          body: requestBody,
         });
       } catch (error: any) {
         console.error(`getimgaiHandler: Error calling getimg.ai API: ${error.message}`);
@@ -67,10 +69,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       try {
         if (getImgData && !getImgData.image) {
-          console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image prompt: ${prompt} negativePrompt: ${negativePrompt} 
-            width: ${width} height: ${height} steps: ${steps} guidance: ${guidance} seed: ${seed} scheduler: ${scheduler} outputFormat: ${outputFormat}`);
-          console.log(`getimgaiHandler: Error calling getimg.ai API, missing .image: ${JSON.stringify(getImgData, null, 2)}`);
-          throw new Error(`getimgaiHandler: Error calling getimg.ai API, mising .image`);
+          console.error(`getimgaiHandler: Error with API using RequestBody: ${JSON.stringify(requestBody, null, 2)}`);
+          console.log(`getimgaiHandler: Error with API, missing .image in getImgData: ${JSON.stringify(getImgData, null, 2)}`);
+          throw new Error(`getimgaiHandler: Error calling getimg.ai API, missing .image`);
         }
       } catch (error: any) {
         console.error(`getimgaiHandler: Error calling getimg.ai API, missing .image: ${error.message}`);

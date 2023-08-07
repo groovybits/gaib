@@ -91,6 +91,8 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       customPrompt,
       condensePrompt,
       commandPrompt,
+      modelName,
+      fastModelName,
       tokensCount,
       documentCount,
       episodeCount,
@@ -204,12 +206,16 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
     // Set the default history
     let maxCount: number = 16000; // max tokens for GPT-3-16k
-    if (process.env.GPT_MAX_TOKENS) {
-      maxCount = parseInt(process.env.GPT_MAX_TOKENS);
-      if (isNaN(maxCount)) {
-        console.error(`ChatAPI: Invalid GPT_MAX_TOKENS value of ${process.env.GPT_MAX_TOKENS}, using default of 16000.`);
-        maxCount = 16000;
-      }
+    if (modelName === 'gpt-3.5-turbo') {
+      maxCount = 4000;
+    } else if (modelName === 'gpt-4') {
+      maxCount = 8000;
+    } else if (modelName === 'gpt-3.5-turbo-16k') {
+      maxCount = 16000;
+    } else if (modelName === 'gpt-4-32k') {
+      maxCount = 32000;
+    } else {
+      maxCount = 4000;
     }
 
     if (requestedTokens > maxCount) {
@@ -253,7 +259,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       console.log('ChatAPI: promptString: ', promptString, ' tokens: ', countTokens(promptString));
       console.log('ChatAPI: condensePromptString: ', condensePromptString, ' tokens: ', countTokens(condensePromptString));
     } else {
-      console.log(`ChatAPI: ${isStory ? "Episode" : "Question"} [${question.slice(0, 20)}...] ${localPersonality} ${isStory ? 'Story' : 'Answer'} ${requestedTokens} tokens ${documentsReturned} documents ${episodeCount} ${isStory ? "episodes" : "answers"}.`);
+      console.log(`ChatAPI: ${modelName}/${fastModelName} ${maxCount}k ${isStory ? "Episode" : "Question"} [${question.slice(0, 20)}...] ${localPersonality} ${isStory ? 'Story' : 'Answer'} ${requestedTokens} tokens ${documentsReturned} documents ${episodeCount} ${isStory ? "episodes" : "answers"}.`);
     }
 
     // Set headers before starting the chain
@@ -277,6 +283,8 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         customPrompt,
         condensePrompt,
         commandPrompt,
+        modelName,
+        fastModelName,
         (token: string) =>
         {
         token_count++;
@@ -380,7 +388,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         }
         // count tokens and break after we hit 2k tokens
         tokenCount = tokenCount + countTokens(hist.message);
-        if (tokenCount > 2000) {
+        if (tokenCount > (maxCount / 4)) {
           return;
         }
       });
