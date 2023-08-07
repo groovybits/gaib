@@ -771,7 +771,6 @@ function Home({ user }: HomeProps) {
             };
 
             let content: string = 'random image of a robot anime AI';
-            const idToken = await user?.getIdToken();
             // Send a POST request to your local API endpoint.
             // timeout if it takes longer than 10 seconds
             // Create an AbortController instance
