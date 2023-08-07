@@ -24,7 +24,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const [currentSentence, setCurrentSentence] = useState(0); // Add this line to keep track of the current sentence
   const { stopSpeaking, speakAudioUrl } = useSpeakText();
   const [autoSpeak, setAutoSpeak] = useState(true);
-  const [autoPage, setAutoPage] = useState(false);
+  const [autoPage, setAutoPage] = useState(true);
   const isSpeakingRef = useRef(false);
   const [useSubtitles, setUseSubtitles] = useState(true);
   const [viewTranscript, setViewTranscript] = useState(false);
@@ -54,7 +54,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const stopSpeakingText = () => {
     if (autoSpeak) {
       setAutoSpeak(false);
-      setAutoPage(false);
+      //setAutoPage(false);
       stopSpeaking(); // Call the stopSpeaking function from useSpeakText
       isSpeakingRef.current = false;
     } else {
@@ -89,7 +89,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
     setCurrentScene(0);
     setCurrentSentence(0);
     setAutoSpeak(true);
-    setAutoPage(false);
+    //setAutoPage(false);
   };
 
   const noPage = () => {
@@ -150,7 +150,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
         } else {
           resetState();
           setAutoSpeak(false);
-          setAutoPage(false);
+          //setAutoPage(false);
         }
 
         if (!autoPage) {
