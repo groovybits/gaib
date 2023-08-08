@@ -589,13 +589,22 @@ function Home({ user }: HomeProps) {
                         resolve();
                       } else {
                         const data = JSON.parse(event.data);
-                        if (data.sourceDocs) {
-                          pendingSourceDocs = data.sourceDocs;
-                        } else {
-                          pendingMessage += data.data;
+                        try {
+                          if (data.sourceDocs) {
+                            console.log(`handleSubmit: Recieved ${data.sourceDocs.length} sourceDocs ${JSON.stringify(data.sourceDocs)}}`);
+                            pendingSourceDocs = data.sourceDocs;
+                          } else {
+                            pendingMessage += data.data;
+                          }
+                        } catch (error) {
+                          console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
                         }
-                        tokens = tokens + countTokens(data.data);
-                        setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
+                        if (data.data) {
+                          tokens = tokens + countTokens(data.data);
+                          setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
+                        } else {
+                          console.log(`handleSubmitQueue: No data returned from the server.`);
+                        }
                       }
                     },
                   });
