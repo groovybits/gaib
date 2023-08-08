@@ -1373,7 +1373,7 @@ function Home({ user }: HomeProps) {
             const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
 
             // Create the summary
-            if (isStory) {
+            if (story.isStory) {
               summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
             } else {
               summary = `Question: ${title}\n\nSpeaker(s) ${speakerList}.\n\nAnswer: ${introduction}...`;
