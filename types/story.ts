@@ -33,6 +33,7 @@ export type Story = {
     references: any[] | undefined;
     isStory: boolean;
     shareUrl: string;
+    query: string;
     rawText: string;
 }
 

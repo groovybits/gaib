@@ -40,7 +40,6 @@ interface HomeProps {
 function Home({ user }: HomeProps) {
   const [query, setQuery] = useState<string>('');
   const [voiceQuery, setVoiceQuery] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [messageState, setMessageState] = useState<{
     messages: Message[];
@@ -61,8 +60,6 @@ function Home({ user }: HomeProps) {
   const [speechRecognitionComplete, setSpeechRecognitionComplete] = useState(false);
   const [speechOutputEnabled, setSpeechOutputEnabled] = useState(true);
   const [timeoutID, setTimeoutID] = useState<NodeJS.Timeout | null>(null);
-  const [lastSpokenMessageIndex, setLastSpokenMessageIndex] = useState(-1);
-  const [lastMessageDisplayed, setLastMessageDisplayed] = useState(-1);
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -318,7 +315,7 @@ function Home({ user }: HomeProps) {
       if (isProcessing) return;  // If a fetch is already in progress, do nothing
       isProcessing = true;  // Set the flag to true to block other fetches
 
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && !isSubmittingRef.current) {
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current) {
         isProcessingTwitchRef.current = true;
         try {
           await fetchEpisodeData();
@@ -340,12 +337,12 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(processTwitchChat, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef]);
+  }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef, selectedPersonality, selectedNamespace, parseQuestion]);
 
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !isProcessingRef.current && !isSubmittingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= 0) {
+      if (isFetching && !isProcessingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= 0) {
         isProcessingRef.current = true;
 
         let currentNews = news;
@@ -422,16 +419,16 @@ function Home({ user }: HomeProps) {
       isProcessingRef.current = false;
     }
 
-    const intervalId = setInterval(processNewsArticle, 60000);  // Then every N seconds
+    const intervalId = setInterval(processNewsArticle, 10000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, isSubmittingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize]);
+  }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize, selectedNamespace, selectedPersonality, parseQuestion]);
 
   // send the  episodes from the queue to the handlesubmit function to build the story
   useEffect(() => {
     const processQueue = async () => {
       let episode: Episode | undefined;
-      if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current && !isSpeaking && !isProcessingRef.current) {
+      if (episodes.length > 0 && isFetching && !isSubmittingRef.current) {
         isSubmittingRef.current = true;
         try {
           episode = episodes.shift();
@@ -467,7 +464,7 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(processQueue, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening, handleSubmit]);
+  }, [episodes, isFetching, isSpeaking, isSubmittingRef, handleSubmit, parseQuestion]);
 
   // handle the submitQueue of episodes
   useEffect(() => {
@@ -524,7 +521,6 @@ function Home({ user }: HomeProps) {
 
             // Reset the state
             setError(null);
-            setLoading(true);
             setLoadingOSD(`Recieved ${localEpisode.type}: ${localEpisode.title.slice(0, 50).replace(/\n/g, ' ')}...`);
             setMessageState((state) => ({ ...state, pending: '' }));
 
@@ -572,7 +568,6 @@ function Home({ user }: HomeProps) {
                           pending: undefined,
                           pendingSourceDocs: undefined,
                         }));
-                        setLoading(false);
                      
                         ctrl.abort();
                         resolve();
@@ -589,7 +584,6 @@ function Home({ user }: HomeProps) {
                           pending: undefined,
                           pendingSourceDocs: undefined,
                         }));
-                        setLoading(false);
                         setLoadingOSD('System Error... Please try again.');
                         ctrl.abort();
                         resolve();
@@ -623,7 +617,7 @@ function Home({ user }: HomeProps) {
 
           // setup the story structure
           let story: Story = {
-            title: localEpisode.title,
+            title: '',
             url: '',
             thumbnailUrls: [],
             id: '',
@@ -640,10 +634,10 @@ function Home({ user }: HomeProps) {
             isStory: localEpisode.type === 'episode' ? true : false,
             shareUrl: '',
             rawText: pendingMessage,
+            query: localEpisode.title
           }
 
           setStoryQueue([...storyQueue, story]);
-          setLastSpokenMessageIndex(newMessages.length - 1);
         }
         isSubmitQueueRef.current = false;
       }
@@ -656,10 +650,10 @@ function Home({ user }: HomeProps) {
       if (!isSubmitQueueRef.current) {
         submitQueueDisplay();
       }
-    }, 10000);  // Then every N seconds
+    }, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [submitQueue, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening]);
+  }, [submitQueue, isFetching, isSpeaking, isProcessingRef, isSubmittingRef, listening]);
 
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
@@ -744,7 +738,7 @@ function Home({ user }: HomeProps) {
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
-    if (!isSpeakingRef.current && storyQueue.length > 0 && !isSubmittingRef.current) {
+    if (!isSpeakingRef.current && storyQueue.length > 0) {
       isSpeakingRef.current = true;
 
       // last message set to mark our position in the messages array
@@ -1259,11 +1253,11 @@ function Home({ user }: HomeProps) {
 
           // add to the beginning of the scentences to speek the query and the title if it is a question
           if (isStory) {
-            sentencesToSpeak.push(`SCENE: \n\n${story.title}`);
+            sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
           } else {
-            sentencesToSpeak.push(`SCENE: \n\n${story.title}`);
+            sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
           }
-          currentSceneText = story.title + "\n\n";
+          currentSceneText = story.query + "\n\n";
           sceneCount++;
           sceneTexts.push(currentSceneText);
           currentSceneText = "";
@@ -1399,6 +1393,7 @@ function Home({ user }: HomeProps) {
           // Fill the story object
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
 
+          story.title = titleScreenText;
           story.UserId = user?.uid || 'anonymous';
           story.id = episodeIdRef.current;
           story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
@@ -1676,7 +1671,7 @@ function Home({ user }: HomeProps) {
       }
       isSpeakingRef.current = false;
     }
-  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, lastSpokenMessageIndex, imageUrl, setSubtitle, setLoadingOSD, lastMessageDisplayed, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
+  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, imageUrl, setSubtitle, setLoadingOSD, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
   // take an Episode and parse the question and return the Episode with the parts filled out from the question
   function parseQuestion(episode: Episode): Episode {
@@ -1856,35 +1851,6 @@ function Home({ user }: HomeProps) {
     // Check if the event is an input event
     if (e.target?.value !== undefined) {
       localEpisode = parseQuestion(e.target.value as Episode); // parse the question
-
-      // Queue the question if processing is in progress
-      if (loading) {
-        console.log(`handleSubmit: Busy Processing, requeing input event: '${JSON.stringify(localEpisode)}'`);
-        setEpisodes([...episodes, localEpisode]);
-        return;
-      }
-    } else if (loading) {
-      // Queue the question if processing is in progress and not an Episode Event
-      if (question === '') {
-        console.log(`handleSubmit: Question is empty, discarding bad input query: '${question}'`);
-        return;
-      }
-      console.log(`handleSubmit: Busy Processing, requeing input query: '${question}'`);
-      let episode: Episode = {
-        title: question,
-        type: question.startsWith('!question') ? 'question' : question.startsWith('!episode') ? 'episode' : isStory ? 'episode' : 'question',
-        username: 'anonymous',
-        namespace: '',
-        personality: '',
-        refresh: false,
-        prompt: '',
-        sourceDocs: [],
-      }
-      episode = parseQuestion(episode); // parse the question
-      setEpisodes([...episodes, episode]);
-      setQuery('');
-      setVoiceQuery('');
-      return;
     } else {
       if (question === '') {
         console.log(`handleSubmit: Question is empty, discarding bad input query: '${question}'`);
@@ -2113,7 +2079,7 @@ function Home({ user }: HomeProps) {
         startSpeechRecognition();
       }
     }
-  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, isStory, episodes, startSpeechRecognition]);
+  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, isStory, episodes, startSpeechRecognition, selectedNamespace, selectedPersonality]);
 
   // Add a useEffect hook to start the speech recognition when the component mounts
   useEffect(() => {
@@ -2376,7 +2342,7 @@ function Home({ user }: HomeProps) {
                       }}
                       type="button"
                     >
-                      {loadingOSD}{(loading && latestMessage.message) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : isSpeaking ? 'Playing...' : ' - Groovy is ready to generate your vision!'}
+                      {loadingOSD}{(latestMessage.message) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : isSpeaking ? 'Playing...' : ' - Groovy is ready to generate your vision!'}
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
