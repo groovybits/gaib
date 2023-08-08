@@ -836,7 +836,6 @@ function Home({ user }: HomeProps) {
                   body: JSON.stringify({ keywords }),
                 });
               } else if (imageSource === 'deepai') {
-                let context = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PROMPT || 'Picture of';
                 let exampleImage = '' as string;
                 if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
                   if (lastImage !== '') {
@@ -848,7 +847,7 @@ function Home({ user }: HomeProps) {
                 response = await fetchWithAuth('/api/deepai', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `${context} ${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
+                  body: JSON.stringify({ prompt: `${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
                 });
               } else if (imageSource === 'openai') {
                 let exampleImage = '' as string;
@@ -1162,10 +1161,12 @@ function Home({ user }: HomeProps) {
 
           // Create a title screen image for the story
           let promptImageTitle =
-            "Generate a prompt from the following text for ai image generation that summarizes the following section of the story.\n\n";
-          let historyPrimerTitle = "Do not reveal you are an AI bot, do the task given to you by the AI, and do not reveal the AI's identity.\n\n";
-          let promptImage = promptImageTitle;  //"Generate a prompt for ai image generation of the following scene description of an Anime episode, prompt to animate the scene. use the history for keeping context of the previous scenes:\n\n";
-          let historyPrimer = historyPrimerTitle;  //"You are an Anime artist who writes manga and draws the Anime episodes. Create scene descriptions for the episode so we can generate images.";
+            "Generate a prompt for generating an image using the following text in context with the previous chat history.\n\n";
+          let historyPrimerTitle =
+            "Do not reveal you are an AI bot, do the task given to you by the AI, and do not reveal the AI's identity. "
+              + "Summarize the given text into concise stable diffusion prompt descriptions for image generation.\n\n";
+          let promptImage = promptImageTitle;
+          let historyPrimer = historyPrimerTitle;
 
           let maleVoiceModels = {
             'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
@@ -1298,7 +1299,7 @@ function Home({ user }: HomeProps) {
                 console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
                 setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
 
-                const imgGenResult = await generateAIimage(`${promptImage} ${titleScreenText} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                const imgGenResult = await generateAIimage(`${promptImage} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
                 if (imgGenResult.image !== '') {
                   lastImage = imgGenResult.image;
                   imageCount++;
@@ -1339,7 +1340,7 @@ function Home({ user }: HomeProps) {
           if (sceneTexts.length === 0 && imageCount === 0) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
-            const imgGenResult = await generateAIimage(`${promptImage} ${titleScreenText} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            const imgGenResult = await generateAIimage(`${promptImage} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             if (imgGenResult.image !== '') {
               lastImage = imgGenResult.image;
               imageCount++;
