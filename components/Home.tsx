@@ -866,9 +866,9 @@ function Home({ user }: HomeProps) {
                 });
               } else if (imageSource === 'getimgai') {
                 const idToken = await user?.getIdToken();
-                let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v1-5';
+                let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v2-1';
                 let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
-                let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 704;
+                let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 512;
                 let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
                 let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
                 let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
@@ -880,6 +880,12 @@ function Home({ user }: HomeProps) {
                 width = Math.floor(width / 64) * 64;
                 height = Math.floor(height / 64) * 64;
 
+                if (width > 1024) {
+                  width = 1024;
+                }
+                if (height > 1024) {
+                  height = 1024;
+                }
                 response = await fetchWithAuth('/api/getimgai', {
                   method: 'POST',
                   headers: {
