@@ -429,6 +429,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           if (sendReferences) {
             sendData(JSON.stringify({ data: `\n\nReferences: ${references}\n` }));
           }
+          //sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
         } else {
           console.error(`ChatAPI: #${i} No reference documents.`);
         }

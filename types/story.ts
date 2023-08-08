@@ -30,9 +30,10 @@ export type Story = {
     timestamp: number;
     personality: string;
     namespace: string;
-    references: string[];
+    references: any[] | undefined;
     isStory: boolean;
     shareUrl: string;
+    rawText: string;
 }
 
 // Define a type for an episode

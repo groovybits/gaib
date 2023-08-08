@@ -104,6 +104,8 @@ function Home({ user }: HomeProps) {
   const [displayCondensePrompt, setDisplayCondensePrompt] = useState('');
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [playQueue, setPlayQueue] = useState<Story[]>([]);
+  const [submitQueue, setSubmitQueue] = useState<Episode[]>([]);
+  const [storyQueue, setStoryQueue] = useState<Story[]>([]);
   const isDisplayingRef = useRef<boolean>(false);
   const [feedNewsChannel, setFeedNewsChannel] = useState<boolean>(false);
   const [translateText, setTranslateText] = useState<boolean>(process.env.NEXT_PUBLIC_ENABLE_TRANSLATE === 'true');
@@ -150,7 +152,11 @@ function Home({ user }: HomeProps) {
   // Declare a new ref for timeout detection
   const timeoutDetected = useRef(false);
 
+  // handleSubmit queue episode function
   const isSubmittingRef = useRef(false);
+
+  // handleSubmitQueue useeffect lock
+  const isSubmitQueueRef = useRef(false);
 
   // Declare a reference to the speech recognition object
   let recognition: SpeechRecognition | null = null;
@@ -424,15 +430,17 @@ function Home({ user }: HomeProps) {
   // send the  episodes from the queue to the handlesubmit function to build the story
   useEffect(() => {
     const processQueue = async () => {
+      let episode: Episode | undefined;
       if (episodes.length > 0 && !loading && isFetching && !listening && !isSubmittingRef.current && !isSpeaking && !isProcessingRef.current) {
-        let episode = episodes.shift();
-        if (episode) {
-          episode = parseQuestion(episode); // parse the question
-        } else {
-          return; // empty episode
-        }
         isSubmittingRef.current = true;
         try {
+          episode = episodes.shift();
+          if (episode) {
+            episode = parseQuestion(episode); // parse the question
+          } else {
+            isSubmittingRef.current = false;
+            return; // empty episode
+          }
           if (episode) {
             // send query to handlesubmit with a mock event
             console.log(`handleSubmitQueue: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
@@ -443,14 +451,13 @@ function Home({ user }: HomeProps) {
                 value: episode,
               },
             };
-            isSubmittingRef.current = false;
             handleSubmit(mockEvent);
           }
         } catch (error) {
           console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
           episode && episodes.unshift(episode); // Put the episode back in the queue
-          isSubmittingRef.current = false;
         }
+        isSubmittingRef.current = false;
       }
     };
 
@@ -461,6 +468,198 @@ function Home({ user }: HomeProps) {
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [episodes, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening, handleSubmit]);
+
+  // handle the submitQueue of episodes
+  useEffect(() => {
+    const submitQueueDisplay = async () => {
+      if (submitQueue.length > 0 && !isSubmitQueueRef.current) {
+        isSubmitQueueRef.current = true;
+        const localEpisode: Episode | undefined = submitQueue.shift();  // Get the first episode
+
+        if (localEpisode) {
+          // Use messages as history
+          let localHistory = [...messages];
+          let titleArray: string[] = [];
+          let tokens: number = 0;
+          let newMessages = [...messages];  // Create a local copy of messages
+          let pendingMessage = '';
+          let pendingSourceDocs: any;
+
+          // History refresh request
+          if (localEpisode.refresh !== undefined && localEpisode.refresh == true) {
+            localHistory = [];
+          }
+
+          try {
+            console.log(`SubmitQueue: Submitting Recieved ${localEpisode.type} #${submitQueue.length}: ${localEpisode.title}`);
+            // create the titles and parts of an episode
+            if (localEpisode.type == 'episode') {
+              titleArray.push(localEpisode.title);
+            } else {
+              titleArray.push(localEpisode.title);
+            }
+
+            console.log(`handleSubmit: history is ${JSON.stringify(localHistory.length > 0 ? localHistory[localHistory.length - 1] : localHistory, null, 2)}`);
+            console.log(`handleSubmit: Submitting question: '${localEpisode.title.slice(0, 1000)}...'`);
+
+            // Clear the timeout
+            if (timeoutID) {
+              clearTimeout(timeoutID);
+              setTimeoutID(null);
+            }
+
+            // Set the message state
+            setMessageState((state) => ({
+              ...state,
+              messages: [
+                ...state.messages,
+                {
+                  type: 'userMessage',
+                  localPersonality: localEpisode.personality,
+                  message: localEpisode.title,
+                },
+              ],
+              pending: undefined,
+            }));
+
+            // Reset the state
+            setError(null);
+            setLoading(true);
+            setLoadingOSD(`Recieved ${localEpisode.type}: ${localEpisode.title.slice(0, 50).replace(/\n/g, ' ')}...`);
+            setMessageState((state) => ({ ...state, pending: '' }));
+
+            // Send the question to the server
+            const fetchData = async () => {
+              return new Promise<void>((resolve, reject) => {
+                const ctrl = new AbortController();
+                try {
+                  fetchEventSourceWithAuth('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Retry-After': '5',
+                    },
+                    body: JSON.stringify({
+                      question: localEpisode.title,
+                      userId: user?.uid,
+                      localPersonality: localEpisode.personality ? localEpisode.personality : selectedPersonality,
+                      selectedNamespace: localEpisode.namespace ? localEpisode.namespace : selectedNamespace,
+                      isStory: localEpisode.type === 'episode' ? true : false,
+                      customPrompt,
+                      condensePrompt,
+                      commandPrompt: localEpisode.prompt ? localEpisode.prompt : '',
+                      modelName: modelName,
+                      fastModelName: fastModelName,
+                      tokensCount,
+                      documentCount,
+                      episodeCount,
+                      titleArray,
+                      history: localHistory,
+                    }),
+                    signal: ctrl.signal,
+                    onmessage: (event: { data: string; }) => {
+                      if (event.data === '[DONE]' || event.data === '[ERROR]') {
+                        const newMessage: Message = {
+                          type: 'apiMessage',
+                          message: pendingMessage,
+                          sourceDocs: pendingSourceDocs,
+                        };
+                        newMessages = [...newMessages, newMessage];
+                        setMessageState((state) => ({
+                          history: [],
+                          messages: newMessages,
+                          sourceDocs: pendingSourceDocs,
+                          pending: undefined,
+                          pendingSourceDocs: undefined,
+                        }));
+                        setLoading(false);
+                     
+                        ctrl.abort();
+                        resolve();
+                      } else if (event.data === '[OUT_OF_TOKENS]') {
+                        setMessageState((state) => ({
+                          ...state,
+                          messages: [
+                            ...state.messages,
+                            {
+                              type: 'apiMessage',
+                              message: 'Sorry, either not enough tokens were allocated or available for story generation.',
+                            },
+                          ],
+                          pending: undefined,
+                          pendingSourceDocs: undefined,
+                        }));
+                        setLoading(false);
+                        setLoadingOSD('System Error... Please try again.');
+                        ctrl.abort();
+                        resolve();
+                      } else {
+                        const data = JSON.parse(event.data);
+                        if (data.sourceDocs) {
+                          pendingSourceDocs = data.sourceDocs;
+                        } else {
+                          pendingMessage += data.data;
+                        }
+                        tokens = tokens + countTokens(data.data);
+                        setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
+                      }
+                    },
+                  });
+                } catch (error: any) {
+                  reject(error);
+                }
+              });
+            };
+
+            await fetchData();
+          } catch (error) {
+            console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
+            if (localEpisode) {
+              submitQueue.unshift(localEpisode); // Put the episode back in the queue
+            }
+          }
+
+          console.log(`storyQueue: messages length ${newMessages.length} contain\n${JSON.stringify(newMessages, null, 2)}`)
+
+          // setup the story structure
+          let story: Story = {
+            title: localEpisode.title,
+            url: '',
+            thumbnailUrls: [],
+            id: '',
+            UserId: localEpisode.username,
+            prompt: localEpisode.prompt,
+            tokens: tokens,
+            scenes: [],
+            imageUrl: '',
+            imagePrompt: '',
+            timestamp: Date.now(),
+            personality: localEpisode.personality,
+            namespace: localEpisode.namespace,
+            references: pendingSourceDocs,
+            isStory: localEpisode.type === 'episode' ? true : false,
+            shareUrl: '',
+            rawText: pendingMessage,
+          }
+
+          setStoryQueue([...storyQueue, story]);
+          setLastSpokenMessageIndex(newMessages.length - 1);
+        }
+        isSubmitQueueRef.current = false;
+      }
+    };
+
+    submitQueueDisplay();  // Run immediately on mount
+
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(() => {
+      if (!isSubmitQueueRef.current) {
+        submitQueueDisplay();
+      }
+    }, 10000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
+  }, [submitQueue, isFetching, isSpeaking, loading, isProcessingRef, isSubmittingRef, listening]);
 
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
@@ -474,7 +673,7 @@ function Home({ user }: HomeProps) {
           setIsSpeaking(true);
 
           setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
-          setLoadingOSD(`Prompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references.join(', ')}`);
+          setLoadingOSD(`Prompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references && playStory.references.join(', ')}`);
           setLastStory(playStory.shareUrl);
           setImageUrl(playStory.imageUrl);
 
@@ -545,29 +744,13 @@ function Home({ user }: HomeProps) {
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
-    if (!isSpeakingRef.current
-      && messages.length > 0
-      && (messages.length - 1) > lastSpokenMessageIndex
-      && messages[messages.length - 1].type === 'apiMessage') {
+    if (!isSpeakingRef.current && storyQueue.length > 0 && !isSubmittingRef.current) {
       isSpeakingRef.current = true;
 
       // last message set to mark our position in the messages array
-      const lastMessageIndex: number = messages.length - 1;
-      if (lastMessageDisplayed != lastMessageIndex) {
-        // Set the last message displayed
-        setLastMessageDisplayed(lastMessageIndex);
-      } else {
-        // sleep for 1 second
-        setTimeout(() => {
-          if (debug) {
-            console.log('SpeakingDisplay: sleeping for 3 seconds, no new messages');
-          }
-        }, 3000);
-        isSpeakingRef.current = false;
-        return;
-      }
-      let lastMessage: string = messages[lastMessageIndex].message;
-      let lastQuery: string = messages[lastMessageIndex - 1].message;
+      let story: Story | undefined = storyQueue.shift();
+
+      console.log(`StoryQueue: Generating Story #${storyQueue.length}: ${story?.title}\n${JSON.stringify(story)}\n`);
 
       // lock speaking and avoid crashing
       try {
@@ -946,30 +1129,10 @@ function Home({ user }: HomeProps) {
           }
         };
 
-        async function processImagesAndSubtitles(query: string, message: string) {
+        async function processImagesAndSubtitles(story: Story) {
           const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
           const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
-          const idToken = await user?.getIdToken();
-
-          // setup the story structure
-          let story: Story = {
-            title: '',
-            url: '',
-            thumbnailUrls: [],
-            id: '',
-            UserId: '',
-            prompt: '',
-            tokens: 0,
-            scenes: [],
-            imageUrl: '',
-            imagePrompt: '',
-            timestamp: Date.now(),
-            personality: '',
-            namespace: '',
-            references: [],
-            isStory: isStory,
-            shareUrl: '',
-          }
+          const message = story.rawText;
 
           let voiceModels: { [key: string]: string } = {};
           let genderMarkedNames: any[] = [];
@@ -1096,11 +1259,11 @@ function Home({ user }: HomeProps) {
 
           // add to the beginning of the scentences to speek the query and the title if it is a question
           if (isStory) {
-            sentencesToSpeak.push(`SCENE: \n\n${query}`);
+            sentencesToSpeak.push(`SCENE: \n\n${story.title}`);
           } else {
-            sentencesToSpeak.push(`SCENE: \n\n${query}`);
+            sentencesToSpeak.push(`SCENE: \n\n${story.title}`);
           }
-          currentSceneText = query + "\n\n" /*+ firstSentence + "\n\n"*/;
+          currentSceneText = story.title + "\n\n";
           sceneCount++;
           sceneTexts.push(currentSceneText);
           currentSceneText = "";
@@ -1236,38 +1399,22 @@ function Home({ user }: HomeProps) {
           // Fill the story object
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
 
-          story.prompt = query.replace('!question:,', '').replace('!story:,', '').replace('!question', '').replace('!story', '').replace('!image', '').replace('!image:', '');
-          story.title = titleScreenText;
           story.UserId = user?.uid || 'anonymous';
           story.id = episodeIdRef.current;
           story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
-          story.tokens = countTokens(sentencesToSpeak.join(' '));
           story.imageUrl = titleScreenImage;
           story.imagePrompt = promptImageEpisodeText.replace(/^\"/, '').replace(/\"$/, '');
-          story.shareUrl = `${baseUrl}/${episodeIdRef.current}`
-          story.personality = selectedPersonality; // TODO - add personality to the story object
-          story.namespace = selectedNamespace; // TODO - add namespace to the story object
-          story.isStory = isStory;
-          story.references = [];
+          story.shareUrl = `${baseUrl}/${episodeIdRef.current}`;
 
           let scene: Scene | null = null;
           let sentenceId = 0;
 
-          let count = 0;
           for (let sentence of sentencesToSpeak) {
             // get the image for the sentence
             if (sentence.startsWith('SCENE: ')) {
               sentence = sentence.replace('SCENE: ', '');
               lastImage = promptImages[imagesIndex];
-              if (imagesIndex < promptImages.length - 1) {
-                imagesIndex++;
-              }
-              if (sceneIndex < sceneTexts.length - 1) {
-                sceneIndex++;  // Move to the next scene
-              }
-              // increment image counter and set the image
-              count += 1;
-
+             
               // If there is a previous scene, add it to the story
               if (scene) {
                 story.scenes.push(scene);
@@ -1277,9 +1424,19 @@ function Home({ user }: HomeProps) {
               scene = {
                 id: sceneIndex,
                 sentences: [],
-                imageUrl: lastImage.toString(),
+                imageUrl: lastImage,
                 imagePrompt: promptImageTexts[imagesIndex],
               };
+
+              // Increment the image index
+              if (imagesIndex < promptImages.length - 1) {
+                imagesIndex++;
+              }
+
+              // Increment the scene index
+              if (sceneIndex < sceneTexts.length - 1) {
+                sceneIndex++;  // Move to the next scene
+              }
             }
 
             let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
@@ -1508,8 +1665,9 @@ function Home({ user }: HomeProps) {
 
         // Multi Modal theme
         try {
-          processImagesAndSubtitles(lastQuery, lastMessage);
-          setLastSpokenMessageIndex(lastMessageIndex);
+          if (story) {
+            processImagesAndSubtitles(story);
+          }
         } catch (error) {
           console.error('Error displaying images and subtitles: ', error);
         }
@@ -1525,7 +1683,7 @@ function Home({ user }: HomeProps) {
     let localEpisode = episode;
     let localIsStory = localEpisode.type ? localEpisode.type == 'episode' ? true : false : isStory;
     let localNamespace = localEpisode.namespace ? localEpisode.namespace : selectedNamespace;
-    let localPersonality = localEpisode.personality ? localEpisode.personality : selectedPersonality;
+    let localPersonality = localEpisode.personality ? localEpisode.personality: selectedPersonality;
     let localCommandPrompt = localEpisode.prompt ? localEpisode.prompt : '';
 
     // fill in the parts of localEpisode with the variables above
@@ -1693,19 +1851,11 @@ function Home({ user }: HomeProps) {
       sourceDocs: [],
     }
 
-    // Use messages as history
-    let localHistory = [...messages];
-    let titleArray: string[] = [];
     let question: string = query;
 
     // Check if the event is an input event
     if (e.target?.value !== undefined) {
       localEpisode = parseQuestion(e.target.value as Episode); // parse the question
-
-      // History refresh request
-      if (localEpisode.refresh !== undefined && localEpisode.refresh == true) {
-        localHistory = [];
-      }
 
       // Queue the question if processing is in progress
       if (loading) {
@@ -1715,7 +1865,7 @@ function Home({ user }: HomeProps) {
       }
     } else if (loading) {
       // Queue the question if processing is in progress and not an Episode Event
-      if (question == '') {
+      if (question === '') {
         console.log(`handleSubmit: Question is empty, discarding bad input query: '${question}'`);
         return;
       }
@@ -1733,165 +1883,21 @@ function Home({ user }: HomeProps) {
       episode = parseQuestion(episode); // parse the question
       setEpisodes([...episodes, episode]);
       setQuery('');
+      setVoiceQuery('');
       return;
     } else {
-      if (question == '') {
+      if (question === '') {
         console.log(`handleSubmit: Question is empty, discarding bad input query: '${question}'`);
         return;
       }
       localEpisode.title = question;
+      setQuery('');
+      setVoiceQuery('');
       localEpisode = parseQuestion(localEpisode); // parse the question
     }
 
-    // create the titles and parts of an episode
-    if (localEpisode.type == 'episode') {
-      titleArray.push(localEpisode.title);
-      /*titleArray.push('The episode begins, introduction and character setup of the plotline...' + localEpisode.title);
-      titleArray.push('the episode continues, plotline and character development...');
-      titleArray.push('the episode continues, coming upon the peak of the story...');
-      titleArray.push('The episode continues, the climax of the story, do not repeat character introductions...');
-      titleArray.push('the episode continues, the story begins to resolve...');
-      titleArray.push('The episode ends and finishes up with a conclusion...');*/
-    } else {
-      titleArray.push(localEpisode.title);
-    }
-
-    console.log(`handleSubmit: history is ${JSON.stringify(localHistory.length > 0 ? localHistory[localHistory.length - 1] : localHistory, null, 2)}`);
-    console.log(`handleSubmit: Submitting question: '${localEpisode.title.slice(0, 1000)}...'`);
-
-    // Clear the timeout
-    if (timeoutID) {
-      clearTimeout(timeoutID);
-      setTimeoutID(null);
-    }
-
-    // Set the message state
-    setMessageState((state) => ({
-      ...state,
-      messages: [
-        ...state.messages,
-        {
-          type: 'userMessage',
-          localPersonality: localEpisode.personality,
-          message: localEpisode.title,
-        },
-      ],
-      pending: undefined,
-    }));
-
-    // Reset the state
-    setError(null);
-    setLoading(true);
-    setLoadingOSD(`Recieved ${localEpisode.type}: ${localEpisode.title.slice(0, 50).replace(/\n/g, ' ')}...`);
-    setQuery('');
-    setVoiceQuery('');
-    setMessageState((state) => ({ ...state, pending: '' }));
-
-    let tokens: number = 0;
-
-    // Send the question to the server
-    const ctrl = new AbortController();
-    try {
-      fetchEventSourceWithAuth('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': '5',
-        },
-        body: JSON.stringify({
-          question: localEpisode.title,
-          userId: user?.uid,
-          localPersonality: localEpisode.personality ? localEpisode.personality : selectedPersonality,
-          selectedNamespace: localEpisode.namespace ? localEpisode.namespace : selectedNamespace,
-          isStory: localEpisode.type === 'episode' ? true : false,
-          customPrompt,
-          condensePrompt,
-          commandPrompt: localEpisode.prompt ? localEpisode.prompt : '',
-          modelName: modelName,
-          fastModelName: fastModelName,
-          tokensCount,
-          documentCount,
-          episodeCount,
-          titleArray,
-          history: localHistory,
-        }),
-        signal: ctrl.signal,
-        onmessage: (event: { data: string; }) => {
-          if (event.data === '[DONE]' || event.data === '[ERROR]') {
-            setMessageState((state) => ({
-              history: [],
-              messages: [
-                ...state.messages,
-                {
-                  type: 'apiMessage',
-                  message: state.pending ?? '',
-                  sourceDocs: state.pendingSourceDocs,
-                },
-              ],
-              pending: undefined,
-              pendingSourceDocs: undefined,
-            }));
-            setLoading(false);
-            if (isDisplayingRef.current === false) {
-              messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-            }
-            ctrl.abort();
-          } else if (event.data === '[OUT_OF_TOKENS]') {
-            setMessageState((state) => ({
-              ...state,
-              messages: [
-                ...state.messages,
-                {
-                  type: 'apiMessage',
-                  message: 'Sorry, either not enough tokens were allocated or available for story generation.',
-                },
-              ],
-              pending: undefined,
-              pendingSourceDocs: undefined,
-            }));
-            setLoading(false);
-            setLoadingOSD('System Error... Please try again.');
-            if (isDisplayingRef.current === false) {
-              messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-            }
-            ctrl.abort();
-          } else {
-            const data = JSON.parse(event.data);
-            if (data.sourceDocs) {
-              setMessageState((state) => ({
-                ...state,
-                pendingSourceDocs: data.sourceDocs,
-              }));
-            } else {
-              setMessageState((state) => ({
-                ...state,
-                pending: (state.pending ?? '') + data.data,
-              }));
-            }
-            tokens = tokens + countTokens(data.data);
-            setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
-
-            if (isDisplayingRef.current === false && isSpeaking === false) {
-              messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-            }
-          }
-        },
-      });
-      // Scroll to the message box
-      if (isDisplayingRef.current === false) {
-        messageListRef.current?.scrollIntoView({ behavior: 'smooth' });
-        messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-      }
-    } catch (error: any) {
-      setLoading(false);
-      setLoadingOSD(`System Error: ${error.message}`);
-      setError('An error occurred while fetching the data. Please try again.');
-      if (isDisplayingRef.current === false) {
-        messageListRef.current?.scrollTo(0, messageListRef.current.scrollHeight);
-      }
-      console.log(`HomeChatMessages: Error: ${error.message}`);
-    }
-    isSubmittingRef.current = false;
+    // put localEpisode into the submitQueue
+    setSubmitQueue([...submitQueue, localEpisode]);
   }
 
   const handleEnter = (e: any) => {
