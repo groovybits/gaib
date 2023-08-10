@@ -43,6 +43,7 @@
     "fs": "0.0.1-security",
     "fs-extra": "^11.1.1",
     "fuse.js": "^6.6.2",
+    "fuzzyset.js": "^1.0.7",
     "gpt3-tokenizer": "^1.1.5",
     "gtts.js": "^1.0.1",
     "howler": "^2.2.3",
@@ -75,6 +76,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.13",
     "@types/fs-extra": "^11.0.1",
+    "@types/fuzzyset.js": "^0.0.2",
     "@types/howler": "^2.2.7",
     "@types/lodash": "^4.14.195",
     "@types/node": "^18.14.6",

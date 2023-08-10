@@ -1,3 +1,5 @@
+import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
+
 export interface Sentence {
     id: number;
     text: string;
@@ -35,6 +37,14 @@ export type Story = {
     shareUrl: string;
     query: string;
     rawText: string;
+    documentCount: number;
+    episodeCount: number;
+    gptModel: string;
+    gptFastModel: string;
+    defaultGender: string;
+    speakingLanguage: string;
+    subtitleLanguage: string;
+    gptPrompt: string;
 }
 
 // Define a type for an episode
@@ -47,4 +57,12 @@ export type Episode = {
     refresh: boolean;
     prompt: string;
     sourceDocs: string[];
+    documentCount: number;
+    episodeCount: number;
+    gptModel: string;
+    gptFastModel: string;
+    defaultGender: string;
+    speakingLanguage: string;
+    subtitleLanguage: string;
+    gptPrompt: string;
 };

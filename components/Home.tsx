@@ -274,7 +274,7 @@ function Home({ user }: HomeProps) {
         }
         console.log(`fetchEpisodeData: Found ${data.length} documents for channel ${channelId} and user ${user?.uid}.`);
 
-        const newEpisodes = data.map((item: any) => ({
+        const newEpisodes: Episode[] = data.map((item: any) => ({
           title: item.title,
           // Add any other necessary fields here
           type: item.type,
@@ -284,6 +284,15 @@ function Home({ user }: HomeProps) {
           personality: item.personality,
           prompt: item.prompt,
           refresh: item.refresh,
+          sourceDocs: [],
+          documentCount: documentCount,
+          episodeCount: episodeCount,
+          gptModel: modelName,
+          gptFastModel: fastModelName,
+          gptPrompt: buildPrompt(selectedPersonality as keyof typeof PERSONALITY_PROMPTS, isStory),
+          defaultGender: gender,
+          speakingLanguage: audioLanguage,
+          subtitleLanguage: subtitleLanguage,
         }));
 
         // Add the new episodes to the episodes array
@@ -393,6 +402,14 @@ function Home({ user }: HomeProps) {
               refresh: false,
               prompt: '',
               sourceDocs: [],
+              documentCount: documentCount,
+              episodeCount: episodeCount,
+              gptModel: modelName,
+              gptFastModel: fastModelName,
+              gptPrompt: buildPrompt(selectedPersonality as keyof typeof PERSONALITY_PROMPTS, isStory),
+              defaultGender: gender,
+              speakingLanguage: audioLanguage,
+              subtitleLanguage: subtitleLanguage,
             }
             console.log(`Queing News headline #${index}: ${headline}`);
             episode = parseQuestion(episode); // parse the question
@@ -424,54 +441,20 @@ function Home({ user }: HomeProps) {
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize, selectedNamespace, selectedPersonality, parseQuestion]);
 
-  // send the  episodes from the queue to the handlesubmit function to build the story
-  useEffect(() => {
-    const processQueue = async () => {
-      let episode: Episode | undefined;
-      if (episodes.length > 0 && isFetching && !isSubmittingRef.current) {
-        isSubmittingRef.current = true;
-        try {
-          episode = episodes.shift();
-          if (episode) {
-            episode = parseQuestion(episode); // parse the question
-          } else {
-            isSubmittingRef.current = false;
-            return; // empty episode
-          }
-          if (episode) {
-            // send query to handlesubmit with a mock event
-            console.log(`handleSubmitQueue: Submitting Recieved ${episode.type} #${episodes.length}: ${episode.title}`);
-
-            const mockEvent = {
-              preventDefault: () => { },
-              target: {
-                value: episode,
-              },
-            };
-            handleSubmit(mockEvent);
-          }
-        } catch (error) {
-          console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
-          episode && episodes.unshift(episode); // Put the episode back in the queue
-        }
-        isSubmittingRef.current = false;
-      }
-    };
-
-    processQueue();  // Run immediately on mount
-
-    // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processQueue, 1000);  // Then every N seconds
-
-    return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [episodes, isFetching, isSpeaking, isSubmittingRef, handleSubmit, parseQuestion]);
-
   // handle the submitQueue of episodes
   useEffect(() => {
     const submitQueueDisplay = async () => {
-      if (submitQueue.length > 0 && !isSubmitQueueRef.current) {
+      if (debug) {
+        console.log(`submitQueueDisplay: Submitting ${episodes.length} episodes...`);
+      }
+      if (episodes.length > 0 && !isSubmitQueueRef.current) {
         isSubmitQueueRef.current = true;
-        const localEpisode: Episode | undefined = submitQueue.shift();  // Get the first episode
+        let localEpisode: Episode = episodes.shift() as Episode;  // Get the first episode
+        if (localEpisode) {
+          localEpisode = parseQuestion(localEpisode); // parse the question
+        } else {
+          console.log(`submitQueueDisplay: No localEpisode found`);
+        }
 
         if (localEpisode) {
           // Use messages as history
@@ -488,7 +471,7 @@ function Home({ user }: HomeProps) {
           }
 
           try {
-            console.log(`SubmitQueue: Submitting Recieved ${localEpisode.type} #${submitQueue.length}: ${localEpisode.title}`);
+            console.log(`SubmitQueue: Submitting Recieved ${localEpisode.type} #${episodes.length}: ${localEpisode.title}`);
             // create the titles and parts of an episode
             if (localEpisode.type == 'episode') {
               titleArray.push(localEpisode.title);
@@ -512,8 +495,8 @@ function Home({ user }: HomeProps) {
                 ...state.messages,
                 {
                   type: 'userMessage',
-                  localPersonality: localEpisode.personality,
-                  message: localEpisode.title,
+                  localPersonality: localEpisode?.personality,
+                  message: localEpisode ? localEpisode.title : '',
                 },
               ],
               pending: undefined,
@@ -618,7 +601,7 @@ function Home({ user }: HomeProps) {
           } catch (error) {
             console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
             if (localEpisode) {
-              submitQueue.unshift(localEpisode); // Put the episode back in the queue
+              episodes.unshift(localEpisode); // Put the episode back in the queue
             }
           }
 
@@ -643,7 +626,15 @@ function Home({ user }: HomeProps) {
             isStory: localEpisode.type === 'episode' ? true : false,
             shareUrl: '',
             rawText: pendingMessage,
-            query: localEpisode.title
+            query: localEpisode.title,
+            documentCount: documentCount,
+            episodeCount: episodeCount,
+            gptModel: modelName,
+            gptFastModel: fastModelName,
+            gptPrompt: buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, localEpisode.type === 'episode' ? true : false),
+            defaultGender: gender,
+            speakingLanguage: audioLanguage,
+            subtitleLanguage: subtitleLanguage,
           }
 
           setStoryQueue([...storyQueue, story]);
@@ -662,7 +653,7 @@ function Home({ user }: HomeProps) {
     }, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [submitQueue, isFetching, isSpeaking, isProcessingRef, isSubmittingRef, listening]);
+  }, [submitQueue, isFetching, isSpeaking, isProcessingRef, isSubmittingRef, listening, episodes]);
 
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
@@ -990,7 +981,7 @@ function Home({ user }: HomeProps) {
 
               if (!response.ok) {
                 console.error(`Error: GPT + AI generated message: ${response.statusText}`);
-                return '';
+                return imagePrompt;
               }
 
               // Parse the response
@@ -1002,7 +993,7 @@ function Home({ user }: HomeProps) {
               // skip if the response is not 200
               if (response.status !== 200) {
                 console.error(`Error: GPT + AI generated message: ${data.error}`);
-                return '';
+                return imagePrompt;
               }
 
               if (debug) {
@@ -1015,12 +1006,12 @@ function Home({ user }: HomeProps) {
             } catch (error) {
               // Handle the error
               console.error(`Error: GPT + AI generated message: ${error}`);
-              return '';
+              return imagePrompt;
             }
             return content;
           } catch (error) {
             console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
-            return '';
+            return imagePrompt;
           }
         };
 
@@ -1268,7 +1259,7 @@ function Home({ user }: HomeProps) {
           let sentencesToSpeak = [] as string[];
 
           // add to the beginning of the scentences to speek the query and the title if it is a question
-          if (isStory) {
+          if (story.isStory) {
             sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
           } else {
             sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
@@ -1687,7 +1678,7 @@ function Home({ user }: HomeProps) {
       }
       isSpeakingRef.current = false;
     }
-  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, imageUrl, setSubtitle, setLoadingOSD, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, isStory, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
+  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, imageUrl, setSubtitle, setLoadingOSD, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
   // take an Episode and parse the question and return the Episode with the parts filled out from the question
   function parseQuestion(episode: Episode): Episode {
@@ -1847,40 +1838,9 @@ function Home({ user }: HomeProps) {
     return localEpisode;
   }
 
-  // Modify the handleSubmit function
-  async function handleSubmit(e: any) {
-    e.preventDefault();
-
-    let localEpisode: Episode = {
-      title: query,
-      type: isStory ? 'episode' : 'question',
-      username: 'anonymous',
-      namespace: selectedNamespace,
-      personality: selectedPersonality,
-      refresh: false,
-      prompt: '',
-      sourceDocs: [],
-    }
-
-    let question: string = query;
-
-    // Check if the event is an input event
-    if (e.target?.value !== undefined) {
-      localEpisode = parseQuestion(e.target.value as Episode); // parse the question
-    } else {
-      if (question === '') {
-        console.log(`handleSubmit: Question is empty, discarding bad input query: '${question}'`);
-        return;
-      }
-      localEpisode.title = question;
-      setQuery('');
-      setVoiceQuery('');
-      localEpisode = parseQuestion(localEpisode); // parse the question
-    }
-
-    // put localEpisode into the submitQueue
-    setSubmitQueue([...submitQueue, localEpisode]);
-  }
+  const handleSubmit = async (e: any) => {
+    e.preventDefault(); // Prevent the default action
+  };
 
   const handleEnter = (e: any) => {
     if (e.key === 'Enter' && !e.shiftKey && query.trim() != '') {
@@ -1895,6 +1855,14 @@ function Home({ user }: HomeProps) {
         refresh: false,
         prompt: '',
         sourceDocs: [],
+        documentCount: documentCount,
+        episodeCount: episodeCount,
+        gptModel: modelName,
+        gptFastModel: fastModelName,
+        gptPrompt: buildPrompt(selectedPersonality as keyof typeof PERSONALITY_PROMPTS, isStory),
+        defaultGender: gender,
+        speakingLanguage: audioLanguage,
+        subtitleLanguage: subtitleLanguage,
       }
       episode = parseQuestion(episode); // parse the question
       setEpisodes([...episodes, episode]);
@@ -2081,6 +2049,14 @@ function Home({ user }: HomeProps) {
         refresh: false,
         prompt: '',
         sourceDocs: [],
+        documentCount: documentCount,
+        episodeCount: episodeCount,
+        gptModel: modelName,
+        gptFastModel: fastModelName,
+        gptPrompt: buildPrompt(selectedPersonality as keyof typeof PERSONALITY_PROMPTS, isStory),
+        defaultGender: gender,
+        speakingLanguage: audioLanguage,
+        subtitleLanguage: subtitleLanguage,
       }
       if (debug) {
         console.log(`Queing episode: ${JSON.stringify(episode, null, 2)}`);
@@ -2171,6 +2147,14 @@ function Home({ user }: HomeProps) {
       refresh: false,
       prompt: '',
       sourceDocs: [],
+      documentCount: documentCount,
+      episodeCount: episodeCount,
+      gptModel: modelName,
+      gptFastModel: fastModelName,
+      gptPrompt: buildPrompt(selectedPersonality as keyof typeof PERSONALITY_PROMPTS, isStory),
+      defaultGender: gender,
+      speakingLanguage: audioLanguage,
+      subtitleLanguage: subtitleLanguage,
     }
     if (debug) {
       console.log(`Replay is queing episode: ${JSON.stringify(episode, null, 2)}`);
@@ -2321,7 +2305,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isFullScreen ? styles.fullScreenOSD : styles.osd
                     }>
-                      {(!isDisplayingRef.current) && episodes.length > 0 ? (
+                      {(!isDisplayingRef.current) && playQueue.length > 0 ? (
                         <>
                           <div className={styles.generatedImage}>
                             <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
@@ -2333,13 +2317,10 @@ function Home({ user }: HomeProps) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {[...episodes].reverse().map((episode, index) => (
+                                {[...playQueue].reverse().map((episode, index) => (
                                   <tr key={index}>
                                     <td>
-                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title.slice(0, 30)}&quot;</p>
-                                    </td>
-                                    <td>
-                                      <p className={`${styles.footer} ${styles.episodeListDescription}`}>{episode.title.slice(30)}</p>
+                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {playQueue.length - index}: &quot;{episode.query}&quot;</p>                                    
                                     </td>
                                   </tr>
                                 ))}

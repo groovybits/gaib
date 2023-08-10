@@ -26,16 +26,25 @@ function EpisodePlanner({ episodes: episodesProp, onNewEpisode, onEpisodeChange 
   const [prompt, setPrompt] = useState('');
   const [refresh, setRefresh] = useState(false);
   const [sourceDocs, setSourceDocs] = useState([]);
+  const [documentCount, setDocumentCount] = useState(0);
+  const [episodeCount, setEpisodeCount] = useState(0);
+  const [gptModel, setGptModel] = useState('');
+  const [gptFastModel, setGptFastModel] = useState('');
+  const [defaultGender, setDefaultGender] = useState('');
+  const [speakingLanguage, setSpeakingLanguage] = useState('');
+  const [subtitleLanguage, setSubtitleLanguage] = useState('');
+  const [gptPrompt, setGptPrompt] = useState('');
+
 
   const handleAddEpisode = () => {
     const newEpisodes: Episode[] = [...episodes];
     const index = newEpisodes.findIndex(episode => episode.title === title);
     if (index !== -1) {
-      newEpisodes[index] = { title, type, username, namespace, personality, refresh, prompt, sourceDocs };
+      newEpisodes[index] = { title, type, username, namespace, personality, refresh, prompt, sourceDocs, documentCount, episodeCount, gptModel, gptFastModel, defaultGender, speakingLanguage, subtitleLanguage, gptPrompt };
       // Call onEpisodeChange with the new list of episodes
       onEpisodeChange(newEpisodes);
     } else {
-      const newEpisode = { title, type, username, namespace, personality, refresh, prompt, sourceDocs };
+      const newEpisode = { title, type, username, namespace, personality, refresh, prompt, sourceDocs, documentCount, episodeCount, gptModel, gptFastModel, defaultGender, speakingLanguage, subtitleLanguage, gptPrompt };
       newEpisodes.push(newEpisode);
       // Call onNewEpisode with the new episode
       onNewEpisode(newEpisode);
