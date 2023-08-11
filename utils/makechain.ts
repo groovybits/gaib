@@ -165,6 +165,7 @@ export const makeChain = async (
             if (!isAdmin && authEnabled) {
               await updateTokenBalance(newTokenBalance);
             }
+            onTokenStream('[END_OF_STREAM]');
           },
           async handleLLMError(error) {
             console.error("makeChain: Error in createModel: ", error);

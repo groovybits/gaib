@@ -16,18 +16,454 @@ import {
   buildPrompt,
   buildCondensePrompt,
 } from '@/config/personalityPrompts';
+import { Scene, Sentence } from '@/types/story';
+import fetch from 'node-fetch';
+import { Storage } from '@google-cloud/storage';
+import { TextToSpeechClient, protos } from '@google-cloud/text-to-speech';
+import nlp from 'compromise';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.DEBUG ? Boolean(process.env.DEBUG) : false;
 const sendReferences = process.env.SEND_REFERENCES ? Boolean(process.env.SEND_REFERENCES) : false;
+const getimgaiApiKey = process.env.GETIMGAI_API_KEY ? process.env.GETIMGAI_API_KEY : '';
+const bucketName = process.env.GCS_BUCKET_NAME ? process.env.GCS_BUCKET_NAME : '';
+
+let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v2-1';
+let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
+let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 512;
+let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
+let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
+let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
+let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
+let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
+let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
+
+let genderMarkedNames: any[] = [];
+let voiceModels: { [key: string]: string } = {};
+
+async function generateImageAndStory(prompt: string, episodeId: string, imageUUID: string): Promise<string> {
+  // print out the variables input to show what settings we have, in one output cmd
+  if (true || debug) {
+    console.log(`generateImageAndStory: model: ${model}
+    prompt: ${prompt}
+    negativePrompt: ${negativePrompt}
+    width: ${width}\
+    eight: ${height}
+    steps: ${steps}
+    guidance: ${guidance}
+    seed: ${seed}
+    scheduler: ${scheduler}
+    outputFormat: ${outputFormat}`);
+  }
+
+  if (prompt === undefined || prompt === '') {
+    console.error(`generateImageAndStory: Error, prompt is undefined or empty: ${prompt}`);
+    return '';
+  }
+
+  let requestBody = JSON.stringify({
+    model: model,
+    prompt,
+    negative_prompt: negativePrompt,
+    width,
+    height,
+    steps,
+    guidance,
+    seed,
+    scheduler,
+    output_format: outputFormat,
+  })
+
+  let getImgResponse: any;
+  try {
+    getImgResponse = await fetch('https://api.getimg.ai/v1/stable-diffusion/text-to-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getimgaiApiKey}`,
+      },
+      body: requestBody,
+    });
+  } catch (error: any) {
+    console.error(`getimgaiChat: Error calling getimg.ai API: ${error.message}`);
+    return '';
+  }
+
+  // Get the image data from the response
+  if (getImgResponse === undefined) {
+    console.error(`getimgaiChat: Error calling getimg.ai API, undefined: ${getImgResponse ? getImgResponse.statusText : 'undefined error'}`);
+    return '';
+  }
+  let getImgData;
+  try {
+    getImgData = await getImgResponse.json() as { image: string; seed: number };
+  } catch (error: any) {
+    console.error(`getimgaiChat: Error parsing getimg.ai API response, .json(): ${error.message}`);
+    return '';
+  }
+
+  try {
+    if (getImgData && !getImgData.image) {
+      console.error(`getimgaiChat: Error with API using RequestBody: ${JSON.stringify(requestBody, null, 2)}`);
+      console.error(`getimgaiChat: Error with API, missing .image in getImgData: ${JSON.stringify(getImgData, null, 2)}`);
+      throw new Error(`getimgaiChat: Error calling getimg.ai API, missing .image`);
+    }
+  } catch (error: any) {
+    console.error(`getimgaiChat: Error calling getimg.ai API, missing .image: ${error.message}`);
+    return '';
+  }
+  const imageBuffer = Buffer.from(getImgData.image, 'base64');
+
+  // Prepare the GCS client
+  const storage = new Storage();
+  const bucket = storage.bucket(bucketName);
+
+  // Prepare the image filename and destination path
+  const destination = `stories/${episodeId}/images/${imageUUID}.${outputFormat}`;
+  let imageUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
+
+  // Create a GCS file instance
+  const file = bucket.file(destination);
+
+  // Stream the image data to the GCS file
+  const stream = file.createWriteStream({
+    metadata: { contentType: `image/${outputFormat}` },
+  });
+
+  stream.on('error', (err) => {
+    console.error(`getimgaiChat: Error uploading image to GCS: ${err.message}`);
+    imageUrl = '';
+  });
+
+  stream.on('finish', async () => {
+    console.log(`getimgaiChat: Successfully uploaded image to GCS: ${destination}`);
+  });
+  stream.end(imageBuffer);
+  return imageUrl;
+}
+
+async function generateTextToSpeechMP3(text: string, episodeId: string, imageUUID: string, ssmlGender: any, languageCode: string, name: string): Promise<string> {
+  text = text.trim();
+  const storage = new Storage();
+
+  if (!text) {
+    throw new Error('generateTextToSpeechMP3: text is empty');
+  }
+
+  if (episodeId === undefined) {
+    throw new Error('generateTextToSpeechMP3: episodeId is undefined');
+  }
+
+  if (imageUUID === undefined) {
+    throw new Error('generateTextToSpeechMP3: imageUUID is undefined');
+  }
+
+  if (bucketName === undefined || bucketName === '') {
+    throw new Error('generateTextToSpeechMP3: bucketName is undefined');
+  }
+
+  // Read the JSON content from the environment variable
+  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+  if (!credentialsJson) {
+    throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set');
+  }
+  const credentialsData = JSON.parse(credentialsJson);
+
+  // Create credentials from the JSON content
+  const credentials = {
+    client_email: credentialsData.client_email,
+    private_key: credentialsData.private_key,
+  };
+
+  // Initialize the Text-to-Speech client with the credentials
+  const client = new TextToSpeechClient({ credentials });
+
+  const request = {
+    input: { text },
+    voice: { name: name, languageCode: languageCode, ssmlGender: ssmlGender as protos.google.cloud.texttospeech.v1.SsmlVoiceGender },
+    audioConfig: { audioEncoding: 'MP3' as const },
+  };
+
+  return new Promise((resolve, reject) => {
+    try {
+      client.synthesizeSpeech(request, (err: any, response: any) => {
+        if (err) {
+          console.error(`generateTextToSpeechMP3: Error in synthesizing speech for name: ${name}, languageCode: ${languageCode}, ssmlGender: ${ssmlGender}:`, err);
+          console.error(`generateTextToSpeechMP3: Request: ${JSON.stringify(request)}`);
+          reject('');
+        } else {
+          // Save the audio to a file in the GCS bucket
+          let audioPath = `stories/${episodeId}/audio/${imageUUID}.mp3`;
+          const file = storage.bucket(bucketName).file(audioPath);
+          const stream = file.createWriteStream({
+            metadata: {
+              contentType: 'audio/mpeg',
+            },
+          });
+
+          stream.on('error', (err) => {
+            console.error(`generateTextToSpeechMP3: Error in saving audio to file ${audioPath}:`, err);
+            reject('');
+          });
+
+          stream.on('finish', () => {
+            console.log(`generateTextToSpeechMP3: Saved audio to file ${audioPath}`);
+            const audioFile = `https://storage.googleapis.com/${bucketName}/${audioPath}`;
+            resolve(audioFile);
+          });
+
+          stream.end(response!.audioContent);
+        }
+      });
+    } catch (error) {
+      console.error(`generateTextToSpeechMP3: Error in synthesizing speech for name: ${name}, languageCode: ${languageCode}, ssmlGender: ${ssmlGender}:`, error);
+      console.error(`generateTextToSpeechMP3: Request ${JSON.stringify(request)}`);
+      reject('');
+    }
+  });
+}
 
 function countTokens(textString: string): number {
   let totalTokens = 0;
-  
+
   const encoded = tokenizer.encode(textString);
   totalTokens += encoded.bpe.length;
-  
+
   return totalTokens;
+}
+
+function removeMarkdownAndSpecialSymbols(text: string): string {
+  // handle SCENE markers
+  if (text.includes('SCENE:')) {
+    return text.replace('[', '').replace(']', '').replace('SCENE:', '');
+  }
+
+  // Remove markdown formatting
+  const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
+  let cleanedText = text.replace(markdownRegex, '');
+
+  // remove any lines of just dashes like --- or ===
+  const dashRegex = /^[-=]{3,}$/g;
+  cleanedText = cleanedText.replace(dashRegex, '');
+
+  // Remove special symbols (including periods)
+  const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
+  const finalText = cleanedText.replace(specialSymbolsRegex, '');
+
+  return finalText;
+}
+
+async function translateText(text: string, targetLanguage: string): Promise<string> {
+  const fetchTranslation = async (text: string, targetLanguage: string): Promise<string> => {
+    const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
+    const apiUrl = 'https://translation.googleapis.com/language/translate/v2?key=' + apiKey;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: text, target: targetLanguage }),
+    });
+
+    if (!response.ok) {
+      const errorResponse = await response.json();
+      console.log("Google Translate API error response:", errorResponse);
+      throw new Error('Error in translating text, statusText: ' + response.statusText);
+    }
+
+    const data: any = await response.json();
+    if (data && data.data && data.data.translations && data.data.translations[0] && data.data.translations[0].translatedText) {
+      return data.data.translations[0].translatedText;
+    } else {
+      console.log(`Google Translate API error with empty text response: ${response.statusText} ${JSON.stringify(data)}`);
+      throw new Error('Error in translating text, statusText: ' + response.statusText);
+    }
+  };
+
+  return await fetchTranslation(text, targetLanguage);
+}
+
+async function buildGenderMap(gender: string, audioLanguage: string, message: string): Promise<void> {
+  let currentSpeaker: string = 'groovy';
+  let isContinuingToSpeak = false;
+  let isSceneChange = false;
+  let lastSpeaker = '';
+  let detectedGender = '';
+
+  let maleVoiceModels = {
+    'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
+    'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
+    'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
+    'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
+  };
+
+  let femaleVoiceModels = {
+    'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+    'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+    'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+    'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+  };
+
+  let neutralVoiceModels = {
+    'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
+    'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+    'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+    'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+  };
+
+  let defaultModels = {
+    'en-US': 'en-US-Wavenet-C',
+    'ja-JP': 'ja-JP-Wavenet-A',
+    'es-US': 'es-US-Wavenet-A',
+    'en-GB': 'en-GB-Wavenet-A'
+  };
+
+  if (gender == `MALE`) {
+    defaultModels = {
+      'en-US': 'en-US-Wavenet-A',
+      'ja-JP': 'ja-JP-Wavenet-C',
+      'es-US': 'es-US-Wavenet-B',
+      'en-GB': 'en-GB-Wavenet-B'
+    };
+  }
+  // Define default voice model for language
+  let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+  let model = defaultModel;
+
+  // Extract gender markers from the entire message
+  const genderMarkerMatches = message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
+  if (genderMarkerMatches) {
+    let name: string;
+    for (const match of genderMarkerMatches) {
+      const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
+      if (match.includes(':')) {
+        name = match.slice(0, match.indexOf(':')).trim().toLowerCase();
+      } else {
+        name = match.slice(0, match.indexOf('[')).trim().toLowerCase();
+      }
+
+      // check if name is already setup
+      if (name in voiceModels) {
+        continue;
+      }
+      genderMarkedNames.push({ name, marker });
+
+      // Assign a voice model to the name
+      if (marker === 'm' && !voiceModels[name]) {
+        if (maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].length > 0) {
+          voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
+          maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
+        }
+      } else if ((marker == 'n' || marker === 'f') && !voiceModels[name]) {
+        if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
+          voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
+          femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
+        }
+      } else if (!voiceModels[name]) {
+        if (neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].length > 0) {
+          voiceModels[name] = neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].shift() as string;
+          neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].push(voiceModels[name]);
+        }
+      }
+    }
+  }
+
+  if (debug) {
+    console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
+    console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
+  }
+}
+
+function processSpeakerChange(sentence_by_character: string, context: {
+  voiceModels: any,
+  genderMarkedNames: any,
+  gender: string,
+  defaultModel: string,
+  audioLanguage: string,
+  currentSpeaker: string,
+  lastSpeaker: string,
+  isContinuingToSpeak: boolean,
+  isSceneChange: boolean,
+}) {
+  let { currentSpeaker, lastSpeaker, isContinuingToSpeak, isSceneChange, genderMarkedNames, defaultModel, gender, voiceModels, audioLanguage } = context;
+  let speakerChanged = false;
+  let detectedGender = '';
+  let model = '';
+
+  // Check if sentence contains a name from genderMarkedNames
+  for (const { name, marker } of genderMarkedNames) {
+    const lcSentence = sentence_by_character.toLowerCase();
+    let nameFound = false;
+
+    const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
+    const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
+    for (const prefix of prefixes) {
+      if (lcSentence.startsWith(name + prefix)) {
+        nameFound = true;
+        break;
+      }
+    }
+    for (const prefix of regprefixes) {
+      if (nameFound) {
+        break;
+      }
+      if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
+        nameFound = true;
+        break;
+      }
+    }
+
+    if (nameFound) {
+      console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
+      if (currentSpeaker !== name) {
+        lastSpeaker = currentSpeaker;
+        speakerChanged = true;
+        currentSpeaker = name;
+        isContinuingToSpeak = false; // New speaker detected, so set isContinuingToSpeak to false
+      }
+      switch (marker) {
+        case 'f':
+          detectedGender = 'FEMALE';
+          break;
+        case 'm':
+          detectedGender = 'MALE';
+          break;
+        case 'n':
+          detectedGender = 'FEMALE';
+          break;
+      }
+      // Use the voice model for the character if it exists, otherwise use the default voice model
+      model = voiceModels[name] || defaultModel;
+      break; // Exit the loop as soon as a name is found
+    }
+  }
+
+  if (debug) {
+    console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+  }
+
+  // If the speaker has changed or if it's a scene change, switch back to the default voice
+  if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
+    detectedGender = gender;
+    currentSpeaker = 'groovy';
+    model = defaultModel;
+    console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
+    isSceneChange = true; // Reset the scene change flag
+  }
+
+  // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
+  if (sentence_by_character.startsWith('(') || (!sentence_by_character.startsWith('*') && !speakerChanged && !isSceneChange)) {
+    isContinuingToSpeak = true;
+  }
+
+  return {
+    currentSpeaker,
+    detectedGender,
+    model,
+    lastSpeaker,
+    isContinuingToSpeak,
+    isSceneChange,
+  };
 }
 
 async function getValidNamespace(namespaces: any) {
@@ -83,6 +519,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     const {
+      episodeId,
       question,
       userId,
       localPersonality,
@@ -97,8 +534,23 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       documentCount,
       episodeCount,
       titleArray,
-      history
+      history,
+      gender,
+      speakingLanguage,
+      subtitleLanguage,
     } = req.body;
+
+    if (episodeId === undefined) {
+      console.error('ChatAPI: No episodeId in the request');
+      res.status(400).json({ error: 'No episodeId in the request' });
+      return;
+    }
+
+    if (getimgaiApiKey === '') {
+      console.error('ChatAPI: GETIMGAI_API_KEY not set');
+      res.status(500).json({ error: 'GETIMGAI_API_KEY not set' });
+      return;
+    }
 
     // check each input to confirm it is valid and not undefined
     if (question === undefined) {
@@ -175,6 +627,24 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       return;
     }
 
+    if (!gender) {
+      console.error('No gender in the request');
+      res.status(400).json({ error: 'No gender in the request' });
+      return;
+    }
+
+    if (!speakingLanguage) {
+      console.error('No speakingLanguage in the request');
+      res.status(400).json({ error: 'No speakingLanguage in the request' });
+      return;
+    }
+
+    if (!subtitleLanguage) {
+      console.error('No subtitleLanguage in the request');
+      res.status(400).json({ error: 'No subtitleLanguage in the request' });
+      return;
+    }
+
     const sendData = (data: string) => {
       res.write(`data: ${data}\n\n`);
     };
@@ -194,7 +664,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         Connection: 'keep-alive',
       });
       sendData(JSON.stringify({ data: '' }));
-      sendData(JSON.stringify({ data: question.replace('REPLAY:', '').replace('!image:','').replace('!image','') }));
+      sendData(JSON.stringify({ data: question.replace('REPLAY:', '').replace('!image:', '').replace('!image', '') }));
       sendData('[DONE]');
       res.end();
       return;
@@ -271,10 +741,34 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     sendData(JSON.stringify({ data: '' }));
 
     // Function to create a single chain
-    async function createChain(i: number, title: string, namespaceResult: any, localPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean) {
+    async function createChain(i: number, title: string, namespaceResult: any, localPersonality: any, requestedTokens: number, documentCount: number, userId: string, isStory: boolean, defaultGender: any, speakerLanguage: string, subtitleLanguage: string) {
       let token_count = 0;
+      let sceneText = '';
+      let sentenceCount: number = 0;
+      let sceneCount: number = 0;
+      let speaker: string = localPersonality;
+      let imageUrl: string = '';
+      let gender: string = defaultGender;
+      let language: string = speakerLanguage;
+
+      let speakerMap = {
+        currentSpeaker: 'groovy', // Default speaker
+        lastSpeaker: '',
+        isContinuingToSpeak: false,
+        isSceneChange: false,
+        genderMarkedNames: genderMarkedNames, // Assuming this is defined elsewhere
+        defaultModel: model,
+        gender: gender,
+        voiceModels: voiceModels, // Assuming this is defined elsewhere
+        audioLanguage: language,
+      };
+
+      // Define a lock variable outside of the callback
+      let lock: Promise<void> = Promise.resolve();
+
       console.log(`createChain: ${isStory ? "Episode" : "Answer"} #${i + 1} of ${localEpisodeCount} ${isStory ? "episodes" : "answers"}. ${isStory ? "Plotline" : "Question"}: "${title}"`);
-      return await makeChain(namespaceResult.vectorStore,
+      let chainResult = await makeChain(
+        namespaceResult.vectorStore,
         localPersonality,
         requestedTokens,
         documentCount,
@@ -285,20 +779,155 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         commandPrompt,
         modelName,
         fastModelName,
-        (token: string) =>
-        {
-        token_count++;
-        if (token_count % 100 === 0) {
-          if (debug) {
-            console.log(`ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);
+        async (token: string) => {
+          // Await the current lock
+          await lock;
+
+          // Create a new lock
+          let resolveLock: () => void;
+          lock = new Promise<void>((resolve) => {
+            resolveLock = resolve;
+          });
+
+          token_count++;
+
+          sceneText = sceneText + token;
+
+          // check for newlines \n and send the sentence
+          if ((sceneText.length > 20 && sceneText.endsWith('\n')) || (sceneText.includes('[SCENE') && sceneText.includes(']')) || sceneText.includes('[END_OF_STREAM]')) {
+            // split up scene into sentences
+            let sentences_by_character: string[] = nlp(sceneText).sentences().out('array');
+
+            if (sentences_by_character.length === 0) {
+              console.error(`createChain: No sentences found in sceneText ${sceneText}, using entire sceneText as a sentence.`);
+              sentences_by_character = [sceneText];
+            }
+
+            console.log(`chainResult: Found SCENE #${sceneCount} ${sentences_by_character.length} sentences sceneText is ${sceneText.length} characters...\n"${sceneText}"`);
+
+            let scene: Scene = {
+              id: sceneCount,
+              sentences: [],
+              imageUrl: '',
+              imagePrompt: '',
+            };
+
+            // loop through sentences and create audio/images for each
+            for (let i = 0; i < sentences_by_character.length; i++) {
+              let sentence_by_character = sentences_by_character[i];
+              if (sentence_by_character.length > 0) {
+                const cleanSentence: string = removeMarkdownAndSpecialSymbols(sentence_by_character).trim();
+                let cleanTranslation: string = '';
+
+                console.log(`chainResult: parsing sentence #${sentenceCount}: ${sentence_by_character.length} characters.\n"${sentence_by_character}"`);
+
+                // translate the sentence to the speaking language
+                if (subtitleLanguage != speakerLanguage) {
+                  console.log(`chainResult: translateText: ${sentence_by_character} to ${subtitleLanguage}`);
+                  try {
+                    const translation = await translateText(sentence_by_character, subtitleLanguage);
+                    console.log(`chainResult: translation: ${translation}`);
+                    cleanTranslation = translation;
+                  } catch (error) {
+                    console.error(`chainResult: translateText error: ${error}`);
+                  }
+                }
+
+                let sentence: Sentence = {
+                  id: sentenceCount,
+                  text: '',
+                  speaker: '',
+                  model: '',
+                  gender: '',
+                  language: '',
+                  imageUrl: '',
+                  audioFile: '',
+                };
+
+                // Text sentence
+                sentence.text = sentence_by_character;
+
+                // Image
+                sentence.imageUrl = imageUrl;
+
+                // gender map the speaker to the character and gender
+                buildGenderMap(gender, language, sentence_by_character);
+
+                // analyze the setence for the speaker name and gender and language
+                //speakerMap = processSpeakerChange(sentence_by_character, speakerMap);
+
+                // Text to Speech
+                sentence.speaker = speaker;
+                sentence.gender = gender;
+                sentence.language = language;
+                sentence.model = '';
+
+                // add audio to scene through generate audio
+                try {
+                  const newMP3 = await generateTextToSpeechMP3(cleanSentence, episodeId, sentenceCount.toString(), sentence.gender, sentence.language, sentence.model);
+                  if (newMP3 != '') {
+                    sentence.audioFile = newMP3;
+                  } else {
+                    console.error(`chainResult: generateTextToSpeechMP3 error: no audio returned for sentence #${sentenceCount} ${sentence_by_character}`);
+                  }
+                } catch (error) {
+                  console.error(`chainResult: generateTextToSpeechMP3 error: ${error}`);
+                }
+                scene.sentences.push(sentence);
+                sentenceCount++;
+              }
+            }
+
+            // add image to the scene through generate image
+            try {
+              let newImg = await generateImageAndStory(sceneText, episodeId, sceneCount.toString());
+              if (newImg != '') {
+                scene.imageUrl = newImg;
+                imageUrl = scene.imageUrl;
+              } else {
+                console.error(`chainResult: generateImageAndStory error: no image returned for scene #${sceneCount} ${sceneText}`);
+              }
+            } catch (error) {
+              console.error(`chainResult: generateImageAndStory error: ${error}`);
+            }
+
+            // Assign the image URL to each sentence within the scene
+            scene.sentences.forEach(sentence => {
+              sentence.imageUrl = imageUrl;
+            });
+
+            const jsonData = JSON.stringify({ scene: scene });
+            sendData(jsonData);
+            //console.log(`chainResult: sending scene #${sceneCount}: ${jsonData.length} characters ${jsonData} ${JSON.stringify(scene, null, 2)}`);
+
+            // clear the scene
+            sceneText = '';
+            sceneCount++;
           }
-        }
-        if (typeof token === 'string') {
-          sendData(JSON.stringify({ data: token }));
-        } else {
-          console.error(`ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Invalid token:`, token ? token : 'null');
-        }
-      });
+
+          // token counter for status output
+          if (token_count % 100 === 0) {
+            if (debug) {
+              console.log(`ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Chat Token count: ${token_count}`);
+            }
+          }
+
+          // send the token to the client
+          if (typeof token === 'string') {
+            sendData(JSON.stringify({ data: token }));
+          } else {
+            console.error(`ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Invalid token:`, token ? token : 'null');
+          }
+          // Resolve the lock
+          resolveLock!();
+        });
+
+      if (sceneText != '') {
+        // add image to the scene through generate image
+        console.error(`ChatAPI: createChain ${isStory ? "Episode" : "Answer"} #${i + 1} Scene text not empty: ${sceneText}`);
+      }
+
+      return chainResult;
     }
 
     // Create an array to hold the chains
@@ -345,7 +974,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       try {
         console.log(`ChatAPI: Creating Chain for ${isStory ? "Episode" : "Answer"} #${i + 1} of ${localEpisodeCount} ${isStory ? "episodes" : "answers"}.`);
         let title: string = titles[i];
-        const chain = await createChain(i, title, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory);
+        const chain = await createChain(i, title, namespaceResult, localPersonality, requestedTokens, documentsReturned, userId, isStory, gender, speakingLanguage, subtitleLanguage);
 
         // Add the title to the chat history
         chatHistory = [...chatHistory, { "type": "userMessage", "message": title }];
@@ -411,7 +1040,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
           }
         }
         total_token_count = total_token_count + countTokens(response.text) + countTokens(title) + countTokens(promptString) + countTokens(condensePromptString);
-        
+
         if (response.sourceDocuments) {
           // Create a new array with only unique objects
           const uniqueSourceDocuments = response.sourceDocuments.filter((obj: { metadata: { source: any; }; }, index: any, self: { metadata: { source: any; }; }[]) =>

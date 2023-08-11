@@ -443,6 +443,51 @@ function Home({ user }: HomeProps) {
 
   // handle the submitQueue of episodes
   useEffect(() => {
+    const shareStory = async (storyToShare: Story, automated: boolean): Promise<string> => {
+      try {
+        if (!user && authEnabled) {
+          return '';
+        } else if (!user) {
+          return '';
+        }
+
+        if (debug) {
+          console.log('Data being written:', JSON.stringify(storyToShare));
+          console.log('ID of the current user:', user.uid);
+        }
+
+        // Send a POST request to the API endpoint
+        const response = await fetchWithAuth('/api/shareStory', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(storyToShare),
+        });
+
+        // Parse the response
+        const data = await response.json();
+
+        // Extract the story ID and URL from the response
+        const { storyUrl, shareUrl } = data;
+
+        console.log(`Story ${storyToShare.title}... json shared as ${shareUrl} JSON stored as ${storyUrl}.`);
+        if (twitchChatEnabled && authEnabled && channelId !== '') {
+          // Post the story to the Twitch chat
+          await postResponse(channelId,
+            `Shared ${storyToShare.isStory ?
+              "Story" : "Question"}: ${storyToShare.title} at ${shareUrl} as personality ${storyToShare.personality} ` +
+            `with document embeddings from ${storyToShare.namespace == "groovypdf" ? "Wisdom" : "Science"} ` +
+            `Plotline: ${storyToShare.title}`, user.uid);
+        }
+
+        return shareUrl;
+      } catch (error) {
+        console.error('An error occurred in the shareStory function:', error); // Check for any errors
+        return '';
+      }
+    };
+
     const submitQueueDisplay = async () => {
       if (debug) {
         console.log(`submitQueueDisplay: Submitting ${episodes.length} episodes...`);
@@ -464,11 +509,53 @@ function Home({ user }: HomeProps) {
           let newMessages = [...messages];  // Create a local copy of messages
           let pendingMessage = '';
           let pendingSourceDocs: any;
+          let sceneCount = 0;
 
           // History refresh request
           if (localEpisode.refresh !== undefined && localEpisode.refresh == true) {
             localHistory = [];
           }
+
+          // setup the story structure
+          let story: Story = {
+            title: '',
+            url: '',
+            thumbnailUrls: [],
+            id: '',
+            UserId: localEpisode.username,
+            prompt: localEpisode.prompt,
+            tokens: tokens,
+            scenes: [],
+            imageUrl: '',
+            imagePrompt: '',
+            timestamp: Date.now(),
+            personality: localEpisode.personality,
+            namespace: localEpisode.namespace,
+            references: [],
+            isStory: localEpisode.type === 'episode' ? true : false,
+            shareUrl: '',
+            rawText: '',
+            query: localEpisode.title,
+            documentCount: documentCount,
+            episodeCount: episodeCount,
+            gptModel: modelName,
+            gptFastModel: fastModelName,
+            gptPrompt: buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, localEpisode.type === 'episode' ? true : false),
+            defaultGender: gender,
+            speakingLanguage: audioLanguage,
+            subtitleLanguage: subtitleLanguage,
+          }
+
+          // Display the images and subtitles
+          episodeIdRef.current = uuidv4().replace(/-/g, '');
+
+          // Fill the story object
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
+          const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
+
+          story.id = episodeIdRef.current;
+          story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
+          story.shareUrl = `${baseUrl}/${episodeIdRef.current}`;
 
           try {
             console.log(`SubmitQueue: Submitting Recieved ${localEpisode.type} #${episodes.length}: ${localEpisode.title}`);
@@ -516,9 +603,9 @@ function Home({ user }: HomeProps) {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
-                      'Retry-After': '5',
                     },
                     body: JSON.stringify({
+                      episodeId: episodeIdRef.current,
                       question: localEpisode.title,
                       userId: user?.uid,
                       localPersonality: localEpisode.personality ? localEpisode.personality : selectedPersonality,
@@ -534,10 +621,23 @@ function Home({ user }: HomeProps) {
                       episodeCount,
                       titleArray,
                       history: localHistory,
+                      gender: story.defaultGender,
+                      speakingLanguage: story.speakingLanguage,
+                      subtitleLanguage: story.subtitleLanguage,
                     }),
                     signal: ctrl.signal,
                     onmessage: (event: { data: string; }) => {
+                      //console.log(`handleSubmit: event is ${JSON.stringify(event)}`);
                       if (event.data === '[DONE]' || event.data === '[ERROR]') {
+                        // fill in the story and add it to the story queue
+                        story.rawText = pendingMessage;
+                        story.tokens = tokens;
+                        story.references = pendingSourceDocs;
+                        const storyPart: Story = {
+                          ...story,
+                        }
+                        storyPart.scenes = [];
+                        setPlayQueue([...playQueue, storyPart]);
                         const newMessage: Message = {
                           type: 'apiMessage',
                           message: pendingMessage,
@@ -573,15 +673,32 @@ function Home({ user }: HomeProps) {
                       } else {
                         const data = JSON.parse(event.data);
                         try {
-                          if (data.sourceDocs) {
+                          if (data.scene) {
+                            console.log(`handleSubmit: Recieved scene #${sceneCount} ${JSON.stringify(data.scene)}}`);
+                            story.scenes.push(data.scene);
+                            if (sceneCount === 0) {
+                              story.title = data.scene.sentences[0].text;
+                              story.imageUrl = data.scene.sentences[0].imageUrl;
+                            }
+                            const storyPart: Story = {
+                              ...story,
+                            }
+                            storyPart.scenes = [data.scene];
+                            setPlayQueue([...playQueue, storyPart]);
+                            sceneCount++;
+                          } else if(data.sourceDocs) {
                             console.log(`handleSubmit: Recieved ${data.sourceDocs.length} sourceDocs ${JSON.stringify(data.sourceDocs)}}`);
                             pendingSourceDocs = data.sourceDocs;
-                          } else {
+                          } else if (data.data) {
                             pendingMessage += data.data;
+                          } else {
+                            console.log(`handleSubmit: Recieved uknown data ${JSON.stringify(data)}}`);
                           }
                         } catch (error) {
                           console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
                         }
+
+                        // Update the OSD and token count
                         if (data.data) {
                           tokens = tokens + countTokens(data.data);
                           setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
@@ -607,37 +724,8 @@ function Home({ user }: HomeProps) {
 
           console.log(`storyQueue: messages length ${newMessages.length} contain\n${JSON.stringify(newMessages, null, 2)}`)
 
-          // setup the story structure
-          let story: Story = {
-            title: '',
-            url: '',
-            thumbnailUrls: [],
-            id: '',
-            UserId: localEpisode.username,
-            prompt: localEpisode.prompt,
-            tokens: tokens,
-            scenes: [],
-            imageUrl: '',
-            imagePrompt: '',
-            timestamp: Date.now(),
-            personality: localEpisode.personality,
-            namespace: localEpisode.namespace,
-            references: pendingSourceDocs,
-            isStory: localEpisode.type === 'episode' ? true : false,
-            shareUrl: '',
-            rawText: pendingMessage,
-            query: localEpisode.title,
-            documentCount: documentCount,
-            episodeCount: episodeCount,
-            gptModel: modelName,
-            gptFastModel: fastModelName,
-            gptPrompt: buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, localEpisode.type === 'episode' ? true : false),
-            defaultGender: gender,
-            speakingLanguage: audioLanguage,
-            subtitleLanguage: subtitleLanguage,
-          }
-
-          setStoryQueue([...storyQueue, story]);
+          // share the story
+          shareStory(story, isFetching);
         }
         isSubmitQueueRef.current = false;
       }
@@ -660,16 +748,26 @@ function Home({ user }: HomeProps) {
     const playQueueDisplay = async () => {
       if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
         const playStory = playQueue[0];  // Get the first story
+
+        // Check if the story has any scenes
+        if (playStory.scenes && playStory.scenes.length === 0) {
+          console.error(`PlayQueaue: Story #${playQueue.length} has no scenes, skipping.`);
+          setPlayQueue(playQueue.slice(1));  // Remove the story from the queue
+          return;
+        }
+
         try {
           console.log(`PlayQueaue: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
 
           isDisplayingRef.current = true;
           setIsSpeaking(true);
 
-          setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
-          setLoadingOSD(`Prompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references && playStory.references.join(', ')}`);
-          setLastStory(playStory.shareUrl);
-          setImageUrl(playStory.imageUrl);
+          if (playStory.scenes.length > 0 && playStory.scenes[0].id === 0) {
+            setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
+            setLoadingOSD(`Prompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references && playStory.references.join(', ')}`);
+            setLastStory(playStory.shareUrl);
+            setImageUrl(playStory.imageUrl);
+          }
 
           // This function needs to be async to use await inside
           async function playScenes() {
@@ -721,10 +819,14 @@ function Home({ user }: HomeProps) {
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
-        setSubtitle('Think of a story you want to tell, or a question you want to ask.');
 
-        setLoadingOSD(`Finished playing ${playStory.title}. `);
-        setSubtitle('\nGroovy\nCreate your visions and dreams today');
+        // end of story reset the subtitle and OSD
+        if (playStory.tokens > 0) {
+          setSubtitle('Think of a story you want to tell, or a question you want to ask.');
+
+          setLoadingOSD(`Finished playing ${playStory.title}. `);
+          setSubtitle('\nGroovy\nCreate your visions and dreams today');
+        }
       }
     };
 
@@ -735,950 +837,6 @@ function Home({ user }: HomeProps) {
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD, setImageUrl, setLastStory]);
-
-  // Generate a new story when the query input has been added to
-  useEffect(() => {
-    if (!isSpeakingRef.current && storyQueue.length > 0) {
-      isSpeakingRef.current = true;
-
-      // last message set to mark our position in the messages array
-      let story: Story | undefined = storyQueue.shift();
-
-      console.log(`StoryQueue: Generating Story #${storyQueue.length}: ${story?.title}\n${JSON.stringify(story)}\n`);
-
-      // lock speaking and avoid crashing
-      try {
-        let lastImage: string = '';
-
-        function extractKeywords(sentence: string, numberOfKeywords = 2) {
-          const doc = nlp(sentence);
-
-          // Extract nouns, verbs, and adjectives
-          const nouns = doc.nouns().out('array');
-          const verbs = doc.verbs().out('array');
-          const adjectives = doc.adjectives().out('array');
-
-          // Combine the extracted words and shuffle the array
-          const combinedWords = [...nouns, ...verbs, ...adjectives];
-          combinedWords.sort(() => 0.5 - Math.random());
-
-          // Select the first N words as keywords
-          const keywords = combinedWords.slice(0, numberOfKeywords);
-
-          return keywords;
-        }
-
-        async function getGaib() {
-          const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
-          const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
-          let randomNumber = 0;
-          if (maxNumber > 1) {
-            randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
-          } else {
-            randomNumber = maxNumber;
-          }
-
-          let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
-          if (directoryUrl != null && maxNumber >= 1 && randomNumber >= 0) {
-            url = `${directoryUrl}/${randomNumber}.png`;
-          }
-          return url;
-        }
-
-        // Choose Pexles, DeepAI or local images
-        async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: string = '', localEpisodeId = '', count = 0): Promise<string> {
-          const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
-          const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
-
-          // check if enabled
-          if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
-            return '';
-          }
-
-          // Check if it has been 5 seconds since we last generated an image
-          const endTime = new Date();
-          const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-          if (deltaTimeInSeconds < 1 && messages.length > 0) {
-            console.log(`generateImageUrl: has been ${deltaTimeInSeconds} seconds since last image generation.`);
-          }
-          setStartTime(endTime);
-
-          if (sentence === '') {
-            sentence = '';
-            return '';
-          }
-
-          let keywords = '';
-
-          // Use local images if requested else use Pexels API to fetch images
-          if (!useImageAPI) {
-            // use local images
-            return await getGaib();
-          } else {
-            try {
-              let response;
-              if (imageSource === 'pexels') {
-                let extracted_keywords = extractKeywords(sentence, 32).join(' ');
-                console.log('Extracted keywords: [', extracted_keywords, ']');
-                keywords = encodeURIComponent(extracted_keywords);
-                response = await fetchWithAuth('/api/pexels', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ keywords }),
-                });
-              } else if (imageSource === 'deepai') {
-                let exampleImage = '' as string;
-                if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-                  if (lastImage !== '') {
-                    exampleImage = lastImage;
-                  } else {
-                    exampleImage = await getGaib();
-                  }
-                }
-                response = await fetchWithAuth('/api/deepai', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
-                });
-              } else if (imageSource === 'openai') {
-                let exampleImage = '' as string;
-                if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-                  if (lastImage !== '') {
-                    exampleImage = lastImage;
-                  } else {
-                    exampleImage = await getGaib();
-                  }
-                }
-                response = await fetchWithAuth('/api/openai', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
-                });
-              } else if (imageSource === 'getimgai') {
-                const idToken = await user?.getIdToken();
-                let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v2-1';
-                let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
-                let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 512;
-                let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
-                let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
-                let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
-                let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
-                let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
-                let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
-
-                // Ensure width and height are multiples of 64
-                width = Math.floor(width / 64) * 64;
-                height = Math.floor(height / 64) * 64;
-
-                if (width > 1024) {
-                  width = 1024;
-                }
-                if (height > 1024) {
-                  height = 1024;
-                }
-                response = await fetchWithAuth('/api/getimgai', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    model: model,
-                    prompt: `${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
-                    negativePrompt: negativePrompt,
-                    width: width,
-                    height: height,
-                    steps: steps,
-                    guidance: guidance,
-                    seed: seed,
-                    scheduler: scheduler,
-                    outputFormat: outputFormat,
-                  }),
-                });
-              }
-
-              if (!response || !response.ok || response.status !== 200) {
-                console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API ${response ? response.statusText : ''}`);
-                return '';
-              }
-
-              const data = await response.json();
-              let imageId = uuidv4();
-              let duplicateImage = false;
-              if (imageSource === 'pexels') {
-                return data.photos[0].src.large2x;
-              } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
-                const imageUrl = data.output_url;
-                if (data?.duplicate === true) {
-                  duplicateImage = true;
-                }
-                if (saveImages === 'true' && !duplicateImage && authEnabled) {
-                  const idToken = await user?.getIdToken();
-                  // Store the image and index it
-                  await fetchWithAuth('/api/storeImage', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
-                  });
-                }
-                const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
-                if (bucketName !== '' && !duplicateImage) {
-                  return `https://storage.googleapis.com/${bucketName}/deepAIimage/${localEpisodeId}_${count}_${imageId}.jpg`;
-                } else {
-                  // don't store images in GCS or it is a duplicate image
-                  return imageUrl;
-                }
-              } else if (imageSource === 'getimgai' && data.output_url) {
-                const imageUrl = data.output_url;
-                if (data?.duplicate === true) {
-                  duplicateImage = true;
-                }
-                return imageUrl;
-              } else {
-                console.error('No image found for the given keywords: [', keywords, ']');
-              }
-            } catch (error) {
-              console.error('Error fetching image from API:', error);
-            }
-          }
-          // failed to fetch image, leave the image as is
-          return '';
-        }
-
-        // This function generates the AI message using GPT
-        const generateAImessage = async (imagePrompt: string, personalityPrompt: string, maxTokens: number = 100): Promise<string> => {
-          try {
-            // Prepare the request body. You may need to adjust this to fit your use case.
-            const requestBody = {
-              message: imagePrompt,
-              prompt: personalityPrompt,
-              llm: fastModelName,
-              conversationHistory: conversationHistory,  // You may need to populate this with previous conversation history, if any.
-              maxTokens: maxTokens,
-            };
-
-            let content: string = 'random image of a robot anime AI';
-            // Send a POST request to your local API endpoint.
-            // timeout if it takes longer than 10 seconds
-            // Create an AbortController instance
-            const controller = new AbortController();
-            const { signal } = controller;
-
-            // Set a timeout to abort the fetch request after N / 1000 seconds
-            const timeout = setTimeout(() => {
-              controller.abort();
-            }, 120000);
-
-            try {
-              // Make the fetch request, passing the signal to it
-              const response = await fetchWithAuth('/api/gpt', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody),
-                signal  // Pass the abort signal to the fetch request
-              });
-
-              if (!response.ok) {
-                console.error(`Error: GPT + AI generated message: ${response.statusText}`);
-                return imagePrompt;
-              }
-
-              // Parse the response
-              const data = await response.json();
-
-              // Clear the timeout if the request completes successfully
-              clearTimeout(timeout);
-
-              // skip if the response is not 200
-              if (response.status !== 200) {
-                console.error(`Error: GPT + AI generated message: ${data.error}`);
-                return imagePrompt;
-              }
-
-              if (debug) {
-                console.log(`GPT + AI generated message: ${data.aiMessage.content}`);
-              }
-
-              // Extract the AI generated message.
-              content = data.aiMessage.content;
-              setConvesationHistory([...conversationHistory, data])
-            } catch (error) {
-              // Handle the error
-              console.error(`Error: GPT + AI generated message: ${error}`);
-              return imagePrompt;
-            }
-            return content;
-          } catch (error) {
-            console.error(`GPT + Failed to generate a message for image, using ${imagePrompt} , error: ${error}`);
-            return imagePrompt;
-          }
-        };
-
-        // This function generates the image using the AI message from the previous function
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = true): Promise<{ image: string, prompt: string }> => {
-          try {
-            let prompt = imagePrompt;
-            let content: string = '';
-            let retries = 0;
-            while (gptPrompt && content === '') {
-              if (retries > 0) {
-                console.log(`generateAIimage: Retry #${retries} for image generation`);
-                if (retries > 1) {
-                  console.log(`generateAIimage: Too many retries for image generation, giving up`);
-                  break;
-                }
-                // sleep for 1 second
-                setTimeout(() => {
-                  if (debug) {
-                    console.log('generateAIimage: sleeping for 1 second, retrying');
-                  }
-                }, 3000);
-              }
-              content = await generateAImessage(imagePrompt, personalityPrompt);
-            }
-            if (content === '') {
-              prompt = imagePrompt;
-            } else {
-              prompt = content;
-            }
-            // Use the AI generated message as the prompt for generating an image URL.
-            let gaibImage = await generateImageUrl(prompt, true, localLastImage, episodeIdRef.current, count);
-            return { image: gaibImage, prompt: prompt };
-          } catch (error) {
-            console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
-            return { image: '', prompt: imagePrompt };
-          }
-        };
-
-        function removeMarkdownAndSpecialSymbols(text: string): string {
-          // Remove markdown formatting
-          const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
-          let cleanedText = text.replace(markdownRegex, '');
-
-          // remove any lines of just dashes like --- or ===
-          const dashRegex = /^[-=]{3,}$/g;
-          cleanedText = cleanedText.replace(dashRegex, '');
-
-          // Remove special symbols (including periods)
-          const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
-          const finalText = cleanedText.replace(specialSymbolsRegex, '');
-
-          return finalText;
-        }
-
-        async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
-          const idToken = await user?.getIdToken();
-          const response = await fetchWithAuth('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, targetLanguage }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Error in translating text, statusText: ' + response.statusText);
-          }
-
-          const data = await response.json();
-          return data.translatedText;
-        }
-
-        const shareStory = async (storyToShare: Story, automated: boolean): Promise<string> => {
-          try {
-            if (!user && authEnabled) {
-              return '';
-            } else if (!user) {
-              return '';
-            }
-
-            if (debug) {
-              console.log('Data being written:', JSON.stringify(storyToShare));
-              console.log('ID of the current user:', user.uid);
-            }
-
-            // Send a POST request to the API endpoint
-            const response = await fetchWithAuth('/api/shareStory', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(storyToShare),
-            });
-
-            // Parse the response
-            const data = await response.json();
-
-            // Extract the story ID and URL from the response
-            const { storyUrl, shareUrl } = data;
-
-            console.log(`Story ${storyToShare.title}... json shared as ${shareUrl} JSON stored as ${storyUrl}.`);
-            if (twitchChatEnabled && authEnabled && channelId !== '') {
-              // Post the story to the Twitch chat
-              await postResponse(channelId,
-                `Shared ${storyToShare.isStory ?
-                  "Story" : "Question"}: ${storyToShare.title} at ${shareUrl} as personality ${storyToShare.personality} ` +
-                `with document embeddings from ${storyToShare.namespace == "groovypdf" ? "Wisdom" : "Science"} ` +
-                `Plotline: ${storyToShare.title}`, user.uid);
-            }
-
-            return shareUrl;
-          } catch (error) {
-            console.error('An error occurred in the shareStory function:', error); // Check for any errors
-            return '';
-          }
-        };
-
-        async function processImagesAndSubtitles(story: Story) {
-          const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
-          const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
-          const message = story.rawText;
-
-          let voiceModels: { [key: string]: string } = {};
-          let genderMarkedNames: any[] = [];
-          let detectedGender: string = gender;
-          let currentSpeaker: string = 'groovy';
-          let isContinuingToSpeak = false;
-          let isSceneChange = false;
-          let lastSpeaker = '';
-
-          let sceneTexts: string[] = [];
-          let promptImages: (string)[] = [];
-          let promptImageTexts: string[] = [];
-          let promptImageText = '';
-          let promptImageEpisodeText = '';
-          let currentSceneText = "";
-          let imageCount = 0;
-          let sceneCount = 0;
-
-          // Create a title screen image for the story
-          let promptImageTitle =
-            "Generate a prompt for generating an image using the following text in context with the previous chat history.\n\n";
-          let historyPrimerTitle =
-            "Do not reveal you are an AI bot, do the task given to you by the AI, and do not reveal the AI's identity. "
-              + "Summarize the given text into concise stable diffusion prompt descriptions for image generation.\n\n";
-          let promptImage = promptImageTitle;
-          let historyPrimer = historyPrimerTitle;
-
-          let maleVoiceModels = {
-            'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
-            'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
-            'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
-            'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
-          };
-
-          let femaleVoiceModels = {
-            'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-            'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
-            'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-            'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-          };
-
-          let neutralVoiceModels = {
-            'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-            'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
-            'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-            'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-          };
-
-          let defaultModels = {
-            'en-US': 'en-US-Wavenet-C',
-            'ja-JP': 'ja-JP-Wavenet-A',
-            'es-US': 'es-US-Wavenet-A',
-            'en-GB': 'en-GB-Wavenet-A'
-          };
-
-          if (gender == `MALE`) {
-            defaultModels = {
-              'en-US': 'en-US-Wavenet-A',
-              'ja-JP': 'ja-JP-Wavenet-C',
-              'es-US': 'es-US-Wavenet-B',
-              'en-GB': 'en-GB-Wavenet-B'
-            };
-          }
-          // Define default voice model for language
-          let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
-          let model = defaultModel;
-
-          // Extract gender markers from the entire message
-          const genderMarkerMatches = message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
-          if (genderMarkerMatches) {
-            let name: string;
-            for (const match of genderMarkerMatches) {
-              const marker = match.slice(match.indexOf('[') + 1, match.indexOf(']')).toLowerCase();
-              if (match.includes(':')) {
-                name = match.slice(0, match.indexOf(':')).trim().toLowerCase();
-              } else {
-                name = match.slice(0, match.indexOf('[')).trim().toLowerCase();
-              }
-              genderMarkedNames.push({ name, marker });
-
-              // Assign a voice model to the name
-              if (marker === 'm' && !voiceModels[name]) {
-                if (maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].length > 0) {
-                  voiceModels[name] = maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].shift() as string;
-                  maleVoiceModels[audioLanguage as keyof typeof maleVoiceModels].push(voiceModels[name]);
-                }
-              } else if ((marker == 'n' || marker === 'f') && !voiceModels[name]) {
-                if (femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].length > 0) {
-                  voiceModels[name] = femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].shift() as string;
-                  femaleVoiceModels[audioLanguage as keyof typeof femaleVoiceModels].push(voiceModels[name]);
-                }
-              } else if (!voiceModels[name]) {
-                if (neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].length > 0) {
-                  voiceModels[name] = neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].shift() as string;
-                  neutralVoiceModels[audioLanguage as keyof typeof neutralVoiceModels].push(voiceModels[name]);
-                }
-              }
-            }
-          }
-
-          if (debug) {
-            console.log(`Response Speaker map: ${JSON.stringify(voiceModels)}`);
-            console.log(`Gender Marked Names: ${JSON.stringify(genderMarkedNames)}`);
-          }
-
-          // get first sentence as title or question to display
-          const sentences: string[] = nlp(message).sentences().out('array');
-          let firstSentence = sentences.length > 0 ? sentences[0] : query;
-
-          // display title screen with image and title
-          const imgGenResult = await generateAIimage(`${promptImageTitle}${message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
-          if (imgGenResult.image !== '') {
-            lastImage = imgGenResult.image;
-            imageCount++;
-            promptImages.push(lastImage);
-            if (imgGenResult.prompt != '') {
-              promptImageEpisodeText = imgGenResult.prompt;
-              console.log(`promptImageEpisodeText: ${promptImageEpisodeText}`);
-            }
-          }
-          const titleScreenImage: string = lastImage;
-          const titleScreenText: string = firstSentence;
-
-          // Extract the scene texts from the message
-          let sentencesToSpeak = [] as string[];
-
-          // add to the beginning of the scentences to speek the query and the title if it is a question
-          if (story.isStory) {
-            sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
-          } else {
-            sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
-          }
-          currentSceneText = story.query + "\n\n";
-          sceneCount++;
-          sceneTexts.push(currentSceneText);
-          currentSceneText = "";
-
-          for (const sentence of sentences) {
-            // check if we need to change the scene
-            const allowList = ['Title', 'Question', 'Answer', 'Begins', 'Plotline', 'Scene', 'SCENE', 'SCENE:'];
-
-            if (currentSceneText.length > 500
-              || allowList.some(word => sentence.includes(word))
-              || (!sentence.startsWith('References: ')
-                && sentence !== ''
-                && (imageSource == 'pexels'
-                  || imageCount === 0
-                )
-              )) {
-              // When we encounter a new scene, we push the current scene text to the array
-              // and start a new scene text
-              let extraPrompt = ''
-              let cleanSentence = sentence.replace('SCENE:', '').replace('SCENE', '');
-              if (currentSceneText !== "") {
-                // generate this scenes image
-                console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
-                setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
-
-                const imgGenResult = await generateAIimage(`${promptImage} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-                if (imgGenResult.image !== '') {
-                  lastImage = imgGenResult.image;
-                  imageCount++;
-                  promptImages.push(lastImage);
-                  if (imgGenResult.prompt != '') {
-                    promptImageText = imgGenResult.prompt;
-                    promptImageTexts.push(promptImageText);
-                    console.log(`promptImageText: ${promptImageText}`);
-                    extraPrompt = promptImageText;
-                  }
-                }
-
-                sceneTexts.push(`${currentSceneText.replace('SCENE:', '').replace('SCENE', '')}`);
-                //sceneTexts.push(`${extraPrompt}`);
-                // sceneCount++;
-                sceneCount++;
-              }
-              // Next scene setup and increment scene counter
-              currentSceneText = cleanSentence;
-
-              sentencesToSpeak.push(`SCENE: ${cleanSentence}`);
-              //sentencesToSpeak.push(`SCENE: ${extraPrompt}`);
-            } else {
-              // If it's not a new scene, we append the sentence to the current scene text
-              currentSceneText += ` ${sentence}`;
-              sentencesToSpeak.push(sentence);
-            }
-          }
-
-          // Don't forget to push the last scene text
-          if (currentSceneText !== "") {
-            sceneTexts.push(`SCENE: ${currentSceneText}`);
-            sceneCount++;
-          }
-
-          // absence of SCENE markers in the message without any images and no sceneTexts
-          let extraPrompt = ''
-          if (sceneTexts.length === 0 && imageCount === 0) {
-            console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
-            setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
-            const imgGenResult = await generateAIimage(`${promptImage} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
-            if (imgGenResult.image !== '') {
-              lastImage = imgGenResult.image;
-              imageCount++;
-              promptImages.push(lastImage);
-              if (imgGenResult.prompt != '') {
-                promptImageText = imgGenResult.prompt;
-                promptImageTexts.push(promptImageText);
-                console.log(`promptImageText: ${promptImageText}`);
-                extraPrompt = promptImageText;
-              }
-            }
-            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
-            sentencesToSpeak.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
-            //sentencesToSpeak.push(`SCENE: ${extraPrompt}`);
-
-            // save story and images for auto save and/or sharing
-            sceneCount++;
-          } else if (sceneTexts.length === 0) {
-            console.log(`No scenes found in the message: ${message}`);
-            sceneTexts.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
-            sentencesToSpeak.push(`SCENE: ${sentences.join(' ').replace('SCENE:', '').replace('SCENE', '')}`);
-            sceneCount++;
-          }
-          setLoadingOSD(`Generating images for ${sentences.length} sentences with ${sceneTexts.length} scenes...`);
-
-          // keep track of scene and images positions
-          let sceneIndex = 0;
-          let imagesIndex = 0;
-          let title: string = '';
-          let summary: string = '';
-
-          // Extract all unique speakers for twitch channel chat responses
-          if (channelId !== '' && twitchChatEnabled) {
-            const uniqueSpeakers = Array.from(new Set(genderMarkedNames.map(item => item.name)));
-
-            // Create a list of speakers with their genders
-            const speakerList = uniqueSpeakers.map(speaker => {
-              const speakerGender = genderMarkedNames.find(item => item.name.toLowerCase() === speaker.toLowerCase());
-              return `${speaker} (Gender: ${speakerGender?.marker || 'Unknown'})`;
-            }).join(', ');
-
-            // Create a title for the story from the first sentence
-            title = sentences[0].substring(0, 100);  // Limit the title to 100 characters
-
-            // Create a brief introduction of the story from the second sentence
-            const introduction = sentences.length > 1 ? sentences[1].substring(0, 100) : '';  // Limit the introduction to 100 characters
-
-            // Create the summary
-            if (story.isStory) {
-              summary = `Title: ${title}\n\nStarring ${speakerList}.\n\nScript: ${introduction}...`;
-            } else {
-              summary = `Question: ${title}\n\nSpeaker(s) ${speakerList}.\n\nAnswer: ${introduction}...`;
-            }
-
-            // Post the summary to the API endpoint
-            try {
-              await postResponse(channelId, summary, user?.uid);
-            } catch (error) {
-              console.error('Failed to post response: ', error);
-            }
-          }
-
-          // Display the images and subtitles
-          episodeIdRef.current = uuidv4().replace(/-/g, '');
-
-          // Fill the story object
-          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
-
-          story.title = titleScreenText;
-          story.UserId = user?.uid || 'anonymous';
-          story.id = episodeIdRef.current;
-          story.url = `https://storage.googleapis.com/${bucketName}/stories/${episodeIdRef.current}/data.json`;
-          story.imageUrl = titleScreenImage;
-          story.imagePrompt = promptImageEpisodeText.replace(/^\"/, '').replace(/\"$/, '');
-          story.shareUrl = `${baseUrl}/${episodeIdRef.current}`;
-
-          let scene: Scene | null = null;
-          let sentenceId = 0;
-
-          for (let sentence of sentencesToSpeak) {
-            // get the image for the sentence
-            if (sentence.startsWith('SCENE: ')) {
-              sentence = sentence.replace('SCENE: ', '');
-              lastImage = promptImages[imagesIndex];
-             
-              // If there is a previous scene, add it to the story
-              if (scene) {
-                story.scenes.push(scene);
-              }
-
-              // Start a new scene
-              scene = {
-                id: sceneIndex,
-                sentences: [],
-                imageUrl: lastImage,
-                imagePrompt: promptImageTexts[imagesIndex],
-              };
-
-              // Increment the image index
-              if (imagesIndex < promptImages.length - 1) {
-                imagesIndex++;
-              }
-
-              // Increment the scene index
-              if (sceneIndex < sceneTexts.length - 1) {
-                sceneIndex++;  // Move to the next scene
-              }
-            }
-
-            let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
-
-            // go through by sentence so we can preserve the speaker
-            let spokenLineIndex = 0;
-            for (const sentence_by_character of sentences_by_character) {
-              if (sentence_by_character == '') {
-                continue;
-              }
-
-              // Set the subtitle to the translated text if the text is not in English
-              let translatedText = '';
-              if (subtitleLanguage !== 'en-US' && translateText) {
-                translatedText = await fetchTranslation(sentence_by_character, subtitleLanguage);
-              }
-
-              let speakerChanged = false;
-              // Check if sentence contains a name from genderMarkedNames
-              for (const { name, marker } of genderMarkedNames) {
-                const lcSentence = sentence_by_character.toLowerCase();
-                let nameFound = false;
-
-                const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
-                const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
-                for (const prefix of prefixes) {
-                  if (lcSentence.startsWith(name + prefix)) {
-                    nameFound = true;
-                    break;
-                  }
-                }
-                for (const prefix of regprefixes) {
-                  if (nameFound) {
-                    break;
-                  }
-                  if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
-                    nameFound = true;
-                    break;
-                  }
-                }
-
-                if (nameFound) {
-                  console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
-                  if (currentSpeaker !== name) {
-                    lastSpeaker = currentSpeaker;
-                    speakerChanged = true;
-                    currentSpeaker = name;
-                    isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
-                  }
-                  switch (marker) {
-                    case 'f':
-                      detectedGender = 'FEMALE';
-                      break;
-                    case 'm':
-                      detectedGender = 'MALE';
-                      break;
-                    case 'n':
-                      detectedGender = 'FEMALE';
-                      break;
-                  }
-                  // Use the voice model for the character if it exists, otherwise use the default voice model
-                  model = voiceModels[name] || defaultModel;
-                  break;  // Exit the loop as soon as a name is found
-                }
-              }
-
-              if (debug) {
-                console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
-              }
-
-              // If the speaker has changed or if it's a scene change, switch back to the default voice
-              if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
-                detectedGender = gender;
-                currentSpeaker = 'groovy';
-                model = defaultModel;
-                console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
-                isSceneChange = true;  // Reset the scene change flag
-              }
-
-              // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
-              if (sentence_by_character.startsWith('(') || (!sentence_by_character.startsWith('*') && !speakerChanged && !isSceneChange)) {
-                isContinuingToSpeak = true;
-              }
-
-              let audioFile: string = '';
-              spokenLineIndex += 1;
-              const cleanText: string = removeMarkdownAndSpecialSymbols(sentence_by_character);
-              let translationEntry: string = '';
-
-              // Speak the sentence if speech output is enabled
-              if (audioLanguage === 'en-US') {
-                // Speak the original text
-                if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', cleanText.slice(0, 30));
-                }
-                try {
-                  if (cleanText != '') {
-                    audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
-
-                    // Try to run speakText to create the audio file
-                    try {
-                      await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
-
-                      // Check if the audio file exists
-                      const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
-                      if (!response.ok) {
-                        throw new Error(`File not found at ${audioFile}`);
-                      }
-                    } catch (e) {
-                      console.log('Error speaking text on first attempt or file not found: ', e);
-
-                      // If the first attempt fails or the file doesn't exist, try to run speakText again
-                      console.log(`Trying to run speakText again...`);
-                      try {
-                        await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
-
-                        // Check if the audio file exists
-                        const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
-                        if (!response.ok) {
-                          throw new Error(`File not found at ${audioFile}`);
-                        }
-                      } catch (e) {
-                        console.log('Error speaking text on second attempt or file not found: ', e);
-                        audioFile = '';  // Unset the audioFile variable
-                      }
-                    }
-                  }
-                } catch (e) {
-                  console.log('Error speaking text: ', e);
-                }
-
-              } else {
-                // Speak the translated text
-                if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
-                  // Use the previously translated text
-                  translationEntry = translatedText;
-                } else {
-                  // Translate the text
-                  translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
-                }
-                const cleanTranslation = removeMarkdownAndSpecialSymbols(translationEntry);
-                if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", cleanTranslation);
-                }
-                try {
-                  if (cleanTranslation != '') {
-                    audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanTranslation.slice(0, 10)}`);
-
-                    // Try to run speakText to create the audio file
-                    try {
-                      await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
-
-                      // Check if the audio file exists
-                      const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
-                      if (!response.ok) {
-                        throw new Error(`File not found at ${audioFile}`);
-                      }
-                    } catch (e) {
-                      console.log('Error speaking text on first attempt or file not found: ', e);
-
-                      // If the first attempt fails or the file doesn't exist, try to run speakText again
-                      console.log(`Trying to run speakText again...`);
-                      try {
-                        await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
-
-                        // Check if the audio file exists
-                        const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
-                        if (!response.ok) {
-                          throw new Error(`File not found at ${audioFile}`);
-                        }
-                      } catch (e) {
-                        console.log('Error speaking text on second attempt or file not found: ', e);
-                        audioFile = '';  // Unset the audioFile variable
-                      }
-                    }
-                  }
-                } catch (e) {
-                  console.log('Error speaking text: ', e);
-                }
-              }
-
-              // Update the last speaker
-              lastSpeaker = currentSpeaker;
-
-              // If there is a current scene, add the sentence to it
-              if (scene && (cleanText !== '' || translationEntry !== '') && audioFile !== '') {
-                scene.sentences.push({
-                  id: sentenceId++,
-                  text: translationEntry != '' ? translationEntry : sentence_by_character,
-                  imageUrl: lastImage,  // or another image related to the sentence
-                  speaker: currentSpeaker,  // or another speaker related to the sentence
-                  gender: detectedGender,  // or another gender related to the sentence
-                  language: audioLanguage,  // or another language related to the sentence
-                  model: model,  // or another model related to the sentence
-                  audioFile: `https://storage.googleapis.com/${bucketName}/${audioFile}`,  // or another audio file related to the sentence
-                });
-              }
-            }
-          }
-
-          // If there is a last scene, add it to the story
-          if (scene) {
-            story.scenes.push(scene);
-          }
-
-          // share the story
-          try {
-            // Share the story after building it before displaying it
-            let shareUrl = await shareStory(story, isFetching);
-
-            if (shareUrl != '' && isDisplayingRef.current === false) {
-              setLoadingOSD(`\nEpisode shared to: ${shareUrl}!`);
-            }
-          } catch (error) {
-            console.error(`Error sharing story: ${error}`);
-          }
-
-          // Add the story to the playQueue
-          setPlayQueue(prevPlayQueue => [...prevPlayQueue, story]);
-
-          // clear the status OSD display
-          setLoadingOSD('');
-        }
-
-        // Multi Modal theme
-        try {
-          if (story) {
-            processImagesAndSubtitles(story);
-          }
-        } catch (error) {
-          console.error('Error displaying images and subtitles: ', error);
-        }
-      } catch (error) {
-        console.error('SpeakDisplay: UseEffect had an error processing messages: ', error);
-      }
-      isSpeakingRef.current = false;
-    }
-  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, imageUrl, setSubtitle, setLoadingOSD, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isSpeakingRef, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
   // take an Episode and parse the question and return the Episode with the parts filled out from the question
   function parseQuestion(episode: Episode): Episode {
