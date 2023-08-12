@@ -1019,7 +1019,7 @@ function Home({ user }: HomeProps) {
         };
 
         // This function generates the image using the AI message from the previous function
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = true): Promise<{ image: string, prompt: string }> => {
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = false): Promise<{ image: string, prompt: string }> => {
           try {
             let prompt = imagePrompt;
             let content: string = '';
