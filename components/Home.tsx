@@ -1021,32 +1021,16 @@ function Home({ user }: HomeProps) {
         // This function generates the image using the AI message from the previous function
         const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = false): Promise<{ image: string, prompt: string }> => {
           try {
-            let prompt = imagePrompt;
+            let prompt: string = imagePrompt;
             let content: string = '';
-            let retries = 0;
-            while (gptPrompt && content === '') {
-              if (retries > 0) {
-                console.log(`generateAIimage: Retry #${retries} for image generation`);
-                if (retries > 1) {
-                  console.log(`generateAIimage: Too many retries for image generation, giving up`);
-                  break;
-                }
-                // sleep for 1 second
-                setTimeout(() => {
-                  if (debug) {
-                    console.log('generateAIimage: sleeping for 1 second, retrying');
-                  }
-                }, 3000);
-              }
+            if (gptPrompt) {
               content = await generateAImessage(imagePrompt, personalityPrompt);
-            }
-            if (content === '') {
-              prompt = imagePrompt;
-            } else {
-              prompt = content;
+              if (content !== '') {
+                prompt = content;
+              }
             }
             // Use the AI generated message as the prompt for generating an image URL.
-            let gaibImage = await generateImageUrl(prompt, true, localLastImage, episodeIdRef.current, count);
+            let gaibImage = await generateImageUrl(prompt.slice(0,2000), true, localLastImage, episodeIdRef.current, count);
             return { image: gaibImage, prompt: prompt };
           } catch (error) {
             console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
@@ -1245,7 +1229,7 @@ function Home({ user }: HomeProps) {
           let firstSentence = sentences.length > 0 ? sentences[0] : query;
 
           // display title screen with image and title
-          const imgGenResult = await generateAIimage(`${promptImageTitle}${message.slice(0, 2040)}`, `${historyPrimerTitle}\n`, '', 0);
+          const imgGenResult = await generateAIimage(`${promptImageTitle}`, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
             lastImage = imgGenResult.image;
             imageCount++;
