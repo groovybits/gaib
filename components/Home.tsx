@@ -581,7 +581,7 @@ function Home({ user }: HomeProps) {
                           pending: undefined,
                           pendingSourceDocs: undefined,
                         }));
-                     
+
                         ctrl.abort();
                         resolve();
                       } else if (event.data === '[OUT_OF_TOKENS]') {
@@ -1030,7 +1030,7 @@ function Home({ user }: HomeProps) {
               }
             }
             // Use the AI generated message as the prompt for generating an image URL.
-            let gaibImage = await generateImageUrl(prompt.slice(0,2000), true, localLastImage, episodeIdRef.current, count);
+            let gaibImage = await generateImageUrl(prompt.slice(0, 2000), true, localLastImage, episodeIdRef.current, count);
             return { image: gaibImage, prompt: prompt };
           } catch (error) {
             console.error("Image GPT Prompt + generateImageUrl Failed to generate an image URL:", error);
@@ -1040,18 +1040,27 @@ function Home({ user }: HomeProps) {
 
         function removeMarkdownAndSpecialSymbols(text: string): string {
           // Remove markdown formatting
-          const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|\[[^\]]+\]|<[^>]+>|\d+\.\s|\#+\s)/g;
+          const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|<[^>]+>|\d+\.\s|\#+\s)/g;
           let cleanedText = text.replace(markdownRegex, '');
 
-          // remove any lines of just dashes like --- or ===
-          const dashRegex = /^[-=]{3,}$/g;
+          // Remove content within brackets [content]
+          const bracketContentRegex = /\[[^\]]*\]/g;
+          cleanedText = cleanedText.replace(bracketContentRegex, '');
+
+          // Remove any lines of just dashes like --- or ===
+          const dashRegex = /^[-=]{3,}$/gm; // Added 'm' flag for multiline matching
           cleanedText = cleanedText.replace(dashRegex, '');
+
+          // Remove lines with repeated special characters
+          const repeatedSpecialCharsRegex = /^([@#^&*()":{}|<>])\1*$/gm; // Added 'm' flag for multiline matching
+          cleanedText = cleanedText.replace(repeatedSpecialCharsRegex, '');
 
           // Remove special symbols (including periods)
           const specialSymbolsRegex = /[@#^&*()":{}|<>]/g;
           const finalText = cleanedText.replace(specialSymbolsRegex, '');
 
-          return finalText;
+          // Remove extra spaces and line breaks
+          return finalText.replace(/\s{2,}/g, ' ').trim();
         }
 
         async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
@@ -1142,7 +1151,7 @@ function Home({ user }: HomeProps) {
             "Generate a prompt for generating an image using the following text in context with the previous chat history.\n\n";
           let historyPrimerTitle =
             "Do not reveal you are an AI bot, do the task given to you by the AI, and do not reveal the AI's identity. "
-              + "Summarize the given text into concise stable diffusion prompt descriptions for image generation.\n\n";
+            + "Summarize the given text into concise stable diffusion prompt descriptions for image generation.\n\n";
           let promptImage = promptImageTitle;
           let historyPrimer = historyPrimerTitle;
 
@@ -1228,6 +1237,30 @@ function Home({ user }: HomeProps) {
           const sentences: string[] = nlp(message).sentences().out('array');
           let firstSentence = sentences.length > 0 ? sentences[0] : query;
 
+          // walk through sentences and join the ones that are broken up with [SCENE: ... that end with a ] on a subsequent line
+          let combinedSentences: string[] = [];
+          let currentSceneOrInt: string = '';
+
+          for (const sentence of sentences) {
+            if (sentence.startsWith('[SCENE:') || sentence.startsWith('INT.')) {
+              if (currentSceneOrInt) {
+                combinedSentences.push(currentSceneOrInt); // Add the previous scene or INT. line to the result
+              }
+              currentSceneOrInt = sentence; // Start a new scene or INT. line
+            } else if (currentSceneOrInt && (sentence.endsWith(']') || sentence.startsWith('INT.'))) {
+              currentSceneOrInt += ' ' + sentence; // Append to the current scene or INT. line
+              combinedSentences.push(currentSceneOrInt); // Add the completed scene or INT. line to the result
+              currentSceneOrInt = ''; // Reset the current scene or INT. line
+            } else {
+              combinedSentences.push(sentence); // Add regular sentences to the result
+            }
+          }
+
+          // If there's an unfinished scene or INT. line, add it to the result
+          if (currentSceneOrInt) {
+            combinedSentences.push(currentSceneOrInt);
+          }
+
           // display title screen with image and title
           const imgGenResult = await generateAIimage(`${promptImageTitle} ${firstSentence}`, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
@@ -1256,9 +1289,9 @@ function Home({ user }: HomeProps) {
           sceneTexts.push(currentSceneText);
           currentSceneText = "";
 
-          for (const sentence of sentences) {
+          for (const sentence of combinedSentences) {
             // check if we need to change the scene
-            const allowList = ['Title', 'Question', 'Answer', 'Begins', 'Plotline', 'Scene', 'SCENE', 'SCENE:'];
+            const allowList = ['Title', 'Question', 'Answer', 'Begins', 'Plotline', 'Scene', 'SCENE', 'SCENE:', 'INT.'];
 
             if (currentSceneText.length > 500
               || allowList.some(word => sentence.includes(word))
@@ -1403,7 +1436,7 @@ function Home({ user }: HomeProps) {
             if (sentence.startsWith('SCENE: ')) {
               sentence = sentence.replace('SCENE: ', '');
               lastImage = promptImages[imagesIndex];
-             
+
               // If there is a previous scene, add it to the story
               if (scene) {
                 story.scenes.push(scene);
@@ -1428,105 +1461,112 @@ function Home({ user }: HomeProps) {
               }
             }
 
-            let sentences_by_character: string[] = nlp(sentence).sentences().out('array');
-
             // go through by sentence so we can preserve the speaker
             let spokenLineIndex = 0;
-            for (const sentence_by_character of sentences_by_character) {
-              if (sentence_by_character == '') {
-                continue;
-              }
 
-              // Set the subtitle to the translated text if the text is not in English
-              let translatedText = '';
-              if (subtitleLanguage !== 'en-US' && translateText) {
-                translatedText = await fetchTranslation(sentence_by_character, subtitleLanguage);
-              }
+            // Set the subtitle to the translated text if the text is not in English
+            let translatedText = '';
+            if (subtitleLanguage !== 'en-US' && translateText) {
+              translatedText = await fetchTranslation(sentence, subtitleLanguage);
+            }
 
-              let speakerChanged = false;
-              // Check if sentence contains a name from genderMarkedNames
-              for (const { name, marker } of genderMarkedNames) {
-                const lcSentence = sentence_by_character.toLowerCase();
-                let nameFound = false;
+            let speakerChanged = false;
+            // Check if sentence contains a name from genderMarkedNames
+            for (const { name, marker } of genderMarkedNames) {
+              const lcSentence = sentence.toLowerCase();
+              let nameFound = false;
 
-                const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
-                const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
-                for (const prefix of prefixes) {
-                  if (lcSentence.startsWith(name + prefix)) {
-                    nameFound = true;
-                    break;
-                  }
+              const regprefixes = [':', ' \\(', '\\[', '\\*:', ':\\*', '\\*\\*:', '\\*\\*\\[', ' \\['];
+              const prefixes = [':', ' (', '[', '*:', ':*', '**:', '**[', ' ['];
+              for (const prefix of prefixes) {
+                if (lcSentence.startsWith(name + prefix)) {
+                  nameFound = true;
+                  break;
                 }
-                for (const prefix of regprefixes) {
-                  if (nameFound) {
-                    break;
-                  }
-                  if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
-                    nameFound = true;
-                    break;
-                  }
-                }
-
+              }
+              for (const prefix of regprefixes) {
                 if (nameFound) {
-                  console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
-                  if (currentSpeaker !== name) {
-                    lastSpeaker = currentSpeaker;
-                    speakerChanged = true;
-                    currentSpeaker = name;
-                    isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
-                  }
-                  switch (marker) {
-                    case 'f':
-                      detectedGender = 'FEMALE';
-                      break;
-                    case 'm':
-                      detectedGender = 'MALE';
-                      break;
-                    case 'n':
-                      detectedGender = 'FEMALE';
-                      break;
-                  }
-                  // Use the voice model for the character if it exists, otherwise use the default voice model
-                  model = voiceModels[name] || defaultModel;
-                  break;  // Exit the loop as soon as a name is found
+                  break;
+                }
+                if (lcSentence.match(new RegExp(`\\b\\w*\\s${name}${prefix}`))) {
+                  nameFound = true;
+                  break;
                 }
               }
 
+              if (nameFound) {
+                console.log(`Detected speaker: ${name}, gender marker: ${marker}`);
+                if (currentSpeaker !== name) {
+                  lastSpeaker = currentSpeaker;
+                  speakerChanged = true;
+                  currentSpeaker = name;
+                  isContinuingToSpeak = false;  // New speaker detected, so set isContinuingToSpeak to false
+                }
+                switch (marker) {
+                  case 'f':
+                    detectedGender = 'FEMALE';
+                    break;
+                  case 'm':
+                    detectedGender = 'MALE';
+                    break;
+                  case 'n':
+                    detectedGender = 'FEMALE';
+                    break;
+                }
+                // Use the voice model for the character if it exists, otherwise use the default voice model
+                model = voiceModels[name] || defaultModel;
+                break;  // Exit the loop as soon as a name is found
+              }
+            }
+
+            if (debug) {
+              console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+            }
+
+            // If the speaker has changed or if it's a scene change, switch back to the default voice
+            if (!speakerChanged && (sentence.startsWith('*') || sentence.startsWith('-'))) {
+              detectedGender = gender;
+              currentSpeaker = 'groovy';
+              model = defaultModel;
+              console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
+              isSceneChange = true;  // Reset the scene change flag
+            }
+
+            // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
+            if (sentence.startsWith('(') || (!sentence.startsWith('*') && !speakerChanged && !isSceneChange)) {
+              isContinuingToSpeak = true;
+            }
+
+            let audioFile: string = '';
+            spokenLineIndex += 1;
+            const cleanText: string = removeMarkdownAndSpecialSymbols(sentence);
+            let translationEntry: string = '';
+
+            // Speak the sentence if speech output is enabled
+            if (audioLanguage === 'en-US') {
+              // Speak the original text
               if (debug) {
-                console.log(`Using voice model: ${model} for ${currentSpeaker} - ${detectedGender} in ${audioLanguage} language`);
+                console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', cleanText.slice(0, 30));
               }
+              try {
+                if (cleanText != '') {
+                  audioFile = `audio/${story.id}/${sentenceId}.mp3`;
+                  setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
 
-              // If the speaker has changed or if it's a scene change, switch back to the default voice
-              if (!speakerChanged && (sentence_by_character.startsWith('*') || sentence_by_character.startsWith('-'))) {
-                detectedGender = gender;
-                currentSpeaker = 'groovy';
-                model = defaultModel;
-                console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
-                isSceneChange = true;  // Reset the scene change flag
-              }
+                  // Try to run speakText to create the audio file
+                  try {
+                    await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
 
-              // If the sentence starts with a parenthetical action or emotion, the speaker is continuing to speak
-              if (sentence_by_character.startsWith('(') || (!sentence_by_character.startsWith('*') && !speakerChanged && !isSceneChange)) {
-                isContinuingToSpeak = true;
-              }
+                    // Check if the audio file exists
+                    const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
+                    if (!response.ok) {
+                      throw new Error(`File not found at ${audioFile}`);
+                    }
+                  } catch (e) {
+                    console.log('Error speaking text on first attempt or file not found: ', e);
 
-              let audioFile: string = '';
-              spokenLineIndex += 1;
-              const cleanText: string = removeMarkdownAndSpecialSymbols(sentence_by_character);
-              let translationEntry: string = '';
-
-              // Speak the sentence if speech output is enabled
-              if (audioLanguage === 'en-US') {
-                // Speak the original text
-                if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Text: ', cleanText.slice(0, 30));
-                }
-                try {
-                  if (cleanText != '') {
-                    audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanText.slice(0, 10)}`);
-
-                    // Try to run speakText to create the audio file
+                    // If the first attempt fails or the file doesn't exist, try to run speakText again
+                    console.log(`Trying to run speakText again...`);
                     try {
                       await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
 
@@ -1536,53 +1576,53 @@ function Home({ user }: HomeProps) {
                         throw new Error(`File not found at ${audioFile}`);
                       }
                     } catch (e) {
-                      console.log('Error speaking text on first attempt or file not found: ', e);
-
-                      // If the first attempt fails or the file doesn't exist, try to run speakText again
-                      console.log(`Trying to run speakText again...`);
-                      try {
-                        await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
-
-                        // Check if the audio file exists
-                        const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
-                        if (!response.ok) {
-                          throw new Error(`File not found at ${audioFile}`);
-                        }
-                      } catch (e) {
-                        console.log('Error speaking text on second attempt or file not found: ', e);
-                        audioFile = '';  // Unset the audioFile variable
-                      }
+                      console.log('Error speaking text on second attempt or file not found: ', e);
+                      audioFile = '';  // Unset the audioFile variable
                     }
                   }
-                  // sleep for 1 second
-                  setTimeout(() => {
-                    if (debug) {
-                      console.log('avoid any rate limits...');
-                    }
-                  }, 50);
-                } catch (e) {
-                  console.log('Error speaking text: ', e);
                 }
+                // sleep for 1 second
+                setTimeout(() => {
+                  if (debug) {
+                    console.log('avoid any rate limits...');
+                  }
+                }, 50);
+              } catch (e) {
+                console.log('Error speaking text: ', e);
+              }
 
+            } else {
+              // Speak the translated text
+              if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
+                // Use the previously translated text
+                translationEntry = translatedText;
               } else {
-                // Speak the translated text
-                if (translatedText !== '' && audioLanguage == subtitleLanguage && translateText) {
-                  // Use the previously translated text
-                  translationEntry = translatedText;
-                } else {
-                  // Translate the text
-                  translationEntry = await fetchTranslation(sentence_by_character, audioLanguage);
-                }
-                const cleanTranslation = removeMarkdownAndSpecialSymbols(translationEntry);
-                if (debug) {
-                  console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence_by_character, "\n Translation Text: ", cleanTranslation);
-                }
-                try {
-                  if (cleanTranslation != '') {
-                    audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                    setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanTranslation.slice(0, 10)}`);
+                // Translate the text
+                translationEntry = await fetchTranslation(sentence, audioLanguage);
+              }
+              const cleanTranslation = removeMarkdownAndSpecialSymbols(translationEntry);
+              if (debug) {
+                console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", cleanTranslation);
+              }
+              try {
+                if (cleanTranslation != '') {
+                  audioFile = `audio/${story.id}/${sentenceId}.mp3`;
+                  setLoadingOSD(`Speech to Text MP3 encoding #${sentenceId} - ${detectedGender}/${model}/${audioLanguage} - Text: ${cleanTranslation.slice(0, 10)}`);
 
-                    // Try to run speakText to create the audio file
+                  // Try to run speakText to create the audio file
+                  try {
+                    await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
+
+                    // Check if the audio file exists
+                    const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
+                    if (!response.ok) {
+                      throw new Error(`File not found at ${audioFile}`);
+                    }
+                  } catch (e) {
+                    console.log('Error speaking text on first attempt or file not found: ', e);
+
+                    // If the first attempt fails or the file doesn't exist, try to run speakText again
+                    console.log(`Trying to run speakText again...`);
                     try {
                       await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
 
@@ -1592,45 +1632,31 @@ function Home({ user }: HomeProps) {
                         throw new Error(`File not found at ${audioFile}`);
                       }
                     } catch (e) {
-                      console.log('Error speaking text on first attempt or file not found: ', e);
-
-                      // If the first attempt fails or the file doesn't exist, try to run speakText again
-                      console.log(`Trying to run speakText again...`);
-                      try {
-                        await speakText(cleanTranslation, 1, detectedGender, audioLanguage, model, audioFile);
-
-                        // Check if the audio file exists
-                        const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
-                        if (!response.ok) {
-                          throw new Error(`File not found at ${audioFile}`);
-                        }
-                      } catch (e) {
-                        console.log('Error speaking text on second attempt or file not found: ', e);
-                        audioFile = '';  // Unset the audioFile variable
-                      }
+                      console.log('Error speaking text on second attempt or file not found: ', e);
+                      audioFile = '';  // Unset the audioFile variable
                     }
                   }
-                } catch (e) {
-                  console.log('Error speaking text: ', e);
                 }
+              } catch (e) {
+                console.log('Error speaking text: ', e);
               }
+            }
 
-              // Update the last speaker
-              lastSpeaker = currentSpeaker;
+            // Update the last speaker
+            lastSpeaker = currentSpeaker;
 
-              // If there is a current scene, add the sentence to it
-              if (scene && (cleanText !== '' || translationEntry !== '') && audioFile !== '') {
-                scene.sentences.push({
-                  id: sentenceId++,
-                  text: translationEntry != '' ? translationEntry : sentence_by_character,
-                  imageUrl: lastImage,  // or another image related to the sentence
-                  speaker: currentSpeaker,  // or another speaker related to the sentence
-                  gender: detectedGender,  // or another gender related to the sentence
-                  language: audioLanguage,  // or another language related to the sentence
-                  model: model,  // or another model related to the sentence
-                  audioFile: `https://storage.googleapis.com/${bucketName}/${audioFile}`,  // or another audio file related to the sentence
-                });
-              }
+            // If there is a current scene, add the sentence to it
+            if (scene && (cleanText !== '' || translationEntry !== '') && audioFile !== '') {
+              scene.sentences.push({
+                id: sentenceId++,
+                text: translationEntry != '' ? translationEntry : sentence,
+                imageUrl: lastImage,  // or another image related to the sentence
+                speaker: currentSpeaker,  // or another speaker related to the sentence
+                gender: detectedGender,  // or another gender related to the sentence
+                language: audioLanguage,  // or another language related to the sentence
+                model: model,  // or another model related to the sentence
+                audioFile: `https://storage.googleapis.com/${bucketName}/${audioFile}`,  // or another audio file related to the sentence
+              });
             }
           }
 
@@ -1678,7 +1704,7 @@ function Home({ user }: HomeProps) {
     let localEpisode = episode;
     let localIsStory = localEpisode.type ? localEpisode.type == 'episode' ? true : false : isStory;
     let localNamespace = localEpisode.namespace ? localEpisode.namespace : selectedNamespace;
-    let localPersonality = localEpisode.personality ? localEpisode.personality: selectedPersonality;
+    let localPersonality = localEpisode.personality ? localEpisode.personality : selectedPersonality;
     let localCommandPrompt = localEpisode.prompt ? localEpisode.prompt : '';
 
     // fill in the parts of localEpisode with the variables above
@@ -2313,7 +2339,7 @@ function Home({ user }: HomeProps) {
                                 {[...playQueue].reverse().map((episode, index) => (
                                   <tr key={index}>
                                     <td>
-                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {playQueue.length - index}: &quot;{episode.query}&quot;</p>                                    
+                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {playQueue.length - index}: &quot;{episode.query}&quot;</p>
                                     </td>
                                   </tr>
                                 ))}
