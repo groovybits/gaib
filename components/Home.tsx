@@ -725,7 +725,7 @@ function Home({ user }: HomeProps) {
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
-        setSubtitle(`I am ${selectedPersonality.toUpperCase()}\nI can tell you a story or answer any questions.`);
+        setSubtitle(`I am ${playStory.personality.toUpperCase()}\nI can tell you a story or answer any questions.`);
 
         setLoadingOSD(`Finished playing ${playStory.title}. `);
       }
