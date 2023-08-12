@@ -65,7 +65,7 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
-  const [subtitle, setSubtitle] = useState<string>('\n- Groovy -\nCreate your own story today');
+  const [subtitle, setSubtitle] = useState<string>(`I am Groovy\nI can tell you a story or answer any questions.`);
   const [loadingOSD, setLoadingOSD] = useState<string>('Waiting for your ideas...');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
@@ -343,7 +343,7 @@ function Home({ user }: HomeProps) {
     }
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processTwitchChat, 1000);  // Then every N seconds
+    const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef, selectedPersonality, selectedNamespace, parseQuestion]);
@@ -436,7 +436,7 @@ function Home({ user }: HomeProps) {
       isProcessingRef.current = false;
     }
 
-    const intervalId = setInterval(processNewsArticle, 10000);  // Then every N seconds
+    const intervalId = setInterval(processNewsArticle, 30000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize, selectedNamespace, selectedPersonality, parseQuestion]);
@@ -468,6 +468,36 @@ function Home({ user }: HomeProps) {
           // History refresh request
           if (localEpisode.refresh !== undefined && localEpisode.refresh == true) {
             localHistory = [];
+          }
+
+          // setup the story structure
+          let story: Story = {
+            title: '',
+            url: '',
+            thumbnailUrls: [],
+            id: '',
+            UserId: localEpisode.username,
+            prompt: localEpisode.prompt,
+            tokens: tokens,
+            scenes: [],
+            imageUrl: '',
+            imagePrompt: '',
+            timestamp: Date.now(),
+            personality: localEpisode.personality,
+            namespace: localEpisode.namespace,
+            references: [],
+            isStory: localEpisode.type === 'episode' ? true : false,
+            shareUrl: '',
+            rawText: '',
+            query: localEpisode.title,
+            documentCount: documentCount,
+            episodeCount: episodeCount,
+            gptModel: modelName,
+            gptFastModel: fastModelName,
+            gptPrompt: buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, localEpisode.type === 'episode' ? true : false),
+            defaultGender: gender,
+            speakingLanguage: audioLanguage,
+            subtitleLanguage: subtitleLanguage,
           }
 
           try {
@@ -607,35 +637,9 @@ function Home({ user }: HomeProps) {
 
           console.log(`storyQueue: messages length ${newMessages.length} contain\n${JSON.stringify(newMessages, null, 2)}`)
 
-          // setup the story structure
-          let story: Story = {
-            title: '',
-            url: '',
-            thumbnailUrls: [],
-            id: '',
-            UserId: localEpisode.username,
-            prompt: localEpisode.prompt,
-            tokens: tokens,
-            scenes: [],
-            imageUrl: '',
-            imagePrompt: '',
-            timestamp: Date.now(),
-            personality: localEpisode.personality,
-            namespace: localEpisode.namespace,
-            references: pendingSourceDocs,
-            isStory: localEpisode.type === 'episode' ? true : false,
-            shareUrl: '',
-            rawText: pendingMessage,
-            query: localEpisode.title,
-            documentCount: documentCount,
-            episodeCount: episodeCount,
-            gptModel: modelName,
-            gptFastModel: fastModelName,
-            gptPrompt: buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, localEpisode.type === 'episode' ? true : false),
-            defaultGender: gender,
-            speakingLanguage: audioLanguage,
-            subtitleLanguage: subtitleLanguage,
-          }
+          // collect the story raw text and references 
+          story.rawText = pendingMessage;
+          story.references = pendingSourceDocs;
 
           setStoryQueue([...storyQueue, story]);
         }
@@ -721,17 +725,16 @@ function Home({ user }: HomeProps) {
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
-        setSubtitle('Think of a story you want to tell, or a question you want to ask.');
+        setSubtitle(`I am ${selectedPersonality.toUpperCase()}\nI can tell you a story or answer any questions.`);
 
         setLoadingOSD(`Finished playing ${playStory.title}. `);
-        setSubtitle('\nGroovy\nCreate your visions and dreams today');
       }
     };
 
     playQueueDisplay();  // Run immediately on mount
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(playQueueDisplay, 1000);  // Then every N seconds
+    const intervalId = setInterval(playQueueDisplay, 3000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD, setImageUrl, setLastStory]);
@@ -1567,6 +1570,12 @@ function Home({ user }: HomeProps) {
                       }
                     }
                   }
+                  // sleep for 1 second
+                  setTimeout(() => {
+                    if (debug) {
+                      console.log('avoid any rate limits...');
+                    }
+                  }, 50);
                 } catch (e) {
                   console.log('Error speaking text: ', e);
                 }
