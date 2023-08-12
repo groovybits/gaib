@@ -63,7 +63,7 @@ Example:
 
 Note: Type !episode and !question  in lower case. Ask any questions and our AI will answer them.
 
-You can also use natural language to ask questions or generate episodes. For example, you can ask "as a buddhist What is the meaning of life?" or "Tell me a story about a samurai as an anime expert.".
+You can also use natural language to ask questions or generate episodes. For example, you can ask "buddha What is the meaning of life?" or "god Tell me a story about a samurai as an anime expert.".
 `;
 
 if (!channelName) {
@@ -333,99 +333,91 @@ client.on('message', async (channel: any, tags: {
     // Assuming PERSONALITY_PROMPTS is defined as a Record with string keys
     const personalitiesFuzzySet = FuzzySet(Object.keys(PERSONALITY_PROMPTS));
 
-    // Define a regular expression to match the patterns
-    const personalityPattern = /as\s*(?:a|an|the)?\s*([\w]+)(?=\s|$)/i;
-
-    // Look for a match in the message
-    const personalityMatch = message.match(personalityPattern);
-
-    let extractedPersonality: string = '';
-    if (personalityMatch) {
-      extractedPersonality = personalityMatch[1].toLowerCase().trim();
-    }
+    // Extract the first word from the message
+    const firstWord = message.split(' ')[0].toLowerCase().trim().replace(',', '').replace(':', '');
 
     // Use fuzzy matching to find the closest match from the available personalities
-    const fuzzyMatch = personalitiesFuzzySet.get(extractedPersonality);
+    const fuzzyMatch = personalitiesFuzzySet.get(firstWord);
     if (fuzzyMatch && fuzzyMatch[0][0] > 0.7) { // You can adjust the threshold as needed
-      extractedPersonality = fuzzyMatch[0][1];
+      personality = fuzzyMatch[0][1];
     }
 
-    // Check if the extracted personality exists in PERSONALITY_PROMPTS
-    if (extractedPersonality && !PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
-      console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-      client.say(channel, `Sorry, personality "${extractedPersonality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
-    } else if (extractedPersonality) {
-      personality = extractedPersonality;
-      console.log(`handleSubmit: Extracted personality: "${personality}"`);  // Log the extracted personality
-    }
+    if (personality && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
+      console.error(`buildPrompt: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
+      client.say(channel, `Sorry, personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
+    } else if (personality) {
 
-    if (!answerInChat) {
-      // Add the command to the Realtime Database
-      const newCommandRef = db.ref(`commands/${channelName}`).push();
-      newCommandRef.set({
-        channelName: channelName,
-        type: isStory ? 'episode' : 'question',
-        title: message,
-        username: tags.username, // Add this line to record the username
-        personality: personality,
-        namespace: 'groovypdf',
-        refresh: false,
-        prompt: `${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username}.`,
-        timestamp: admin.database.ServerValue.TIMESTAMP
-      });
+      if (!answerInChat) {
+        // Add the command to the Realtime Database
+        const newCommandRef = db.ref(`commands/${channelName}`).push();
+        newCommandRef.set({
+          channelName: channelName,
+          type: isStory ? 'episode' : 'question',
+          title: message,
+          username: tags.username, // Add this line to record the username
+          personality: personality,
+          namespace: 'groovypdf',
+          refresh: false,
+          prompt: `${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username}.`,
+          timestamp: admin.database.ServerValue.TIMESTAMP
+        });
+      } else {
+        lastMessageArray.forEach((messageObject: any) => {
+          if (messageObject.role && messageObject.content) {
+            promptArray.push({ "role": messageObject.role, "content": messageObject.content });
+          }
+          counter++;
+        });
+        // add the current message to the promptArray with the final personality prompt
+        promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n\n Question: ${message}\n\nAnswer:` });
+        // save the last message in the array for the next prompt
+        lastMessageArray.push({ "role": "user", "content": `${message}` });
+
+        console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
+
+        fetch(`https://api.openai.com/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openApiKey}`,
+          },
+          body: JSON.stringify({
+            model: llm,
+            max_tokens: maxTokens,
+            temperature: temperature,
+            top_p: 1,
+            n: 1,
+            stream: false,
+            messages: promptArray,
+          }),
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+              const aiMessage = data.choices[0].message;
+              console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
+
+              console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
+
+              gptAnswer = aiMessage.content;
+              client.say(channel, aiMessage.content);
+
+              lastMessageArray.push({ aiMessage });
+            } else {
+              console.error('No choices returned from OpenAI!\n');
+              console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
+            }
+          })
+          .catch(error => console.error('An error occurred:', error));
+      }
     } else {
-      lastMessageArray.forEach((messageObject: any) => {
-        if (messageObject.role && messageObject.content) {
-          promptArray.push({ "role": messageObject.role, "content": messageObject.content });
-        }
-        counter++;
-      });
-      // add the current message to the promptArray with the final personality prompt
-      promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n\n Question: ${message}\n\nAnswer:` });
-      // save the last message in the array for the next prompt
-      lastMessageArray.push({ "role": "user", "content": `${message}` });
-
-      console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
-
-      fetch(`https://api.openai.com/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openApiKey}`,
-        },
-        body: JSON.stringify({
-          model: llm,
-          max_tokens: maxTokens,
-          temperature: temperature,
-          top_p: 1,
-          n: 1,
-          stream: false,
-          messages: promptArray,
-        }),
-      })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const aiMessage = data.choices[0].message;
-            console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
-
-            console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
-
-            gptAnswer = aiMessage.content;
-            client.say(channel, aiMessage.content);
-
-            lastMessageArray.push({ aiMessage });
-          } else {
-            console.error('No choices returned from OpenAI!\n');
-            console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
-          }
-        })
-        .catch(error => console.error('An error occurred:', error));
+      // Handle the case when the first word does not match any personality
+      client.say(channel, `Sorry, I can only respond if the message starts with a recognized personality. try !personalities to see a list of available personalities.`);
     }
   }
 });
