@@ -948,7 +948,7 @@ function Home({ user }: HomeProps) {
         }
 
         // This function generates the AI message using GPT
-        const generateAImessage = async (imagePrompt: string, personalityPrompt: string, maxTokens: number = 100): Promise<string> => {
+        const generateAImessage = async (imagePrompt: string, personalityPrompt: string, maxTokens: number = 50): Promise<string> => {
           try {
             // Prepare the request body. You may need to adjust this to fit your use case.
             const requestBody = {
@@ -969,7 +969,7 @@ function Home({ user }: HomeProps) {
             // Set a timeout to abort the fetch request after N / 1000 seconds
             const timeout = setTimeout(() => {
               controller.abort();
-            }, 120000);
+            }, 60000);
 
             try {
               // Make the fetch request, passing the signal to it
@@ -1019,7 +1019,7 @@ function Home({ user }: HomeProps) {
         };
 
         // This function generates the image using the AI message from the previous function
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = false): Promise<{ image: string, prompt: string }> => {
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = true): Promise<{ image: string, prompt: string }> => {
           try {
             let prompt: string = imagePrompt;
             let content: string = '';
@@ -1229,7 +1229,7 @@ function Home({ user }: HomeProps) {
           let firstSentence = sentences.length > 0 ? sentences[0] : query;
 
           // display title screen with image and title
-          const imgGenResult = await generateAIimage(`${promptImageTitle}`, `${historyPrimerTitle}\n`, '', 0);
+          const imgGenResult = await generateAIimage(`${promptImageTitle} ${firstSentence}`, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
             lastImage = imgGenResult.image;
             imageCount++;
@@ -1277,7 +1277,7 @@ function Home({ user }: HomeProps) {
                 console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
                 setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
 
-                const imgGenResult = await generateAIimage(`${promptImage} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                const imgGenResult = await generateAIimage(`${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
                 if (imgGenResult.image !== '') {
                   lastImage = imgGenResult.image;
                   imageCount++;
@@ -1318,7 +1318,7 @@ function Home({ user }: HomeProps) {
           if (sceneTexts.length === 0 && imageCount === 0) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
-            const imgGenResult = await generateAIimage(`${promptImage} ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            const imgGenResult = await generateAIimage(`${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             if (imgGenResult.image !== '') {
               lastImage = imgGenResult.image;
               imageCount++;
