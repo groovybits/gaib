@@ -1147,37 +1147,37 @@ function Home({ user }: HomeProps) {
           let historyPrimer = historyPrimerTitle;
 
           let maleVoiceModels = {
-            'en-US': ['en-US-Wavenet-A', 'en-US-Wavenet-B', 'en-US-Wavenet-D', 'en-US-Wavenet-I', 'en-US-Wavenet-J'],
-            'ja-JP': ['ja-JP-Wavenet-C', 'ja-JP-Wavenet-D', 'ja-JP-Standard-C', 'ja-JP-Standard-D'],
+            'en-US': ['en-US-Neural2-A', 'en-US-Neural2-D', 'en-US-Neural2-I', 'en-US-Neural2-J'],
+            'ja-JP': ['ja-JP-Neural2-C', 'ja-JP-Neural2-D', 'ja-JP-Wavenet-C', 'ja-JP-Wavenet-D'],
             'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
             'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
           };
 
           let femaleVoiceModels = {
-            'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-            'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+            'en-US': ['en-US-Neural2-C', 'en-US-Neural2-E', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-H'],
+            'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
             'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
             'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
           };
 
           let neutralVoiceModels = {
-            'en-US': ['en-US-Wavenet-C', 'en-US-Wavenet-F', 'en-US-Wavenet-G', 'en-US-Wavenet-H', 'en-US-Wavenet-E'],
-            'ja-JP': ['ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A', 'ja-JP-Standard-B'],
+            'en-US': ['en-US-Neural2-C', 'en-US-Neural2-E', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-H'],
+            'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
             'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
             'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
           };
 
           let defaultModels = {
-            'en-US': 'en-US-Wavenet-C',
-            'ja-JP': 'ja-JP-Wavenet-A',
+            'en-US': 'en-US-Neural2-C',
+            'ja-JP': 'ja-JP-Neural2-B',
             'es-US': 'es-US-Wavenet-A',
             'en-GB': 'en-GB-Wavenet-A'
           };
 
           if (gender == `MALE`) {
             defaultModels = {
-              'en-US': 'en-US-Wavenet-A',
-              'ja-JP': 'ja-JP-Wavenet-C',
+              'en-US': 'en-US-Neural2-A',
+              'ja-JP': 'ja-JP-Nueral2-C',
               'es-US': 'es-US-Wavenet-B',
               'en-GB': 'en-GB-Wavenet-B'
             };
