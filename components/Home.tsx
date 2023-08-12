@@ -65,12 +65,12 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
-  const [subtitle, setSubtitle] = useState<string>(`I am Groovy\nI can tell you a story or answer any questions.`);
-  const [loadingOSD, setLoadingOSD] = useState<string>('Waiting for your ideas...');
+  const [subtitle, setSubtitle] = useState<string>(`-*- GOD -*- \nWelcome, I can tell you a story or answer your questions.`);
+  const [loadingOSD, setLoadingOSD] = useState<string>('Waiting for questions or plotlines...');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('groovy');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('god');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
@@ -78,10 +78,10 @@ function Home({ user }: HomeProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [tokensCount, setTokensCount] = useState<number>(0);
+  const [tokensCount, setTokensCount] = useState<number>(300);
   const [isStory, setIsStory] = useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('MultiModal');
-  const [documentCount, setDocumentCount] = useState<number>(1);
+  const [documentCount, setDocumentCount] = useState<number>(4);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
   const [news, setNews] = useState<Array<any>>([]);
   const [isFetching, setIsFetching] = useState<boolean>(true);
@@ -114,8 +114,8 @@ function Home({ user }: HomeProps) {
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
   const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 3);
-  const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-3.5-turbo');
-  const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo');
+  const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-4');
+  const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k');
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -725,7 +725,7 @@ function Home({ user }: HomeProps) {
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
-        setSubtitle(`I am ${playStory.personality.toUpperCase()}\nI can tell you a story or answer any questions.`);
+        setSubtitle(`-*- ${playStory.personality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
 
         setLoadingOSD(`Finished playing ${playStory.title}. `);
       }
@@ -1132,7 +1132,7 @@ function Home({ user }: HomeProps) {
           let voiceModels: { [key: string]: string } = {};
           let genderMarkedNames: any[] = [];
           let detectedGender: string = gender;
-          let currentSpeaker: string = 'groovy';
+          let currentSpeaker: string = 'god';
           let isContinuingToSpeak = false;
           let isSceneChange = false;
           let lastSpeaker = '';
@@ -1156,28 +1156,28 @@ function Home({ user }: HomeProps) {
           let historyPrimer = historyPrimerTitle;
 
           let maleVoiceModels = {
-            'en-US': ['en-US-Neural2-A', 'en-US-Neural2-D', 'en-US-Neural2-I', 'en-US-Neural2-J'],
+            'en-US': ['en-US-Neural2-J', 'en-US-Neural2-D', 'en-US-Neural2-I', 'en-US-Neural2-A'],
             'ja-JP': ['ja-JP-Neural2-C', 'ja-JP-Neural2-D', 'ja-JP-Wavenet-C', 'ja-JP-Wavenet-D'],
             'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
             'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
           };
 
           let femaleVoiceModels = {
-            'en-US': ['en-US-Neural2-C', 'en-US-Neural2-E', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-H'],
+            'en-US': ['en-US-Neural2-H', 'en-US-Neural2-E', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-C'],
             'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
             'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
             'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
           };
 
           let neutralVoiceModels = {
-            'en-US': ['en-US-Neural2-C', 'en-US-Neural2-E', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-H'],
+            'en-US': ['en-US-Neural2-H', 'en-US-Neural2-C', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-E'],
             'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
             'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
             'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
           };
 
           let defaultModels = {
-            'en-US': 'en-US-Neural2-C',
+            'en-US': 'en-US-Neural2-H',
             'ja-JP': 'ja-JP-Neural2-B',
             'es-US': 'es-US-Wavenet-A',
             'en-GB': 'en-GB-Wavenet-A'
@@ -1185,7 +1185,7 @@ function Home({ user }: HomeProps) {
 
           if (gender == `MALE`) {
             defaultModels = {
-              'en-US': 'en-US-Neural2-A',
+              'en-US': 'en-US-Neural2-J',
               'ja-JP': 'ja-JP-Nueral2-C',
               'es-US': 'es-US-Wavenet-B',
               'en-GB': 'en-GB-Wavenet-B'
@@ -1262,7 +1262,7 @@ function Home({ user }: HomeProps) {
           }
 
           // display title screen with image and title
-          const imgGenResult = await generateAIimage(`${promptImageTitle} ${firstSentence}`, `${historyPrimerTitle}\n`, '', 0);
+          const imgGenResult = await generateAIimage(`a picture for the intro scene of the ${story.isStory ? "episode title" : "question"}: ${firstSentence}`, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
             lastImage = imgGenResult.image;
             imageCount++;
@@ -1310,7 +1310,7 @@ function Home({ user }: HomeProps) {
                 console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
                 setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
 
-                const imgGenResult = await generateAIimage(`${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                const imgGenResult = await generateAIimage(`a picture for the ${story.isStory ? "episode" : "question"} title: ${firstSentence} for the current scene where: ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
                 if (imgGenResult.image !== '') {
                   lastImage = imgGenResult.image;
                   imageCount++;
@@ -1351,7 +1351,7 @@ function Home({ user }: HomeProps) {
           if (sceneTexts.length === 0 && imageCount === 0) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
-            const imgGenResult = await generateAIimage(`${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            const imgGenResult = await generateAIimage(`a picture for the ${story.isStory ? "episode title" : "question"}: ${firstSentence} for the current scene: ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
             if (imgGenResult.image !== '') {
               lastImage = imgGenResult.image;
               imageCount++;
@@ -1526,7 +1526,7 @@ function Home({ user }: HomeProps) {
             // If the speaker has changed or if it's a scene change, switch back to the default voice
             if (!speakerChanged && (sentence.startsWith('*') || sentence.startsWith('-'))) {
               detectedGender = gender;
-              currentSpeaker = 'groovy';
+              currentSpeaker = 'god';
               model = defaultModel;
               console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
               isSceneChange = true;  // Reset the scene change flag
@@ -1761,7 +1761,7 @@ function Home({ user }: HomeProps) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localEpisode.personality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
+            localEpisode.personality = 'god' as keyof typeof PERSONALITY_PROMPTS;
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
@@ -1993,10 +1993,10 @@ function Home({ user }: HomeProps) {
             }
           }
 
-          // If the transcript includes the word "hey groovy", set the start word detected ref to true
-          if (spokenInput.toLowerCase().includes("hey groovy") || spokenInput.toLowerCase().includes("hey groovy")) {
-            // trim off the text prefixing "hey gabe" or "hey groovy" in the spokenInput
-            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey groovy|hey groovy)/gi, '').trim();
+          // If the transcript includes the word "hey god", set the start word detected ref to true
+          if (spokenInput.toLowerCase().includes("hey god") || spokenInput.toLowerCase().includes("hey god")) {
+            // trim off the text prefixing "hey gabe" or "hey god" in the spokenInput
+            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey god|hey god)/gi, '').trim();
             startWordDetected.current = true;
           } else if (!startWordDetected.current) {
             console.log(`Speech recognition onresult: Start word not detected, spokenInput: '${spokenInput.slice(0, 16)}...'`);
@@ -2004,8 +2004,8 @@ function Home({ user }: HomeProps) {
             spokenInput = '';
           }
 
-          // If the transcript includes the word "stop groovy", stop the recognition
-          if (spokenInput.toLowerCase().includes("stop groovy") || spokenInput.toLowerCase().includes("stop groovy")) {
+          // If the transcript includes the word "stop god", stop the recognition
+          if (spokenInput.toLowerCase().includes("stop god") || spokenInput.toLowerCase().includes("stop god")) {
             stopWordDetected.current = true;
             recognition.stop();
             setVoiceQuery('');

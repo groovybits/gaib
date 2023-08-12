@@ -7,7 +7,7 @@ interface TokensDropdownProps {
 }
 
 const TokensDropdown: React.FC<TokensDropdownProps> = ({ onChange }) => {
-  const [tokensCount, setTokensCount] = useState<number>(0);
+  const [tokensCount, setTokensCount] = useState<number>(300);
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = parseInt(event.target.value, 10);

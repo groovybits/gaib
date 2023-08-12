@@ -43,6 +43,9 @@ const TermsPopup: React.FC = () => {
 				maxHeight: '90%'
 			}}>
 				<h2>Welcome to GAIB The Groovy AI Bot</h2>
+
+				<p>Currently Access is only by request, please ask on the Twitch channel for information on access.</p>
+
 				<p>Please read our Terms of Service carefully. By using this website, you agree to the Terms of Service.</p>
 				<p>
 					You are responsible for all content you post on GAIB The Groovy AI Bot (&apos;User Content&apos;). You represent and warrant that you own or have the necessary rights to post your User Content, and that your User Content does not violate any laws or the rights of others.

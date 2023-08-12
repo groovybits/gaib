@@ -7,7 +7,7 @@ interface FastModelNameDropdownProps {
 }
 
 const FastModelNameDropdown: React.FC<FastModelNameDropdownProps> = ({ onChange }) => {
-  const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo');
+  const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k');
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;

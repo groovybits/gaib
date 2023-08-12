@@ -7,7 +7,7 @@ interface ModelNameDropdownProps {
 }
 
 const ModelNameDropdown: React.FC<ModelNameDropdownProps> = ({ onChange }) => {
-  const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-3.5-turbo');
+  const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-4');
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
