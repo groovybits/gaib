@@ -65,12 +65,12 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
-  const [subtitle, setSubtitle] = useState<string>(`-*- GOD -*- \nWelcome, I can tell you a story or answer your questions.`);
+  const [subtitle, setSubtitle] = useState<string>(`-*- BUDDHA -*- \nWelcome, I can tell you a story or answer your questions.`);
   const [loadingOSD, setLoadingOSD] = useState<string>('Waiting for questions or plotlines...');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('god');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('buddha');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
@@ -116,6 +116,7 @@ function Home({ user }: HomeProps) {
   const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 3);
   const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-4');
   const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k');
+  const [currentNumber, setCurrentNumber] = useState<number>(1);
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -659,6 +660,41 @@ function Home({ user }: HomeProps) {
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [submitQueue, isFetching, isSpeaking, isProcessingRef, isSubmittingRef, listening, episodes]);
 
+  useEffect(() => {
+    async function fetchData() {
+      if (!isDisplayingRef.current) {
+        const url = await getGaib();
+        if (url != '') {
+          setImageUrl(url);
+        }
+        setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
+      }
+    }
+
+    fetchData();
+  }, [selectedPersonality, isDisplayingRef.current]); // Empty dependency array ensures this runs once on mount
+
+  async function getGaib() {
+    const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
+    const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
+
+    if (maxNumber > 1) {
+      setCurrentNumber((currentNumber % maxNumber) + 1);
+    } else {
+      setCurrentNumber(maxNumber);
+    }
+
+    if (currentNumber < 1) {
+      setCurrentNumber(1);
+    }
+
+    let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
+    if (directoryUrl != null && maxNumber >= 1 && currentNumber >= 1) {
+      url = `${directoryUrl}/${currentNumber}.png`;
+    }
+    return url;
+  }
+
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
     const playQueueDisplay = async () => {
@@ -725,16 +761,21 @@ function Home({ user }: HomeProps) {
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
-        setSubtitle(`-*- ${playStory.personality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
 
         setLoadingOSD(`Finished playing ${playStory.title}. `);
+        if (playStory.personality === 'passthrough') {
+          // sleep for a few seconds to allow the user to read the subtitle
+          await new Promise(r => setTimeout(r, 10000));          
+        }
+        setImageUrl(await getGaib());
+        setSubtitle(`-*- ${playStory.personality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
       }
     };
 
     playQueueDisplay();  // Run immediately on mount
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(playQueueDisplay, 3000);  // Then every N seconds
+    const intervalId = setInterval(playQueueDisplay, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD, setImageUrl, setLastStory]);
@@ -769,23 +810,6 @@ function Home({ user }: HomeProps) {
           const keywords = combinedWords.slice(0, numberOfKeywords);
 
           return keywords;
-        }
-
-        async function getGaib() {
-          const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
-          const maxNumber = Number(process.env.NEXT_PUBLIC_GAIB_IMAGE_MAX_NUMBER);
-          let randomNumber = 0;
-          if (maxNumber > 1) {
-            randomNumber = (maxNumber && maxNumber > 1) ? Math.floor(Math.random() * maxNumber) + 1 : -1;
-          } else {
-            randomNumber = maxNumber;
-          }
-
-          let url = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
-          if (directoryUrl != null && maxNumber >= 1 && randomNumber >= 0) {
-            url = `${directoryUrl}/${randomNumber}.png`;
-          }
-          return url;
         }
 
         // Choose Pexles, DeepAI or local images
@@ -1132,7 +1156,7 @@ function Home({ user }: HomeProps) {
           let voiceModels: { [key: string]: string } = {};
           let genderMarkedNames: any[] = [];
           let detectedGender: string = gender;
-          let currentSpeaker: string = 'god';
+          let currentSpeaker: string = 'buddha';
           let isContinuingToSpeak = false;
           let isSceneChange = false;
           let lastSpeaker = '';
@@ -1526,7 +1550,7 @@ function Home({ user }: HomeProps) {
             // If the speaker has changed or if it's a scene change, switch back to the default voice
             if (!speakerChanged && (sentence.startsWith('*') || sentence.startsWith('-'))) {
               detectedGender = gender;
-              currentSpeaker = 'god';
+              currentSpeaker = 'buddha';
               model = defaultModel;
               console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
               isSceneChange = true;  // Reset the scene change flag
@@ -1761,7 +1785,7 @@ function Home({ user }: HomeProps) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localEpisode.personality = 'god' as keyof typeof PERSONALITY_PROMPTS;
+            localEpisode.personality = 'buddha' as keyof typeof PERSONALITY_PROMPTS;
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
@@ -1993,10 +2017,10 @@ function Home({ user }: HomeProps) {
             }
           }
 
-          // If the transcript includes the word "hey god", set the start word detected ref to true
-          if (spokenInput.toLowerCase().includes("hey god") || spokenInput.toLowerCase().includes("hey god")) {
-            // trim off the text prefixing "hey gabe" or "hey god" in the spokenInput
-            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey god|hey god)/gi, '').trim();
+          // If the transcript includes the word "hey buddha", set the start word detected ref to true
+          if (spokenInput.toLowerCase().includes("hey buddha") || spokenInput.toLowerCase().includes("hey buddha")) {
+            // trim off the text prefixing "hey gabe" or "hey buddha" in the spokenInput
+            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey buddha|hey buddha)/gi, '').trim();
             startWordDetected.current = true;
           } else if (!startWordDetected.current) {
             console.log(`Speech recognition onresult: Start word not detected, spokenInput: '${spokenInput.slice(0, 16)}...'`);
@@ -2004,8 +2028,8 @@ function Home({ user }: HomeProps) {
             spokenInput = '';
           }
 
-          // If the transcript includes the word "stop god", stop the recognition
-          if (spokenInput.toLowerCase().includes("stop god") || spokenInput.toLowerCase().includes("stop god")) {
+          // If the transcript includes the word "stop buddha", stop the recognition
+          if (spokenInput.toLowerCase().includes("stop buddha") || spokenInput.toLowerCase().includes("stop buddha")) {
             stopWordDetected.current = true;
             recognition.stop();
             setVoiceQuery('');
@@ -2288,7 +2312,7 @@ function Home({ user }: HomeProps) {
   return (
     <>
       <div className={styles.header}>
-        <title>Groovy</title>
+        <title>${ selectedPersonality }</title>
       </div>
       <Layout>
         <div className="mx-auto flex flex-col gap-4 bg-#FFCC33">
@@ -2358,13 +2382,13 @@ function Home({ user }: HomeProps) {
                       }}
                       type="button"
                     >
-                      {loadingOSD}{(latestMessage.message) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : isSpeaking ? 'Playing...' : ' - Groovy is ready to generate your vision!'}
+                      {loadingOSD}{(latestMessage.message) ? latestMessage.message.replace(/\n/g, '').split('').reverse().slice(0, 45).reverse().join('') : isSpeaking ? 'Playing...' : ` - ${selectedPersonality} is ready to answer your questions!`}
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
                         <img
                           src={imageUrl}
-                          alt="Groovy"
+                          alt="Buddha"
                         />
                       </>
                     )}
@@ -2546,8 +2570,8 @@ function Home({ user }: HomeProps) {
                               ? `Writing your story...`
                               : `Answering your question...`
                             : isStory
-                              ? `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} episodes]\nSay "Hey Groovy...Plotline" for a story, say "Stop Groovy" to cancel. You can also type it here then press the Enter key.`
-                              : `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} answers]\nSay "Hey Groovy...Question" for an answer, say "Stop Groovy" to cancel. You can also type it here then press the Enter key.`
+                              ? `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} episodes]\nSay "Hey Buddha...Plotline" for a story, say "Stop Buddha" to cancel. You can also type it here then press the Enter key.`
+                              : `[${selectedPersonality}/${selectedNamespace} ${gender} ${audioLanguage}/${subtitleLanguage} (${documentCount} docs) X ${episodeCount} answers]\nSay "Hey Buddha...Question" for an answer, say "Stop Buddha" to cancel. You can also type it here then press the Enter key.`
                       }
                       value={query}
                       onChange={(e) => {
