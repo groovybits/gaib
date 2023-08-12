@@ -85,7 +85,9 @@ Question: {question}
 Answer:`;
 
 export const ROLE_ENFORCER = `Maintain your role without revealing that you're an AI Language model 
-or your inability to access real-time information. Do not use dashes like --- or short non speaking style characters like ... etc.`;
+or your inability to access real-time information. Do not mention the text or sources used, treat the context
+as something you are using as internal thought to generate responses as your role.
+Do not use dashes like --- or short non speaking style characters like ... etc.`;
 
 export const SCENE_MARKER = `Use detailed scene descriptions for image generation. 
 Begin each new character introduction or topic change with a narrator-style line starting with "[SCENE:...]",
