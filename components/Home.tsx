@@ -28,6 +28,7 @@ import GPT3Tokenizer from 'gpt3-tokenizer';
 import { fetchEventSourceWithAuth, fetchWithAuth } from '@/utils/fetchWithAuth';
 import ModelNameDropdown from '@/components/ModelNameDropdown';
 import FastModelNameDropdown from '@/components/FastModelNameDropdown';
+import { create } from 'lodash';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -117,6 +118,7 @@ function Home({ user }: HomeProps) {
   const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-4');
   const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k');
   const [currentNumber, setCurrentNumber] = useState<number>(1);
+  const [personalityImageUrls, setPersonalityImageUrls] = useState<Record<string, string>>({});
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -681,16 +683,24 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     async function fetchData() {
       if (!isDisplayingRef.current) {
-        const url = await getGaib();
-        if (url != '') {
-          setImageUrl(url);
+        if (!personalityImageUrls[selectedPersonality]) {
+          let imageId = uuidv4().replace(/-/g, '');
+          let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(selectedPersonality, false).slice(0, 2000), true, '', selectedPersonality, imageId);
+          if (gaibImage !== '') {
+            setImageUrl(gaibImage);
+            setPersonalityImageUrls((state) => ({ ...state, [selectedPersonality]: gaibImage }));
+          } else {
+            setImageUrl(await getGaib());
+          }
+        } else {
+          setImageUrl(personalityImageUrls[selectedPersonality]);
         }
         setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
       }
     }
 
     fetchData();
-  }, [selectedPersonality, isDisplayingRef.current]); // Empty dependency array ensures this runs once on mount
+  }, [selectedPersonality, isDisplayingRef.current]); // Dependency array ensures this runs when selectedPersonality or isDisplayingRef.current changes
 
   async function getGaib() {
     const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
@@ -713,6 +723,184 @@ function Home({ user }: HomeProps) {
     return url;
   }
 
+  function extractKeywords(sentence: string, numberOfKeywords = 2) {
+    const doc = nlp(sentence);
+
+    // Extract nouns, verbs, and adjectives
+    const nouns = doc.nouns().out('array');
+    const verbs = doc.verbs().out('array');
+    const adjectives = doc.adjectives().out('array');
+
+    // Combine the extracted words and shuffle the array
+    const combinedWords = [...nouns, ...verbs, ...adjectives];
+    combinedWords.sort(() => 0.5 - Math.random());
+
+    // Select the first N words as keywords
+    const keywords = combinedWords.slice(0, numberOfKeywords);
+
+    return keywords;
+  }
+
+  // Choose Pexles, DeepAI or local images
+  async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: string = '', localEpisodeId = '', count = 0): Promise<string> {
+    const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
+    const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
+
+    // check if enabled
+    if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
+      return '';
+    }
+
+    // Check if it has been 5 seconds since we last generated an image
+    const endTime = new Date();
+    const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+    if (deltaTimeInSeconds < 1 && messages.length > 0) {
+      console.log(`generateImageUrl: has been ${deltaTimeInSeconds} seconds since last image generation.`);
+    }
+    setStartTime(endTime);
+
+    if (sentence === '') {
+      sentence = '';
+      return '';
+    }
+
+    let keywords = '';
+
+    // Use local images if requested else use Pexels API to fetch images
+    if (!useImageAPI) {
+      // use local images
+      return await getGaib();
+    } else {
+      try {
+        let response;
+        if (imageSource === 'pexels') {
+          let extracted_keywords = extractKeywords(sentence, 32).join(' ');
+          console.log('Extracted keywords: [', extracted_keywords, ']');
+          keywords = encodeURIComponent(extracted_keywords);
+          response = await fetchWithAuth('/api/pexels', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keywords }),
+          });
+        } else if (imageSource === 'deepai') {
+          let exampleImage = '' as string;
+          if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+            if (lastImage !== '') {
+              exampleImage = lastImage;
+            } else {
+              exampleImage = await getGaib();
+            }
+          }
+          response = await fetchWithAuth('/api/deepai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: `${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
+          });
+        } else if (imageSource === 'openai') {
+          let exampleImage = '' as string;
+          if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
+            if (lastImage !== '') {
+              exampleImage = lastImage;
+            } else {
+              exampleImage = await getGaib();
+            }
+          }
+          response = await fetchWithAuth('/api/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: `${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
+          });
+        } else if (imageSource === 'getimgai') {
+          let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v2-1';
+          let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
+          let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 512;
+          let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
+          let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
+          let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
+          let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
+          let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
+          let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
+
+          // Ensure width and height are multiples of 64
+          width = Math.floor(width / 64) * 64;
+          height = Math.floor(height / 64) * 64;
+
+          if (width > 1024) {
+            width = 1024;
+          }
+          if (height > 1024) {
+            height = 1024;
+          }
+          response = await fetchWithAuth('/api/getimgai', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              prompt: `${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
+              negativePrompt: negativePrompt,
+              width: width,
+              height: height,
+              steps: steps,
+              guidance: guidance,
+              seed: seed,
+              scheduler: scheduler,
+              outputFormat: outputFormat,
+              imageUUID: count,
+            }),
+          });
+        } else {
+          console.error(`ImageGeneration: Unknown image source ${imageSource}`);
+          return await getGaib();
+        }
+
+        if (!response || !response.ok || response.status !== 200) {
+          console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API ${response ? response.statusText : ''}`);
+          return '';
+        }
+
+        const data = await response.json();
+        let duplicateImage = false;
+        if (imageSource === 'pexels') {
+          return data.photos[0].src.large2x;
+        } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
+          const imageUrl = data.output_url;
+          if (data?.duplicate === true) {
+            duplicateImage = true;
+          }
+          if (saveImages === 'true' && !duplicateImage && authEnabled) {
+            // Store the image and index it
+            await fetchWithAuth('/api/storeImage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ imageUrl, episodeId: localEpisodeId, imageUUID: count}),
+            });
+          }
+          const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
+          if (bucketName !== '' && !duplicateImage) {
+            return `https://storage.googleapis.com/${bucketName}/images/${localEpisodeId}/${count}.jpg`;
+          } else {
+            // don't store images in GCS or it is a duplicate image
+            return imageUrl;
+          }
+        } else if (imageSource === 'getimgai' && data.output_url) {
+          const imageUrl = data.output_url;
+          if (data?.duplicate === true) {
+            duplicateImage = true;
+          }
+          return imageUrl;
+        } else {
+          console.error('No image found for the given keywords: [', keywords, ']');
+        }
+      } catch (error) {
+        console.error('Error fetching image from API:', error);
+      }
+    }
+    // failed to fetch image, leave the image as is
+    return '';
+  }
+
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
     const playQueueDisplay = async () => {
@@ -727,7 +915,11 @@ function Home({ user }: HomeProps) {
           setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
           setLoadingOSD(`Prompt: ${playStory.prompt}\nShared to: ${playStory.shareUrl}\n${playStory.tokens} Tokens ${playStory.isStory ? 'Story' : 'Question'} ${playStory.personality} ${playStory.namespace}\n${playStory.references && playStory.references.join(', ')}`);
           setLastStory(playStory.shareUrl);
-          setImageUrl(playStory.imageUrl);
+          if (playStory.imageUrl != '' && playStory.imageUrl != null && playStory.imageUrl != undefined && typeof playStory.imageUrl != 'object') {
+            setImageUrl(playStory.imageUrl);
+          } else {
+            setImageUrl(await getGaib());
+          }
 
           // This function needs to be async to use await inside
           async function playScenes() {
@@ -743,6 +935,8 @@ function Home({ user }: HomeProps) {
                 }
                 if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
                   setImageUrl(sentence.imageUrl);
+                } else {
+                  setImageUrl(await getGaib());
                 }
                 if (sentence.audioFile != '' && sentence.audioFile.match(/\.mp3$/)) {
                   try {
@@ -765,8 +959,12 @@ function Home({ user }: HomeProps) {
             }
           }
 
-          // Call the function
-          await playScenes();
+          try {
+            // Call the function
+            await playScenes();
+          } catch (error) {
+            console.error('An error occurred in the playScenes function:', error); // Check for any errors
+          }
 
           setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
 
@@ -785,7 +983,25 @@ function Home({ user }: HomeProps) {
           // sleep for a few seconds to allow the user to read the subtitle
           await new Promise(r => setTimeout(r, 10000));          
         }
-        setImageUrl(await getGaib());
+
+        try {
+          // get an image generated from the personality
+          if (!personalityImageUrls[selectedPersonality]) {
+            let imageId = uuidv4().replace(/-/g, '');
+            let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(selectedPersonality, false).slice(0, 2000), true, '', selectedPersonality, imageId);
+            if (gaibImage !== '') {
+              setImageUrl(gaibImage);
+              setPersonalityImageUrls((state) => ({ ...state, [selectedPersonality]: gaibImage }));
+            } else {
+              setImageUrl(await getGaib());
+            }
+          } else {
+            setImageUrl(personalityImageUrls[selectedPersonality]);
+          }
+        } catch (error) {
+          console.error('An error occurred in the getGaib function:', error); // Check for any errors
+        }
+
         setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
       }
     };
@@ -811,181 +1027,6 @@ function Home({ user }: HomeProps) {
       // lock speaking and avoid crashing
       try {
         let lastImage: string = '';
-
-        function extractKeywords(sentence: string, numberOfKeywords = 2) {
-          const doc = nlp(sentence);
-
-          // Extract nouns, verbs, and adjectives
-          const nouns = doc.nouns().out('array');
-          const verbs = doc.verbs().out('array');
-          const adjectives = doc.adjectives().out('array');
-
-          // Combine the extracted words and shuffle the array
-          const combinedWords = [...nouns, ...verbs, ...adjectives];
-          combinedWords.sort(() => 0.5 - Math.random());
-
-          // Select the first N words as keywords
-          const keywords = combinedWords.slice(0, numberOfKeywords);
-
-          return keywords;
-        }
-
-        // Choose Pexles, DeepAI or local images
-        async function generateImageUrl(sentence: string, useImageAPI = true, lastImage: string = '', localEpisodeId = '', count = 0): Promise<string> {
-          const imageSource = (process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels') as 'pexels' | 'deepai' | 'openai' | 'getimgai';
-          const saveImages = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SAVING || 'false';
-
-          // check if enabled
-          if (process.env.NEXT_PUBLIC_ENABLE_IMAGES !== 'true') {
-            return '';
-          }
-
-          // Check if it has been 5 seconds since we last generated an image
-          const endTime = new Date();
-          const deltaTimeInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-          if (deltaTimeInSeconds < 1 && messages.length > 0) {
-            console.log(`generateImageUrl: has been ${deltaTimeInSeconds} seconds since last image generation.`);
-          }
-          setStartTime(endTime);
-
-          if (sentence === '') {
-            sentence = '';
-            return '';
-          }
-
-          let keywords = '';
-
-          // Use local images if requested else use Pexels API to fetch images
-          if (!useImageAPI) {
-            // use local images
-            return await getGaib();
-          } else {
-            try {
-              let response;
-              if (imageSource === 'pexels') {
-                let extracted_keywords = extractKeywords(sentence, 32).join(' ');
-                console.log('Extracted keywords: [', extracted_keywords, ']');
-                keywords = encodeURIComponent(extracted_keywords);
-                response = await fetchWithAuth('/api/pexels', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ keywords }),
-                });
-              } else if (imageSource === 'deepai') {
-                let exampleImage = '' as string;
-                if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-                  if (lastImage !== '') {
-                    exampleImage = lastImage;
-                  } else {
-                    exampleImage = await getGaib();
-                  }
-                }
-                response = await fetchWithAuth('/api/deepai', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `${sentence}`, negative_prompt: 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered', imageUrl: exampleImage }),
-                });
-              } else if (imageSource === 'openai') {
-                let exampleImage = '' as string;
-                if (process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE && process.env.NEXT_PUBLIC_IMAGE_GENERATION_EXAMPLE_IMAGE === 'true') {
-                  if (lastImage !== '') {
-                    exampleImage = lastImage;
-                  } else {
-                    exampleImage = await getGaib();
-                  }
-                }
-                response = await fetchWithAuth('/api/openai', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
-                });
-              } else if (imageSource === 'getimgai') {
-                let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v2-1';
-                let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
-                let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 512;
-                let height = process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_HEIGHT) : 512;
-                let steps = process.env.NEXT_PUBLIC_GETIMGAI_STEPS ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_STEPS) : 25;
-                let guidance = process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE ? parseFloat(process.env.NEXT_PUBLIC_GETIMGAI_GUIDANCE) : 7.5;
-                let seed = process.env.NEXT_PUBLIC_GETIMGAI_SEED ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_SEED) : 42;
-                let scheduler = process.env.NEXT_PUBLIC_GETIMGAI_SCHEDULER || 'dpmsolver++';
-                let outputFormat = process.env.NEXT_PUBLIC_GETIMGAI_OUTPUT_FORMAT || 'jpeg';
-
-                // Ensure width and height are multiples of 64
-                width = Math.floor(width / 64) * 64;
-                height = Math.floor(height / 64) * 64;
-
-                if (width > 1024) {
-                  width = 1024;
-                }
-                if (height > 1024) {
-                  height = 1024;
-                }
-                response = await fetchWithAuth('/api/getimgai', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    model: model,
-                    prompt: `${sentence.trim().replace('\n', ' ').slice(0, 2040)}`,
-                    negativePrompt: negativePrompt,
-                    width: width,
-                    height: height,
-                    steps: steps,
-                    guidance: guidance,
-                    seed: seed,
-                    scheduler: scheduler,
-                    outputFormat: outputFormat,
-                  }),
-                });
-              }
-
-              if (!response || !response.ok || response.status !== 200) {
-                console.error(`ImageGeneration: No response received from Image Generation ${imageSource} API ${response ? response.statusText : ''}`);
-                return '';
-              }
-
-              const data = await response.json();
-              let imageId = uuidv4();
-              let duplicateImage = false;
-              if (imageSource === 'pexels') {
-                return data.photos[0].src.large2x;
-              } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
-                const imageUrl = data.output_url;
-                if (data?.duplicate === true) {
-                  duplicateImage = true;
-                }
-                if (saveImages === 'true' && !duplicateImage && authEnabled) {
-                  // Store the image and index it
-                  await fetchWithAuth('/api/storeImage', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ imageUrl, prompt: sentence, episodeId: `${localEpisodeId}_${count}`, imageUUID: imageId }),
-                  });
-                }
-                const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
-                if (bucketName !== '' && !duplicateImage) {
-                  return `https://storage.googleapis.com/${bucketName}/deepAIimage/${localEpisodeId}_${count}_${imageId}.jpg`;
-                } else {
-                  // don't store images in GCS or it is a duplicate image
-                  return imageUrl;
-                }
-              } else if (imageSource === 'getimgai' && data.output_url) {
-                const imageUrl = data.output_url;
-                if (data?.duplicate === true) {
-                  duplicateImage = true;
-                }
-                return imageUrl;
-              } else {
-                console.error('No image found for the given keywords: [', keywords, ']');
-              }
-            } catch (error) {
-              console.error('Error fetching image from API:', error);
-            }
-          }
-          // failed to fetch image, leave the image as is
-          return '';
-        }
 
         // This function generates the AI message using GPT
         const generateAImessage = async (imagePrompt: string, personalityPrompt: string, maxTokens: number = 50): Promise<string> => {

@@ -10,7 +10,7 @@ const apiKey = process.env.GETIMGAI_API_KEY ? process.env.GETIMGAI_API_KEY : '';
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
     if (req.method === 'POST') {
-      const { model, prompt, negativePrompt, width, height, steps, guidance, seed, scheduler, outputFormat } = req.body;
+      const { model, prompt, negativePrompt, width, height, steps, guidance, seed, scheduler, outputFormat, imageUUID } = req.body;
 
       if (apiKey === '') {
         console.error('getimgaiHandler: GETIMGAI_API_KEY not set');
@@ -87,9 +87,8 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
 
       // Prepare the image filename and destination path
       const episodeId = uuidv4();
-      const imageUUID = uuidv4();
-      const imageName = `${episodeId}_${imageUUID}.${outputFormat}`;
-      const destination = `getimgai/${imageName}`;
+      const imageName = `${episodeId}/${imageUUID}.${outputFormat}`;
+      const destination = `images/${imageName}`;
 
       // Create a GCS file instance
       const file = bucket.file(destination);

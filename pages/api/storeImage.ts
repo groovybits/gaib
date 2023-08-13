@@ -18,7 +18,7 @@ const storage = new Storage();
 export default async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
   await authCheck(req, res, async () => {
     if (req.method === 'POST') {
-      const { imageUrl, prompt, episodeId, imageUUID } = req.body;
+      const { imageUrl, episodeId, imageUUID } = req.body;
 
       // Fetch the image
       const response = await fetch(imageUrl);
@@ -38,9 +38,9 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
       // Create a new blob in the bucket and upload the file data
       const bucketName = process.env.GCS_BUCKET_NAME || '';
       const bucket = storage.bucket(bucketName);
-      const file = bucket.file(`deepAIimage/${episodeId}_${imageUUID}.jpg`);
+      const file = bucket.file(`images/${episodeId}/${imageUUID}.jpg`);
 
-      console.log(`storeImage: Uploading image ${episodeId}_${imageUUID}.jpg to ${bucketName}.`);
+      console.log(`storeImage: Uploading image images/${episodeId}/${imageUUID}.jpg to ${bucketName}.`);
 
       // Pipe the image data to the file
       const writeStream = file.createWriteStream({
