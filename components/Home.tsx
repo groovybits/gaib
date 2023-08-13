@@ -326,7 +326,7 @@ function Home({ user }: HomeProps) {
       if (isProcessing) return;  // If a fetch is already in progress, do nothing
       isProcessing = true;  // Set the flag to true to block other fetches
 
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current) {
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && episodes.length <= 1) {
         isProcessingTwitchRef.current = true;
         try {
           await fetchEpisodeData();
@@ -345,7 +345,7 @@ function Home({ user }: HomeProps) {
     }
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
+    const intervalId = setInterval(processTwitchChat, 10000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef, selectedPersonality, selectedNamespace, parseQuestion]);
@@ -353,7 +353,7 @@ function Home({ user }: HomeProps) {
   // News fetching for automating input via a news feed
   useEffect(() => {
     const processNewsArticle = async () => {
-      if (isFetching && !isProcessingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= 0) {
+      if (isFetching && !isProcessingRef.current && feedNewsChannel && newsFeedEnabled && episodes.length <= 1) {
         isProcessingRef.current = true;
 
         let currentNews = news;
@@ -438,7 +438,7 @@ function Home({ user }: HomeProps) {
       isProcessingRef.current = false;
     }
 
-    const intervalId = setInterval(processNewsArticle, 30000);  // Then every N seconds
+    const intervalId = setInterval(processNewsArticle, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [isFetching, currentNewsIndex, news, setCurrentNewsIndex, feedPrompt, episodes, isStory, feedNewsChannel, newsFeedEnabled, isProcessingRef, currentOffset, feedCategory, feedKeywords, feedSort, maxQueueSize, selectedNamespace, selectedPersonality, parseQuestion]);
@@ -539,6 +539,7 @@ function Home({ user }: HomeProps) {
             setLoadingOSD(`Recieved ${localEpisode.type}: ${localEpisode.title.slice(0, 50).replace(/\n/g, ' ')}...`);
             setMessageState((state) => ({ ...state, pending: '' }));
 
+            let dotsStatus = ".";
             // Send the question to the server
             const fetchData = async () => {
               return new Promise<void>((resolve, reject) => {
@@ -619,6 +620,13 @@ function Home({ user }: HomeProps) {
                           setLoadingOSD(`Loading: ${tokens} GPT tokens generated...`);
                         } else {
                           console.log(`handleSubmitQueue: No data returned from the server.`);
+                        }
+                        if (!isDisplayingRef.current) {
+                          dotsStatus += ".";
+                          setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}\n[${tokens} GPT tokens generated]`);
+                          if (dotsStatus.length > 10) {
+                            dotsStatus = ".";
+                          }
                         }
                       }
                     },
@@ -979,10 +987,6 @@ function Home({ user }: HomeProps) {
         stopSpeaking();
 
         setLoadingOSD(`Finished playing ${playStory.title}. `);
-        if (playStory.personality === 'passthrough') {
-          // sleep for a few seconds to allow the user to read the subtitle
-          await new Promise(r => setTimeout(r, 10000));          
-        }
 
         try {
           // get an image generated from the personality
@@ -1317,6 +1321,22 @@ function Home({ user }: HomeProps) {
           const sentences: string[] = nlp(message).sentences().out('array');
           let firstSentence = sentences.length > 0 ? sentences[0] : query;
 
+          if (!isDisplayingRef.current) {
+            if (!personalityImageUrls[story.personality]) {
+              let imageId = uuidv4().replace(/-/g, '');
+              let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', story.personality, imageId);
+              if (gaibImage !== '') {
+                setImageUrl(gaibImage);
+                setPersonalityImageUrls((state) => ({ ...state, [selectedPersonality]: gaibImage }));
+              } else {
+                setImageUrl(await getGaib());
+              }
+            } else {
+              setImageUrl(personalityImageUrls[story.personality]);
+            }
+            setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${isStory ? "Episode:" : "Question"}: ${story.query}...`);
+          }
+
           // walk through sentences and join the ones that are broken up with [SCENE: ... that end with a ] on a subsequent line
           let combinedSentences: string[] = [];
           let currentSceneOrInt: string = '';
@@ -1369,6 +1389,7 @@ function Home({ user }: HomeProps) {
           sceneTexts.push(currentSceneText);
           currentSceneText = "";
 
+          let dotsStatus = ".";
           for (const sentence of combinedSentences) {
             // check if we need to change the scene
             const allowList = ['Title', 'Question', 'Answer', 'Begins', 'Plotline', 'Scene', 'SCENE', 'SCENE:', 'INT.'];
@@ -1417,6 +1438,14 @@ function Home({ user }: HomeProps) {
               // If it's not a new scene, we append the sentence to the current scene text
               currentSceneText += ` ${sentence}`;
               sentencesToSpeak.push(sentence);
+            }
+
+            if (!isDisplayingRef.current) {
+              dotsStatus += ".";
+              setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}`);
+              if (dotsStatus.length > 10) {
+                dotsStatus = ".";
+              }
             }
           }
 
@@ -1512,6 +1541,13 @@ function Home({ user }: HomeProps) {
           let sentenceId = 0;
 
           for (let sentence of sentencesToSpeak) {
+            if (!isDisplayingRef.current) {
+              dotsStatus += ".";
+              setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}\n${dotsStatus}`);
+              if (dotsStatus.length > 10) {
+                dotsStatus = ".";
+              }
+            }
             // get the image for the sentence
             if (sentence.startsWith('SCENE: ')) {
               sentence = sentence.replace('SCENE: ', '');
