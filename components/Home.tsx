@@ -768,7 +768,7 @@ function Home({ user }: HomeProps) {
           await new Promise(r => setTimeout(r, 10000));          
         }
         setImageUrl(await getGaib());
-        setSubtitle(`-*- ${playStory.personality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
+        setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
       }
     };
 

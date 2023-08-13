@@ -36,34 +36,24 @@ if (!openApiKey) {
 
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
-const personalityPrompt: string = "You're the personality requested by the chat message with 'as <personality>' that can answer questions or create episodes / stories. " +
-  "The system commands are: `!episode <description>` to create a new episode, you can also use natural language too " +
-  "`!question <question>` to ask a question, `[wisdom]` or `[science]` to set the knowledge domain, " +
-  "`[refresh]` to refresh the system, `[personality] <role>` to set the AI's personality, " +
-  "`!personalities` to view available personalities, `[prompt] \" < custom prompt> \"` " +
-  "to provide a custom prompt, `!image: <image description > ` to generate an image, " +
-  "and`!help` to get detailed instructions.When asked to generate a story or episode, use`!episode: <description>`. " +
-  "Always communicate with respect.";
+const personalityPrompt: string = "You're the personality requested by the chat message with '<personality> ...' that can answer questions or create episodes / stories. " +
+  "Type !personalities to view available personalities, !image <image description > ` to generate an image, " +
+  "and`!help` to get detailed instructions. When asked to generate a story or episode, include the word episode and the personality asked for if any as the first word." +
+  "Always communicate with respect and as the personality GOD who is all knowing and all seeing.";
 
 const helpMessage: string = `
 Help: - Ask me how to generate anime or general anime questions.
 
+Use the role as the first word in your message to specify the personality you want to use.
+For example, if you want to use the personality god, start your message with 'god ...'.
+
 Commands:
-  !episode <description> - Generate an episode based on  description.
-  !question <question> - Ask a question.
+  !help - Display this help message.
   !image <prompt> - Generate an image based on prompt.
-  [refresh] - Clear conversation history, forget everything.
-  [personality] <role> - Change bot's personality and role.
-  [wisdom] or [science] - Set sources for references.
-  [prompt] "<custom personality prompt>" - AI Instructions.
   !personalities - Display available personalities.
 
 Example:
-  !episode Buddha is enlightened - the story of Buddha. [personality] Anime [refresh][wisdom] [prompt] "You are the Buddha."
-
-Note: Type !episode and !question  in lower case. Ask any questions and our AI will answer them.
-
-You can also use natural language to ask questions or generate episodes. For example, you can ask "buddha What is the meaning of life?" or "god Tell me a story about a samurai as an anime expert.".
+ god what should I wear today?
 `;
 
 if (!channelName) {
@@ -100,7 +90,7 @@ client.on('message', async (channel: any, tags: {
   id: any; username: any;
 }, message: any, self: any) => {
   // Ignore messages from the bot itself
-  if (self && !message.toLowerCase().startsWith('!episode:') && !message.toLowerCase().startsWith('!question:')) return;
+  if (self) return;
 
   // Ignore messages that have already been processed
   if (processedMessageIds[tags.id]) {
@@ -210,112 +200,7 @@ client.on('message', async (channel: any, tags: {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
     client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
     //
-    // Question and Answer modes
-  } else if (
-    message.toLowerCase().replace('answer:', '').trim().startsWith('!episode')
-    || message.toLowerCase().replace('answer:', '').trim().startsWith('!question')
-    || message.toLowerCase().replace('answer:', '').trim().startsWith('episode')
-    || message.toLowerCase().replace('answer:', '').trim().startsWith('question')
-  ) {
-    // Parse the title and plotline from the command
-    let title: any = '';
-
-    let namespace = 'groovypdf';
-    if (message.toLowerCase().includes('[wisdom]')) {
-      namespace = 'groovypdf';
-      message.replace('[wisdom]', '');
-    } else if (message.toLowerCase().includes('[science]')) {
-      namespace = 'videoengineer';
-      message.replace('[science]', '');
-    }
-
-    let personality = 'groovy';
-    try {
-      if (message.toLowerCase().includes('[personality]')) {
-        let personalityMatch = message.toLowerCase().match(/\[personality\]\s*([\w\s]*?)(?=\s|$)/i);
-        if (personalityMatch) {
-          let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
-          if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
-            console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            personality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
-
-            client.say(channel, `Sorry, personality "${extractedPersonality}" does not exist in my database.`);
-          }
-          personality = extractedPersonality;
-          console.log(`handleSubmit: Extracted personality: "${personality}"`);  // Log the extracted personality
-          message = message.toLowerCase().replace(new RegExp('\\[personality\\]\\s*' + extractedPersonality, 'i'), '').trim();
-          message = message.toLowerCase().replace(new RegExp('\\[personality\\]', 'i'), '').trim();
-          console.log(`handleSubmit: Updated question: '${message}'`);  // Log the updated question
-        } else {
-          console.log(`handleSubmit: No personality found in question: '${message}'`);  // Log the question
-
-          client.say(channel, `Sorry, I failed a extracting the personality, please try again. Question: ${message}`);
-        }
-      }
-    } catch (error) {
-      console.error(`handleSubmit: Error extracting personality: '${error}'`);  // Log the question
-
-      client.say(channel, `Sorry, I failed a extracting the personality, please try again.`);
-    }
-
-    // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
-    let prompt = '';
-    try {
-      if (message.toLowerCase().includes('[prompt]')) {
-        let endPrompt = false;
-        let customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
-        if (customPromptMatch) {
-          // try with quotes around the prompt
-          prompt = customPromptMatch[1].trim();
-        } else {
-          // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
-          customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
-          if (customPromptMatch) {
-            prompt = customPromptMatch[1].trim();
-            endPrompt = true;
-          }
-        }
-        if (prompt) {
-          console.log(`handleSubmit: Extracted commandPrompt: '${prompt}'`);  // Log the extracted customPrompt
-          // remove prompt from from question with [PROMPT] "<question>" removed
-          if (endPrompt) {
-            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*' + prompt, 'i'), '').trim();
-          } else {
-            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + prompt + '\"', 'i'), '').trim();
-          }
-          console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
-        } else {
-          console.log(`handleSubmit: No Command Prompt found in question: '${message}'`);  // Log the question
-        }
-      }
-    } catch (error) {
-      console.error(`handleSubmit: Error extracting command Prompt: '${error}'`);  // Log the question  
-
-      client.say(channel, `Sorry, I failed a extracting the command Prompt, please try again.`);
-    }
-
-    title = message.slice(0, promptLimit).trim();
-    const isStory: any = message.toLowerCase().startsWith('!episode') ? true : false;
-
-    // if title is defined and not empty, then add the command to Firestore
-    if (title) {
-      // Add the command to the Realtime Database
-      const newCommandRef = db.ref(`commands/${channelName}`).push();
-      newCommandRef.set({
-        channelName: channelName,
-        type: isStory ? 'episode' : 'question',
-        title,
-        username: tags.username, // Add this line to record the username
-        personality: personality,
-        namespace: namespace,
-        refresh: false,
-        prompt: personalityPrompt,
-        timestamp: admin.database.ServerValue.TIMESTAMP
-      });
-    } else {
-      console.log(`Invalid Format ${tags.username} Please Use "!episode <description>" (received: ${message}).`);
-      client.say(channel, `Groovy Invalid Format ${tags.username} Please Use "!episode <description>" (received: ${message}). See !help for more info.`);
-    }
+    // Question and Answer mode
   } else {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
