@@ -396,16 +396,16 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
               <Link href="/feed" className={styles.footer}>
                 <a>Story Board</a>
               </Link>&nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Copy Link</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleFacebookShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on Facebook</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleLinkedInShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on LinkedIn</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleTwitterShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={() => { storyId && handleShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Copy Link</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={() => { storyId && handleFacebookShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on Facebook</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={() => { storyId && handleLinkedInShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on LinkedIn</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={() => { storyId && handleTwitterShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={stopAutoPaging}>{autoPage ? 'Manual-Page' : 'Auto-Page'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={toggleSpeakingText}>{autoSpeak ? 'Stop Playing' : 'Start Playing'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={resetState}>Reset</button>&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => setUseSubtitles(!useSubtitles)}>{useSubtitles ? 'Hide Subtitles' : 'Show Subtitles'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => setViewTranscript(!viewTranscript)}>{viewTranscript ? 'Hide Transcript' : 'Show Transcript'}</button>
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={stopAutoPaging}>{autoPage ? 'Manual-Page' : 'Auto-Page'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={toggleSpeakingText}>{autoSpeak ? 'Stop Playing' : 'Start Playing'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={resetState}>Reset</button>&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={() => setUseSubtitles(!useSubtitles)}>{useSubtitles ? 'Hide Subtitles' : 'Show Subtitles'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} disabled={isSpeakingRef.current} onClick={() => setViewTranscript(!viewTranscript)}>{viewTranscript ? 'Hide Transcript' : 'Show Transcript'}</button>
             </div>
             <div className={styles.feedSection}>
               <div className={styles.feed}>
