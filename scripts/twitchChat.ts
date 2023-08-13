@@ -241,6 +241,26 @@ client.on('message', async (channel: any, tags: {
       refresh = true;
     }
 
+    // look for [PROMPT] "<prompt>" in the message and extract the prompt
+    let prompt = '';
+    let customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
+    if (customPromptMatch) {
+      // try with quotes around the prompt
+      prompt = customPromptMatch[1].trim();
+    } else {
+      // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
+      customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
+      if (customPromptMatch) {
+        prompt = customPromptMatch[1].trim();
+      }
+    }
+    if (prompt) {
+      console.log(`handleSubmit: Extracted commandPrompt: '${prompt}'`);  // Log the extracted customPrompt
+      // remove prompt from from question with [PROMPT] "<question>" removed
+      message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + prompt + '\"', 'i'), '').trim();
+      console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
+    }
+
     if (personality && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
       console.error(`buildPrompt: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
       client.say(channel, `Sorry, personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
@@ -256,7 +276,7 @@ client.on('message', async (channel: any, tags: {
           personality: personality,
           namespace: namespace,
           refresh: refresh,
-          prompt: `${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly.`,
+          prompt: `${prompt} ${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly.`,
           timestamp: admin.database.ServerValue.TIMESTAMP
         });
       } else {
