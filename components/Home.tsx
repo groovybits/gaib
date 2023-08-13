@@ -502,6 +502,24 @@ function Home({ user }: HomeProps) {
             subtitleLanguage: subtitleLanguage,
           }
 
+          if (!personalityImageUrls[story.personality]) {
+            // Generate image here...
+            if (!personalityImageUrls[story.personality]) {
+              let imageId = uuidv4().replace(/-/g, '');
+              let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', story.personality, imageId);
+              if (gaibImage !== '') {
+                setImageUrl(gaibImage);
+                setPersonalityImageUrls((state) => ({ ...state, [story.personality]: gaibImage }));
+              } else {
+                setImageUrl(await getGaib());
+              }
+            } else {
+              setImageUrl(personalityImageUrls[story.personality]);
+            }
+          } else {
+            setImageUrl(personalityImageUrls[story.personality]);
+          }
+
           try {
             console.log(`SubmitQueue: Submitting Recieved ${localEpisode.type} #${episodes.length}: ${localEpisode.title}`);
             // create the titles and parts of an episode
@@ -1104,7 +1122,7 @@ function Home({ user }: HomeProps) {
         };
 
         // This function generates the image using the AI message from the previous function
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = true): Promise<{ image: string, prompt: string }> => {
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = false): Promise<{ image: string, prompt: string }> => {
           try {
             let prompt: string = imagePrompt;
             let content: string = '';
@@ -1327,14 +1345,14 @@ function Home({ user }: HomeProps) {
               let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', story.personality, imageId);
               if (gaibImage !== '') {
                 setImageUrl(gaibImage);
-                setPersonalityImageUrls((state) => ({ ...state, [selectedPersonality]: gaibImage }));
+                setPersonalityImageUrls((state) => ({ ...state, [story.personality]: gaibImage }));
               } else {
                 setImageUrl(await getGaib());
               }
             } else {
               setImageUrl(personalityImageUrls[story.personality]);
             }
-            setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${isStory ? "Episode:" : "Question"}: ${story.query}...`);
+            setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}.\n[${story.tokens} GPT tokens generated]`);
           }
 
           // walk through sentences and join the ones that are broken up with [SCENE: ... that end with a ] on a subsequent line
@@ -1362,7 +1380,14 @@ function Home({ user }: HomeProps) {
           }
 
           // display title screen with image and title
-          const imgGenResult = await generateAIimage(`a picture for the intro scene of the ${story.isStory ? "episode title" : "question"}: ${firstSentence}`, `${historyPrimerTitle}\n`, '', 0);
+          promptImage = `a picture for the ${story.isStory ? "episode title" : "question"}: ${story.title} for the current scene: ${currentSceneText}`;
+          if (!story.isStory) {
+            promptImage =
+              "Portrait shot of the personality: "
+              + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000)
+              + "\n\n Answering: " + `${story.title}:\n ${currentSceneText}`;
+          }
+          const imgGenResult = await generateAIimage(promptImage, `${historyPrimerTitle}\n`, '', 0);
           if (imgGenResult.image !== '') {
             lastImage = imgGenResult.image;
             imageCount++;
@@ -1410,8 +1435,14 @@ function Home({ user }: HomeProps) {
                 // generate this scenes image
                 console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
                 setLoadingOSD(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
-
-                const imgGenResult = await generateAIimage(`a picture for the ${story.isStory ? "episode" : "question"} title: ${firstSentence} for the current scene where: ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+                let promptImage = `a picture for the ${story.isStory ? "episode title" : "question"}: ${story.title} for the current scene: ${currentSceneText}`;
+                if (!story.isStory) {
+                  promptImage =
+                    "Portrait shot of the personality: "
+                    + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000)
+                    + "\n\n Answering: " + `${story.title}:\n ${currentSceneText}`;
+                }
+                const imgGenResult = await generateAIimage(promptImage, `${historyPrimer}\n`, '', imageCount);
                 if (imgGenResult.image !== '') {
                   lastImage = imgGenResult.image;
                   imageCount++;
@@ -1442,7 +1473,7 @@ function Home({ user }: HomeProps) {
 
             if (!isDisplayingRef.current) {
               dotsStatus += ".";
-              setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}`);
+              setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}\n[${story.tokens} GPT tokens generated]`);
               if (dotsStatus.length > 10) {
                 dotsStatus = ".";
               }
@@ -1460,7 +1491,14 @@ function Home({ user }: HomeProps) {
           if (sceneTexts.length === 0 && imageCount === 0) {
             console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
             setLoadingOSD(`Generating #${imageCount + 1} Scene ${sceneCount + 1} of: ${currentSceneText.slice(0, 20)}`);
-            const imgGenResult = await generateAIimage(`a picture for the ${story.isStory ? "episode title" : "question"}: ${firstSentence} for the current scene: ${currentSceneText}`, `${historyPrimer}\n`, '', imageCount);
+            let promptImage = `a picture for the ${story.isStory ? "episode title" : "question"}: ${story.title} for the current scene: ${currentSceneText}`;
+            if (!story.isStory) {
+              promptImage =
+                "Portrait shot of the personality: "
+                + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000)
+                + "\n\n Answering: " + `${story.title}:\n ${currentSceneText}`;
+            }
+            const imgGenResult = await generateAIimage(promptImage, `${historyPrimer}\n`, '', imageCount);
             if (imgGenResult.image !== '') {
               lastImage = imgGenResult.image;
               imageCount++;
@@ -1543,7 +1581,7 @@ function Home({ user }: HomeProps) {
           for (let sentence of sentencesToSpeak) {
             if (!isDisplayingRef.current) {
               dotsStatus += ".";
-              setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}\n${dotsStatus}`);
+              setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}\n${dotsStatus}\n[${story.tokens} GPT tokens generated]`);
               if (dotsStatus.length > 10) {
                 dotsStatus = ".";
               }
