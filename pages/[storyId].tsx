@@ -51,7 +51,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
     }
   };
 
-  const stopSpeakingText = () => {
+  const toggleSpeakingText = () => {
     if (autoSpeak) {
       setAutoSpeak(false);
       //setAutoPage(false);
@@ -84,8 +84,10 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
 
   // Reset the state when the story changes
   const resetState = () => {
-    stopAutoPaging();
-    stopSpeakingText();
+    setAutoPage(false);
+    setAutoSpeak(false);
+    stopSpeaking();
+    isSpeakingRef.current = false;
     setCurrentScene(0);
     setCurrentSentence(0);
     setAutoSpeak(true);
@@ -148,7 +150,6 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
           setCurrentScene(prevScene => prevScene + 1);
           setCurrentSentence(0); // Reset sentence index when moving to the next scene
         } else {
-          resetState();
           setAutoSpeak(false);
           //setAutoPage(false);
         }
@@ -395,13 +396,13 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
               <Link href="/feed" className={styles.footer}>
                 <a>Story Board</a>
               </Link>&nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Copy Link</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleFacebookShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on Facebook</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleLinkedInShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on LinkedIn</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleTwitterShareClick(storyId); stopAutoPaging(); stopSpeakingText(); }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => { storyId && handleShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Copy Link</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => { storyId && handleFacebookShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on Facebook</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => { storyId && handleLinkedInShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on LinkedIn</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={() => { storyId && handleTwitterShareClick(storyId); stopAutoPaging(); toggleSpeakingText(); }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={stopAutoPaging}>{autoPage ? 'Manual-Page' : 'Auto-Page'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={stopSpeakingText}>{autoSpeak ? 'Stop Playing' : 'Start Playing'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+              <button className={styles.footer} onClick={toggleSpeakingText}>{autoSpeak ? 'Stop Playing' : 'Start Playing'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
               <button className={styles.footer} onClick={resetState}>Reset</button>&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => setUseSubtitles(!useSubtitles)}>{useSubtitles ? 'Hide Subtitles' : 'Show Subtitles'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => setViewTranscript(!viewTranscript)}>{viewTranscript ? 'Hide Transcript' : 'Show Transcript'}</button>
