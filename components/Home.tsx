@@ -240,7 +240,6 @@ function Home({ user }: HomeProps) {
     let isProcessing = false;
 
     async function fetchEpisodeData() {
-      const idToken = await user?.getIdToken();
       try {
         if (debug) {
           console.log(`fetchEpisodeData: Fetching documents for channel ${channelId} and user ${user?.uid}...`);
@@ -901,7 +900,6 @@ function Home({ user }: HomeProps) {
                   body: JSON.stringify({ prompt: `${sentence.trim().replace('\n', ' ').slice(0, 800)}` }),
                 });
               } else if (imageSource === 'getimgai') {
-                const idToken = await user?.getIdToken();
                 let model = process.env.NEXT_PUBLIC_GETIMGAI_MODEL || 'stable-diffusion-v2-1';
                 let negativePrompt = process.env.NEXT_PUBLIC_GETIMGAI_NEGATIVE_PROMPT || 'blurry, cropped, watermark, unclear, illegible, deformed, jpeg artifacts, writing, letters, numbers, cluttered';
                 let width = process.env.NEXT_PUBLIC_GETIMGAI_WIDTH ? parseInt(process.env.NEXT_PUBLIC_GETIMGAI_WIDTH) : 512;
@@ -958,7 +956,6 @@ function Home({ user }: HomeProps) {
                   duplicateImage = true;
                 }
                 if (saveImages === 'true' && !duplicateImage && authEnabled) {
-                  const idToken = await user?.getIdToken();
                   // Store the image and index it
                   await fetchWithAuth('/api/storeImage', {
                     method: 'POST',
@@ -1107,7 +1104,6 @@ function Home({ user }: HomeProps) {
         }
 
         async function fetchTranslation(text: string, targetLanguage: string): Promise<string> {
-          const idToken = await user?.getIdToken();
           const response = await fetchWithAuth('/api/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

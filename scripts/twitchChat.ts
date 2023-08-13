@@ -271,7 +271,7 @@ client.on('message', async (channel: any, tags: {
         newCommandRef.set({
           channelName: channelName,
           type: isStory ? 'episode' : 'question',
-          title: message + ` asked by ${tags.username}`,
+          title: `${tags.username} ${isStory ? "asked to create the story" : "asked the question"}: ` + message,
           username: tags.username, // Add this line to record the username
           personality: personality,
           namespace: namespace,
