@@ -229,19 +229,16 @@ client.on('message', async (channel: any, tags: {
 
     let namespace = 'groovypdf';
     // check for either wisdom or science namespace and set the namespace variable
-    if (message.toLowerCase().includes('[wisdom]') || message.toLowerCase().includes(' wisdom')) {
+    if (message.toLowerCase().includes('[wisdom]') || message.toLowerCase().includes('wisdom')) {
       namespace = 'groovypdf';
-      message.replace('[wisdom]', '');
-    } else if (message.toLowerCase().includes('[science]') || message.toLowerCase().includes(' science')) {
+    } else if (message.toLowerCase().includes('[science]') || message.toLowerCase().includes('science')) {
       namespace = 'videoengineer';
-      message.replace('[science]', '');
     }
 
     // set refresh if refresh seen in message
     let refresh = false;
     if (message.toLowerCase().includes('[refresh]') || message.toLowerCase().includes('refresh]')) {
       refresh = true;
-      message.replace('[refresh]', '');
     }
 
     if (personality && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
