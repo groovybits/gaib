@@ -19,12 +19,11 @@ const db = admin.database();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 800;
-const promptLimit: number = process.env.GROOVY_PROMPT_LIMIT ? parseInt(process.env.GROOVY_PROMPT_LIMIT) : 1000;
+const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 500;
 const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
-const llm = 'gpt-4';  //'gpt-3.5-turbo-16k-0613';  //'gpt-4';  //'text-davinci-002';
+const llm = 'gpt-3.5-turbo-16k';  //'gpt-4';
 const maxTokens = 100;
-const temperature = 0.8;
+const temperature = 0.3;
 
 const answerInChat = process.env.TWITCH_ANSWER_IN_CHAT ? process.env.TWITCH_ANSWER_IN_CHAT === 'true' : false;
 
@@ -123,76 +122,9 @@ client.on('message', async (channel: any, tags: {
   }
   console.log(`Received message: ${message}\nfrom ${tags.username} in ${channel}\nwith tags: ${JSON.stringify(tags)}\n`)
 
-  // Check if the message is a command
-  if (message.toLowerCase().startsWith('!image')) {
-    console.log(`${tags.username} Sending Image to Channel: ${channel}\n`);
-    client.say(channel, `${tags.username} Sending Image to Channel: ${channel}`);
 
-    let namespace = 'groovypdf';
-    if (message.toLowerCase().includes('[wisdom]')) {
-      namespace = 'groovypdf';
-      message.replace('[wisdom]', '');
-    } else if (message.toLowerCase().includes('[science]')) {
-      namespace = 'videoengineer';
-      message.replace('[science]', '');
-    }
-
-    // Extract a customPrompt if [PROMPT] "<custom prompt>" is given with prompt in quotes, similar to personality extraction yet will have spaces
-    let prompt = '';
-    try {
-      if (message.toLowerCase().includes('[prompt]')) {
-        let endPrompt = false;
-        let customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*\"([^"]*?)(?=\")/i);
-        if (customPromptMatch) {
-          // try with quotes around the prompt
-          prompt = customPromptMatch[1].trim();
-        } else {
-          // try without quotes around the prompt, go from [PROMPT] to the end of line or newline character
-          customPromptMatch = message.toLowerCase().match(/\[prompt\]\s*([^"\n]*?)(?=$|\n)/i);
-          if (customPromptMatch) {
-            prompt = customPromptMatch[1].trim();
-            endPrompt = true;
-          }
-        }
-        if (prompt) {
-          console.log(`handleSubmit: Extracted commandPrompt: '${prompt}'`);  // Log the extracted customPrompt
-          // remove prompt from from question with [PROMPT] "<question>" removed
-          if (endPrompt) {
-            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*' + prompt, 'i'), '').trim();
-          } else {
-            message = message.toLowerCase().replace(new RegExp('\\[prompt\\]\\s*\"' + prompt + '\"', 'i'), '').trim();
-          }
-          console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
-        } else {
-          console.log(`handleSubmit: No Command Prompt found in question: '${message}'`);  // Log the question
-        }
-      }
-    } catch (error) {
-      console.error(`handleSubmit: Error extracting command Prompt: '${error}'`);  // Log the question  
-
-      client.say(channel, `Sorry, I failed a extracting the command Prompt, please try again.`);
-    }
-
-    let imagePrompt = message.slice(0, promptLimit).trim();
-    if (imagePrompt) {
-      // Add the command to the Realtime Database
-      const newCommandRef = db.ref(`commands/${channelName}`).push();
-      newCommandRef.set({
-        channelName: channelName,
-        type: 'question',
-        title: imagePrompt,
-        personality: 'passthrough',
-        namespace: namespace,
-        refresh: false,
-        prompt: personalityPrompt,
-        username: tags.username, // Add this line to record the username
-        timestamp: admin.database.ServerValue.TIMESTAMP
-      });
-    } else {
-      console.log(`Invalid Format ${tags.username} Please Use "!image: <prompt>" (received: ${message}).`);
-      client.say(channel, `Groovy: Invalid Format ${tags.username} Please Use "!image: <prompt>" (received: ${message}). See !help for more info.`);
-    }
-  } else if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help' || message.toLowerCase().replace('answer:', '').trim().startsWith('/help'))) {
+  // check message to see if it is a command
+  if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help' || message.toLowerCase().replace('answer:', '').trim().startsWith('/help'))) {
     client.say(channel, helpMessage);
     //
     // Personality Prompts list for help with !personalities  
@@ -261,25 +193,36 @@ client.on('message', async (channel: any, tags: {
       console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
     }
 
+    if (personality === '' && message.toLowerCase().startsWith('!image') || message.toLowerCase().startsWith('/image') || message.toLowerCase().startsWith('image')) {
+      personality = 'passthrough';
+    }
+
+    if (message.length > messageLimit) {
+      console.log(`handleSubmit: Message length ${message.length} exceeds limit of ${messageLimit}. Truncating message.`);
+      client.say(channel, `Sorry, your message is too long. Please keep it under ${messageLimit} characters. Truncaging your message to ${messageLimit} characters.`);
+      message = message.slice(0, messageLimit);
+    }
+
     if (personality && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
       console.error(`buildPrompt: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
       client.say(channel, `Sorry, personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
     } else if (personality) {
-      if (!answerInChat) {
-        // Add the command to the Realtime Database
-        const newCommandRef = db.ref(`commands/${channelName}`).push();
-        newCommandRef.set({
-          channelName: channelName,
-          type: isStory ? 'episode' : 'question',
-          title: `${tags.username} ${isStory ? "asked to create the story" : "asked the question"}: ` + message,
-          username: tags.username, // Add this line to record the username
-          personality: personality,
-          namespace: namespace,
-          refresh: refresh,
-          prompt: `${prompt} ${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly.`,
-          timestamp: admin.database.ServerValue.TIMESTAMP
-        });
-      } else {
+      // Add the command to the Realtime Database
+      const newCommandRef = db.ref(`commands/${channelName}`).push();
+      newCommandRef.set({
+        channelName: channelName,
+        type: isStory ? 'episode' : 'question',
+        title: `${tags.username} ${isStory ? "asked to create the story" : "asked the question"}: ` + message,
+        username: tags.username, // Add this line to record the username
+        personality: personality,
+        namespace: namespace,
+        refresh: refresh,
+        prompt: `${prompt} ${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly.`,
+        timestamp: admin.database.ServerValue.TIMESTAMP
+      });
+
+      // Use GPT to talk back in chat
+      if (answerInChat) {
         lastMessageArray.forEach((messageObject: any) => {
           if (messageObject.role && messageObject.content) {
             promptArray.push({ "role": messageObject.role, "content": messageObject.content });
@@ -335,7 +278,7 @@ client.on('message', async (channel: any, tags: {
       }
     } else {
       // Handle the case when the first word does not match any personality
-      client.say(channel, `Sorry, I can only respond if the message starts with a recognized personality. try !personalities to see a list of available personalities.`);
+      client.say(channel, `Sorry, I can only respond if the message starts with a recognized personality "<personality> <question>". try !personalities to see a list of available personalities.`);
     }
   }
 });
