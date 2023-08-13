@@ -227,6 +227,23 @@ client.on('message', async (channel: any, tags: {
       personality = fuzzyMatch[0][1];
     }
 
+    let namespace = 'groovypdf';
+    // check for either wisdom or science namespace and set the namespace variable
+    if (message.toLowerCase().includes('[wisdom]') || message.toLowerCase().includes(' wisdom')) {
+      namespace = 'groovypdf';
+      message.replace('[wisdom]', '');
+    } else if (message.toLowerCase().includes('[science]') || message.toLowerCase().includes(' science')) {
+      namespace = 'videoengineer';
+      message.replace('[science]', '');
+    }
+
+    // set refresh if refresh seen in message
+    let refresh = false;
+    if (message.toLowerCase().includes('[refresh]') || message.toLowerCase().includes('refresh]')) {
+      refresh = true;
+      message.replace('[refresh]', '');
+    }
+
     if (personality && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
       console.error(`buildPrompt: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
       client.say(channel, `Sorry, personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
@@ -238,12 +255,12 @@ client.on('message', async (channel: any, tags: {
         newCommandRef.set({
           channelName: channelName,
           type: isStory ? 'episode' : 'question',
-          title: message,
+          title: message + ` asked by ${tags.username}`,
           username: tags.username, // Add this line to record the username
           personality: personality,
-          namespace: 'groovypdf',
-          refresh: false,
-          prompt: `${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username}.`,
+          namespace: namespace,
+          refresh: refresh,
+          prompt: `${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly.`,
           timestamp: admin.database.ServerValue.TIMESTAMP
         });
       } else {
