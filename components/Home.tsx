@@ -502,22 +502,22 @@ function Home({ user }: HomeProps) {
             subtitleLanguage: subtitleLanguage,
           }
 
-          if (!personalityImageUrls[story.personality]) {
+          if (!personalityImageUrls[localEpisode.personality]) {
             // Generate image here...
-            if (!personalityImageUrls[story.personality]) {
+            if (!personalityImageUrls[localEpisode.personality]) {
               let imageId = uuidv4().replace(/-/g, '');
-              let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', story.personality, imageId);
+              let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', localEpisode.personality, imageId);
               if (gaibImage !== '') {
                 setImageUrl(gaibImage);
-                setPersonalityImageUrls((state) => ({ ...state, [story.personality]: gaibImage }));
+                setPersonalityImageUrls((state) => ({ ...state, [localEpisode.personality]: gaibImage }));
               } else {
                 setImageUrl(await getGaib());
               }
             } else {
-              setImageUrl(personalityImageUrls[story.personality]);
+              setImageUrl(personalityImageUrls[localEpisode.personality]);
             }
           } else {
-            setImageUrl(personalityImageUrls[story.personality]);
+            setImageUrl(personalityImageUrls[localEpisode.personality]);
           }
 
           try {
@@ -641,7 +641,7 @@ function Home({ user }: HomeProps) {
                         }
                         if (!isDisplayingRef.current) {
                           dotsStatus += ".";
-                          setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}\n[${tokens} GPT tokens generated]`);
+                          setSubtitle(`-*- ${localEpisode.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}\n[${tokens} GPT tokens generated]`);
                           if (dotsStatus.length > 10) {
                             dotsStatus = ".";
                           }
@@ -687,6 +687,7 @@ function Home({ user }: HomeProps) {
           // collect the story raw text and references 
           story.rawText = pendingMessage;
           story.references = sanitizeKeysAndValues(pendingSourceDocs);
+          story.tokens = tokens;
 
           setStoryQueue([...storyQueue, story]);
         }
@@ -726,7 +727,7 @@ function Home({ user }: HomeProps) {
     }
 
     fetchData();
-  }, [selectedPersonality, isDisplayingRef.current]); // Dependency array ensures this runs when selectedPersonality or isDisplayingRef.current changes
+  }, [selectedPersonality]); // Dependency array ensures this runs when selectedPersonality or isDisplayingRef.current changes
 
   async function getGaib() {
     const directoryUrl = process.env.NEXT_PUBLIC_GAIB_IMAGE_DIRECTORY_URL;
@@ -1122,7 +1123,7 @@ function Home({ user }: HomeProps) {
         };
 
         // This function generates the image using the AI message from the previous function
-        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = false): Promise<{ image: string, prompt: string }> => {
+        const generateAIimage = async (imagePrompt: string, personalityPrompt: string, localLastImage: string, count: number = 0, gptPrompt: boolean = true): Promise<{ image: string, prompt: string }> => {
           try {
             let prompt: string = imagePrompt;
             let content: string = '';
