@@ -224,7 +224,7 @@ export function buildPrompt(personality: keyof typeof PERSONALITY_PROMPTS, isSto
       break;
   }
 
-  prompt = `${PERSONALITY_PROMPTS[personality]} ${isStory ? STORY_PROMPT : ''} ${isStory? GENDER_MARKER : ''} ${ROLE_ENFORCER} ${isStory? SCENE_MARKER : 'To help illustrate and summarize, add in lines of the format "[SCENE:...]" worded for an image generation prompt to illustrate the answer.'} ${localCommandPrompt}${footer}`;
+  prompt = `${PERSONALITY_PROMPTS[personality]} ${isStory ? STORY_PROMPT : 'Speak in a conversational tone referencing yourself and the person who asked the question if given.'} ${isStory? GENDER_MARKER : ''} ${ROLE_ENFORCER} ${isStory? SCENE_MARKER : 'To help illustrate and summarize, add in lines of the format "[SCENE:...]" worded for an image generation prompt to illustrate the answer.'} ${localCommandPrompt}${footer}`;
   return prompt;
 }
 

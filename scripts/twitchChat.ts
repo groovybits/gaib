@@ -245,7 +245,6 @@ client.on('message', async (channel: any, tags: {
       console.error(`buildPrompt: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
       client.say(channel, `Sorry, personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
     } else if (personality) {
-
       if (!answerInChat) {
         // Add the command to the Realtime Database
         const newCommandRef = db.ref(`commands/${channelName}`).push();

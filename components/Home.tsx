@@ -638,9 +638,28 @@ function Home({ user }: HomeProps) {
 
           console.log(`storyQueue: messages length ${newMessages.length} contain\n${JSON.stringify(newMessages, null, 2)}`)
 
+          function sanitizeString(str: string): string {
+            return str.replace(/[.#$\/\[\]]/g, '_');
+          }
+
+          function sanitizeKeysAndValues(obj: any): any {
+            if (typeof obj !== 'object' || obj === null) return obj;
+
+            return Object.keys(obj).reduce((acc: Record<string, any>, key: string) => {
+              const sanitizedKey = sanitizeString(key);
+              const value = obj[key];
+              acc[sanitizedKey] = typeof value === 'string'
+                ? sanitizeString(value)
+                : Array.isArray(value)
+                  ? value.map(sanitizeKeysAndValues)
+                  : sanitizeKeysAndValues(value);
+              return acc;
+            }, Array.isArray(obj) ? [] : {});
+          }
+
           // collect the story raw text and references 
           story.rawText = pendingMessage;
-          story.references = pendingSourceDocs;
+          story.references = sanitizeKeysAndValues(pendingSourceDocs);
 
           setStoryQueue([...storyQueue, story]);
         }
