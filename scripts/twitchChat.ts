@@ -12,7 +12,7 @@ const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_I
 const storeUserMessages = process.env.STORE_USER_MESSAGES === 'true' ? true : false;
 
 const index = pinecone.Index(USER_INDEX_NAME);
-const namespace = 'chathistory';
+const chatNamespace = 'chathistory';
 const embeddings = new OpenAIEmbeddings();
 
 // Function to initialize the user index
@@ -37,7 +37,7 @@ async function storeUserMessage(username: string, message: string, namespace: st
 }
 
 // Function to search related conversations
-async function searchRelatedConversations(query: string, k: number = 3): Promise<any[]> {
+async function searchRelatedConversations(query: string, namespace: string, k: number = 3): Promise<any[]> {
   const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
     pineconeIndex: index,
     textKey: 'text',
@@ -254,8 +254,8 @@ client.on('message', async (channel: any, tags: {
       let userContext = '';
       if (storeUserMessages) {
         try {
-          await storeUserMessage(tags.username, message, namespace);
-          const results = await searchRelatedConversations(message, 3);
+          await storeUserMessage(tags.username, message, chatNamespace);
+          const results = await searchRelatedConversations(message, chatNamespace, 3);
 
           // read the results and build the userContext
           // results can be like:
