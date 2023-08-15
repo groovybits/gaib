@@ -283,7 +283,7 @@ client.on('message', async (channel: any, tags: {
         personality: personality,
         namespace: namespace,
         refresh: refresh,
-        prompt: personality === 'passthrough' ? '' : `User Chat Context: ${userContext}.\nEnd of User Chat Context.\n\n${prompt}\n${isStory ? "Create a story from the plotline presented" : "Answer the question asked "} using the Chat Context of previous plotlines and questions by the Twitch chat user ${tags.username} speaking to them directly. Reference the User Chat Context if it exists to help you answer the question referencing what the user has asked in the past.`,
+        prompt: personality === 'passthrough' ? '' : `User Chat Context of past conversations for previous chat memories: ${userContext}.\nEnd of User Chat Context.\n\n${prompt}\n${isStory ? "Create a story from the plotline presented" : "Answer the question asked "} by the Twitch chat user ${tags.username} speaking to them directly.`,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
 
