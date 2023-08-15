@@ -263,7 +263,7 @@ client.on('message', async (channel: any, tags: {
           //     "timestamp": 1692077316671, "type": "message", "username": "testuser" } }]
           results.forEach((result: any) => {
             if (result.metadata && result.metadata.username) {
-              userContext += `${result.metadata.username}: ${result.pageContent}\n`;
+              userContext += `${result.metadata.username}: ${result.pageContent}, `;
             }
           });
 
@@ -283,7 +283,7 @@ client.on('message', async (channel: any, tags: {
         personality: personality,
         namespace: namespace,
         refresh: refresh,
-        prompt: `User Chat History: ${userContext}\n\n${prompt}\n\n${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly. Reference the User Chat History if it exists to help you answer the question.`,
+        prompt: personality === 'passthrough' ? '' : `User Chat Context: [${userContext}] End of User Chat Context\n\n${prompt}\n\n${isStory ? "Create a story from the plotline presented" : "Answer the question asked "} using the Chat Context of previous plotlines and questions by the Twitch chat user ${tags.username} speaking to them directly. Reference the User Chat Context if it exists to help you answer the question referencing what the user has asked in the past.`,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
 
