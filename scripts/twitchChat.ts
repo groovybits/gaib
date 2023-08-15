@@ -289,7 +289,7 @@ client.on('message', async (channel: any, tags: {
           '' :
           `\nPrevious Chat Messages by users: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
             "Create a story from the plotline below presented" :
-            "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. only referene the previous chat messages by users if they relate to the question or story.\n\n`,
+            "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. only reference the previous chat messages by users if they relate to the question or story.\n\n`,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
 
