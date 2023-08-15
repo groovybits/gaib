@@ -30,6 +30,8 @@ async function storeUserMessage(username: string, message: string, namespace: st
     pageContent: message,
     metadata: { username: username, timestamp: Date.now(), type: 'message', namespace: namespace },
   });
+
+  console.log(`Storing user message: ${doc}`);
   await initializeUserIndex([doc], namespace);
 }
 
