@@ -254,7 +254,7 @@ client.on('message', async (channel: any, tags: {
       if (storeUserMessages) {
         try {
           await storeUserMessage(tags.username, tags.username + ` asked: ` + message, personality);
-          const results = await searchRelatedConversations(message, personality, 3);
+          const results = await searchRelatedConversations(message, personality, 1);
 
           // read the results and build the userContext
           // results can be like:
@@ -283,7 +283,11 @@ client.on('message', async (channel: any, tags: {
         personality: personality,
         namespace: namespace,
         refresh: refresh,
-        prompt: personality === 'passthrough' ? '' : `User Chat Context of past conversations for previous chat memories: ${userContext}.\nEnd of User Chat Context.\n\n${prompt}\n${isStory ? "Create a story from the plotline presented" : "Answer the question asked "} by the Twitch chat user ${tags.username} speaking to them directly.`,
+        prompt: personality === 'passthrough' ?
+          '' :
+          `\nPrevious Chat Messages: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
+            "Create a story from the plotline presented" :
+            "Answer the question asked "} by the Twitch chat user ${tags.username} speaking to them directly.`,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
 
