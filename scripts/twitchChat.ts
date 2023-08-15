@@ -253,8 +253,7 @@ client.on('message', async (channel: any, tags: {
       let userContext = '';
       if (storeUserMessages) {
         try {
-          await storeUserMessage(tags.username, tags.username + ` asked: ` + message, personality);
-          const results = await searchRelatedConversations(message, personality, 1);
+          const results = await searchRelatedConversations(message, personality, 2);
 
           // read the results and build the userContext
           // results can be like:
@@ -268,6 +267,9 @@ client.on('message', async (channel: any, tags: {
           });
 
           console.log(`Historical userContext for ${tags.username}: ${userContext}`);
+
+          // store the user message in the database
+          await storeUserMessage(tags.username, tags.username + ` asked: ` + message, personality);
         } catch (error) {
           console.error(`handleSubmit: Error storing user message: ${error}`);
         }
@@ -285,9 +287,9 @@ client.on('message', async (channel: any, tags: {
         refresh: refresh,
         prompt: personality === 'passthrough' ?
           '' :
-          `\nPrevious Chat Messages: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
-            "Create a story from the plotline presented" :
-            "Answer the question asked "} by the Twitch chat user ${tags.username} speaking to them directly.`,
+          `\nPrevious Chat Messages by users: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
+            "Create a story from the plotline below presented" :
+            "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. only referene the previous chat messages by users if they relate to the question or story.\n\n`,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
 
