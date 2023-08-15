@@ -17,6 +17,7 @@ const embeddings = new OpenAIEmbeddings();
 
 // Function to initialize the user index
 async function initializeUserIndex(docs: Document[], namespace: string) {
+  console.log(`Initializing user index with ${docs.length} documents for namespace ${namespace}}.`);
   await PineconeStore.fromDocuments(docs, embeddings, {
     pineconeIndex: index,
     namespace: namespace,
@@ -31,7 +32,7 @@ async function storeUserMessage(username: string, message: string, namespace: st
     metadata: { username: username, timestamp: Date.now(), type: 'message', namespace: namespace },
   });
 
-  console.log(`Storing user message: ${doc}`);
+  console.log(`Storing user message: ${JSON.stringify(doc)} in namespace ${namespace}.`);
   await initializeUserIndex([doc], namespace);
 }
 
@@ -42,6 +43,8 @@ async function searchRelatedConversations(query: string, k: number = 3): Promise
     textKey: 'text',
     namespace,
   });
+
+  console.log(`Searching for related conversations to query: ${query} in namespace ${namespace}.`);
   return await vectorStore.similaritySearch(query, k);
 }
 
