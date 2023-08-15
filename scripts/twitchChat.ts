@@ -36,15 +36,15 @@ async function storeUserMessage(username: string, message: string, namespace: st
 }
 
 // Function to search related conversations
-async function searchRelatedConversations(query: string, namespace: string, k: number = 3): Promise<any[]> {
+async function searchRelatedConversations(query: string, namespace: string, username: string, k: number = 3): Promise<any[]> {
   const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
     pineconeIndex: index,
     textKey: 'text',
     namespace,
   });
 
-  console.log(`Searching for related conversations to query: ${query} in namespace ${namespace}.`);
-  return await vectorStore.similaritySearch(query, k);
+  console.log(`Searching for related conversations to query: ${query} in namespace ${namespace} by user ${username}.`);
+  return await vectorStore.similaritySearch(query, k, { namespace: namespace, username: username, type: 'message' });
 }
 
 // Initialize Firebase Admin SDK
@@ -253,7 +253,7 @@ client.on('message', async (channel: any, tags: {
       let userContext = '';
       if (storeUserMessages) {
         try {
-          const results = await searchRelatedConversations(message, personality, 4);
+          const results = await searchRelatedConversations(message, personality, tags.username, 4);
 
           // read the results and build the userContext
           // results can be like:
