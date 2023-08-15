@@ -253,7 +253,7 @@ client.on('message', async (channel: any, tags: {
       let userContext = '';
       if (storeUserMessages) {
         try {
-          await storeUserMessage(tags.username, message, personality);
+          await storeUserMessage(tags.username, tags.username + ` asked: ` + message, personality);
           const results = await searchRelatedConversations(message, personality, 3);
 
           // read the results and build the userContext
