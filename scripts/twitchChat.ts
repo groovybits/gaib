@@ -3,6 +3,45 @@ import admin from 'firebase-admin';
 import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
 import { Episode } from '@/types/story';
 import FuzzySet from 'fuzzyset.js';
+import { Document } from "langchain/document";
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { PineconeStore } from "langchain/vectorstores/pinecone";
+import { pinecone } from '@/utils/pinecone-client';
+
+const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
+const storeUserMessages = process.env.STORE_USER_MESSAGES === 'true' ? true : false;
+
+const index = pinecone.Index(USER_INDEX_NAME);
+const namespace = 'chathistory';
+const embeddings = new OpenAIEmbeddings();
+
+// Function to initialize the user index
+async function initializeUserIndex(docs: Document[], namespace: string) {
+  await PineconeStore.fromDocuments(docs, embeddings, {
+    pineconeIndex: index,
+    namespace: namespace,
+    textKey: 'text',
+  });
+}
+
+// Function to store a user message
+async function storeUserMessage(username: string, message: string, namespace: string) {
+  const doc = new Document({
+    pageContent: message,
+    metadata: { username: username, timestamp: Date.now(), type: 'message', namespace: namespace },
+  });
+  await initializeUserIndex([doc], namespace);
+}
+
+// Function to search related conversations
+async function searchRelatedConversations(query: string, k: number = 3): Promise<any[]> {
+  const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
+    pineconeIndex: index,
+    textKey: 'text',
+    namespace,
+  });
+  return await vectorStore.similaritySearch(query, k);
+}
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
@@ -128,7 +167,7 @@ client.on('message', async (channel: any, tags: {
     client.say(channel, helpMessage);
     //
     // Personality Prompts list for help with !personalities  
-  } else if (message.toLowerCase().startsWith("!personalities") || message.toLowerCase().startsWith("/personalities")) {
+  } else if (message.toLowerCase().startsWith("!personalities") || message.toLowerCase().startsWith("/personalities") || message.toLowerCase().startsWith("!p") || message.toLowerCase().startsWith("/p")) {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
     client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
     //
@@ -203,10 +242,33 @@ client.on('message', async (channel: any, tags: {
       message = message.slice(0, messageLimit);
     }
 
-    if (personality && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
+    if (personality && personality != 'passthrough' && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
       console.error(`buildPrompt: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
       client.say(channel, `Sorry, personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
     } else if (personality) {
+      let userContext = '';
+      if (storeUserMessages) {
+        try {
+          await storeUserMessage(tags.username, message, namespace);
+          const results = await searchRelatedConversations(message, 3);
+
+          // read the results and build the userContext
+          // results can be like:
+          // [{"pageContent":"would you like to see the ocean?","metadata":{"username":"testuser"}},
+          //   { "pageContent": "would you like to see the ocean?", "metadata": { "namespace": "chathistory", 
+          //     "timestamp": 1692077316671, "type": "message", "username": "testuser" } }]
+          results.forEach((result: any) => {
+            if (result.metadata && result.metadata.username) {
+              userContext += `${result.metadata.username}: ${result.pageContent}\n`;
+            }
+          });
+
+          console.log(`Historical userContext for ${tags.username}: ${userContext}`);
+        } catch (error) {
+          console.error(`handleSubmit: Error storing user message: ${error}`);
+        }
+      }
+
       // Add the command to the Realtime Database
       const newCommandRef = db.ref(`commands/${channelName}`).push();
       newCommandRef.set({
@@ -217,7 +279,7 @@ client.on('message', async (channel: any, tags: {
         personality: personality,
         namespace: namespace,
         refresh: refresh,
-        prompt: `${prompt} ${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly.`,
+        prompt: `User Chat History: ${userContext}\n\n${prompt}\n\n${isStory ? "Create a story from the plotline presented" : "Answer the question asked"} by the Twitch chat user ${tags.username} speaking to them directly. Reference the User Chat History if it exists to help you answer the question.`,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
 
@@ -278,7 +340,7 @@ client.on('message', async (channel: any, tags: {
       }
     } else {
       // Handle the case when the first word does not match any personality
-      client.say(channel, `Sorry, I can only respond if the message starts with a recognized personality "<personality> <question>". try !personalities to see a list of available personalities.`);
+      client.say(channel, `Sorry, I can only respond if the message starts with a recognized personality "<personality> <question>".\n${helpMessage}`);
     }
   }
 });
