@@ -10,13 +10,14 @@ import { pinecone } from '@/utils/pinecone-client';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
 const storeUserMessages = process.env.STORE_USER_MESSAGES === 'true' ? true : false;
+const chatNamespace = "chatmessages";
 
 const index = pinecone.Index(USER_INDEX_NAME);
 const embeddings = new OpenAIEmbeddings();
 
 // Function to initialize the user index
 async function initializeUserIndex(docs: Document[], namespace: string) {
-  console.log(`Initializing user index with ${docs.length} documents for namespace ${namespace}}.`);
+  console.log(`Initialize ${namespace}: user index ${index} with ${docs.length} documents.`);
   await PineconeStore.fromDocuments(docs, embeddings, {
     pineconeIndex: index,
     namespace: namespace,
@@ -25,26 +26,26 @@ async function initializeUserIndex(docs: Document[], namespace: string) {
 }
 
 // Function to store a user message
-async function storeUserMessage(username: string, message: string, namespace: string) {
+async function storeUserMessage(username: string, message: string, namespace: string, personality: string) {
   const doc = new Document({
     pageContent: message,
-    metadata: { username: username, timestamp: Date.now(), type: 'message', namespace: namespace },
+    metadata: { username: username, timestamp: Date.now(), type: 'message', namespace: namespace, personality: personality },
   });
 
-  console.log(`Storing user message: ${JSON.stringify(doc)} in namespace ${namespace}.`);
+  console.log(`Storing ${namespace}: Personality ${personality} for user ${username}'s message: ${JSON.stringify(doc)}.`);
   await initializeUserIndex([doc], namespace);
 }
 
 // Function to search related conversations
-async function searchRelatedConversations(query: string, namespace: string, username: string, k: number = 3): Promise<any[]> {
+async function searchRelatedConversations(query: string, namespace: string, personality: string, username: string, k: number = 3): Promise<any[]> {
   const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
     pineconeIndex: index,
     textKey: 'text',
     namespace,
   });
 
-  console.log(`Searching for related conversations to query: ${query} in namespace ${namespace} by user ${username}.`);
-  return await vectorStore.similaritySearch(query, k, { namespace: namespace, username: username, type: 'message' });
+  console.log(`Searching ${namespace}: Personality: ${personality} for user ${username}'s related conversations to query: ${query}.`);
+  return await vectorStore.similaritySearch(query, k, { personality: personality, namespace: namespace, username: username, type: 'message' });
 }
 
 // Initialize Firebase Admin SDK
@@ -247,13 +248,13 @@ client.on('message', async (channel: any, tags: {
     }
 
     if (personality && personality != 'passthrough' && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
-      console.error(`buildPrompt: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
-      client.say(channel, `Sorry, personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
+      console.error(`User ${tags.username}: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
+      client.say(channel, `Sorry, ${tags.username} personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
     } else if (personality) {
       let userContext = '';
       if (storeUserMessages) {
         try {
-          const results = await searchRelatedConversations(message, personality, tags.username, 4);
+          const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 3);
 
           // read the results and build the userContext
           // results can be like:
@@ -261,17 +262,20 @@ client.on('message', async (channel: any, tags: {
           //   { "pageContent": "would you like to see the ocean?", "metadata": { "namespace": "chathistory", 
           //     "timestamp": 1692077316671, "type": "message", "username": "testuser" } }]
           results.forEach((result: any) => {
-            if (result.metadata && result.metadata.username) {
-              userContext += `${result.metadata.username}: ${result.pageContent}, `;
+            if (result.metadata && result.metadata.username && result.metadata.timestamp) {
+              const date = new Date(result.metadata.timestamp);
+              const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+
+              userContext += `User ${result.metadata.username} asked: ${result.pageContent} on ${formattedDate}, `;
             }
           });
 
-          console.log(`Historical userContext for ${tags.username}: ${userContext}`);
+          console.log(`${chatNamespace}: Personality ${personality} Historical userContext for ${tags.username}: ${userContext}`);
 
           // store the user message in the database
-          await storeUserMessage(tags.username, tags.username + ` asked: ` + message, personality);
+          await storeUserMessage(tags.username, message, chatNamespace, personality);
         } catch (error) {
-          console.error(`handleSubmit: Error storing user message: ${error}`);
+          console.error(`${chatNamespace}: ${personality} Error storing user ${tags.username} message ${message} error: ${error}`);
         }
       }
 
@@ -280,7 +284,7 @@ client.on('message', async (channel: any, tags: {
       newCommandRef.set({
         channelName: channelName,
         type: isStory ? 'episode' : 'question',
-        title: `${tags.username} ${isStory ? "asked to create the story" : "asked the question"}: ` + message,
+        title: personality === 'passthrough' ? "REPLAY: " + message : `${tags.username} ${isStory ? "asked to create the story" : "asked the question"}: ` + message,
         username: tags.username, // Add this line to record the username
         personality: personality,
         namespace: namespace,
@@ -289,7 +293,7 @@ client.on('message', async (channel: any, tags: {
           '' :
           `\nPrevious Chat Messages by users: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
             "Create a story from the plotline below presented" :
-            "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. only reference the previous chat messages by users if they relate to the question or story.\n\n`,
+            "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. use the above context as your knowledge sources as ${personality}, only reference the previous chat messages by users if they relate to the question or story.\n\n`,
         timestamp: admin.database.ServerValue.TIMESTAMP
       });
 
