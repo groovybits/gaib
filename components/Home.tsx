@@ -152,9 +152,6 @@ function Home({ user }: HomeProps) {
   // Declare a new ref for timeout detection
   const timeoutDetected = useRef(false);
 
-  // handleSubmit queue episode function
-  const isSubmittingRef = useRef(false);
-
   // handleSubmitQueue useeffect lock
   const isSubmitQueueRef = useRef(false);
 
@@ -239,8 +236,6 @@ function Home({ user }: HomeProps) {
 
   // Twitch Chat fetching for automating input via a Twitch chat (costs if runs too much, watch out!!!)
   useEffect(() => {
-    let isProcessing = false;
-
     async function fetchEpisodeData() {
       try {
         if (debug) {
@@ -323,9 +318,6 @@ function Home({ user }: HomeProps) {
     }
 
     const processTwitchChat = async () => {
-      if (isProcessing) return;  // If a fetch is already in progress, do nothing
-      isProcessing = true;  // Set the flag to true to block other fetches
-
       if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && episodes.length <= 1) {
         isProcessingTwitchRef.current = true;
         try {
@@ -335,7 +327,6 @@ function Home({ user }: HomeProps) {
         }
         isProcessingTwitchRef.current = false;
       }
-      isProcessing = false;  // Reset the flag once the fetch is complete
     };
 
     try {
@@ -345,10 +336,10 @@ function Home({ user }: HomeProps) {
     }
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processTwitchChat, 10000);  // Then every N seconds
+    const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, isSubmittingRef, selectedPersonality, selectedNamespace, parseQuestion]);
+  }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, selectedPersonality, selectedNamespace, parseQuestion]);
 
   // News fetching for automating input via a news feed
   useEffect(() => {
@@ -705,7 +696,7 @@ function Home({ user }: HomeProps) {
     }, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [submitQueue, isFetching, isSpeaking, isProcessingRef, isSubmittingRef, listening, episodes]);
+  }, [submitQueue, isFetching, isSpeaking, isProcessingRef, listening, episodes]);
 
   useEffect(() => {
     async function fetchData() {
