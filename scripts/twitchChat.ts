@@ -247,6 +247,9 @@ client.on('message', async (channel: any, tags: {
       message = message.slice(0, messageLimit);
     }
 
+    const dateNow = new Date();
+    const formattedDateNow = `${dateNow.getMonth() + 1}/${dateNow.getDate()}/${dateNow.getFullYear()} ${dateNow.getHours()}:${dateNow.getMinutes()}:${dateNow.getSeconds()}`;
+
     if (personality && personality != 'passthrough' && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
       console.error(`User ${tags.username}: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
       client.say(channel, `Sorry, ${tags.username} personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
@@ -262,10 +265,11 @@ client.on('message', async (channel: any, tags: {
           //   { "pageContent": "would you like to see the ocean?", "metadata": { "namespace": "chathistory", 
           //     "timestamp": 1692077316671, "type": "message", "username": "testuser" } }]
           results.forEach((result: any) => {
-            if (result.metadata && result.metadata.username && result.metadata.timestamp) {
-              const date = new Date(result.metadata.timestamp);
-              const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
 
+            const date = new Date(result.metadata.timestamp);
+            const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+
+            if (result.metadata && result.metadata.username && result.metadata.timestamp) {
               userContext += `User ${result.metadata.username} asked: ${result.pageContent} on ${formattedDate}, `;
             }
           });
@@ -291,7 +295,7 @@ client.on('message', async (channel: any, tags: {
         refresh: refresh,
         prompt: personality === 'passthrough' ?
           '' :
-          `\nPrevious Chat Messages by users: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
+          `\nThe date is is currently ${formattedDateNow}. Previous Chat Messages by users: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
             "Create a story from the plotline below presented" :
             "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. use the above context as your knowledge sources as ${personality}, only reference the previous chat messages by users if they relate to the question or story.\n\n`,
         timestamp: admin.database.ServerValue.TIMESTAMP
