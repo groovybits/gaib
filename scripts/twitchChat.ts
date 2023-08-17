@@ -10,6 +10,7 @@ import { pinecone } from '@/utils/pinecone-client';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
 const storeUserMessages = process.env.STORE_USER_MESSAGES === 'true' ? true : false;
+const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'buddha';
 const chatNamespace = "chatmessages";
 
 const index = pinecone.Index(USER_INDEX_NAME);
@@ -252,113 +253,116 @@ client.on('message', async (channel: any, tags: {
 
     if (personality && personality != 'passthrough' && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
       console.error(`User ${tags.username}: Personality "${personality}" does not exist in PERSONALITY_PROMPTS object.`);
-      client.say(channel, `Sorry, ${tags.username} personality "${personality}" does not exist in my database. Type !personalities to see a list of available personalities.`);
-    } else if (personality) {
-      let userContext = '';
-      if (storeUserMessages) {
-        try {
-          const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 3);
+      client.say(channel, `Sorry, ${tags.username} personality "${personality}" doesn't exist. Type !personalities to see a list of available personalities.`);
+      return;
+    }
 
-          // read the results and build the userContext
-          // results can be like:
-          // [{"pageContent":"would you like to see the ocean?","metadata":{"username":"testuser"}},
-          //   { "pageContent": "would you like to see the ocean?", "metadata": { "namespace": "chathistory", 
-          //     "timestamp": 1692077316671, "type": "message", "username": "testuser" } }]
-          results.forEach((result: any) => {
+    // if the personality was not defined, send to the default personality
+    if (personality && !PERSONALITY_PROMPTS.hasOwnProperty(personality)) {
+      personality = defaultPersonality;
+    }
 
-            const date = new Date(result.metadata.timestamp);
-            const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+    let userContext = '';
+    if (storeUserMessages && personality && personality != '' && personality != 'passthrough') {
+      try {
+        const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 3);
 
-            if (result.metadata && result.metadata.username && result.metadata.timestamp) {
-              userContext += `User ${result.metadata.username} asked: ${result.pageContent} on ${formattedDate}, `;
-            }
-          });
+        // read the results and build the userContext
+        // results can be like:
+        // [{"pageContent":"would you like to see the ocean?","metadata":{"username":"testuser"}},
+        //   { "pageContent": "would you like to see the ocean?", "metadata": { "namespace": "chathistory", 
+        //     "timestamp": 1692077316671, "type": "message", "username": "testuser" } }]
+        results.forEach((result: any) => {
 
-          console.log(`${chatNamespace}: Personality ${personality} Historical userContext for ${tags.username}: ${userContext}`);
+          const date = new Date(result.metadata.timestamp);
+          const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
 
-          // store the user message in the database
-          await storeUserMessage(tags.username, message, chatNamespace, personality);
-        } catch (error) {
-          console.error(`${chatNamespace}: ${personality} Error storing user ${tags.username} message ${message} error: ${error}`);
-        }
-      }
-
-      // Add the command to the Realtime Database
-      const newCommandRef = db.ref(`commands/${channelName}`).push();
-      newCommandRef.set({
-        channelName: channelName,
-        type: isStory ? 'episode' : 'question',
-        title: personality === 'passthrough' ? "REPLAY: " + message : `${tags.username} ${isStory ? "asked to create the story" : "asked the question"}: ` + message,
-        username: tags.username, // Add this line to record the username
-        personality: personality,
-        namespace: namespace,
-        refresh: refresh,
-        prompt: personality === 'passthrough' ?
-          '' :
-          `\nThe date is is currently ${formattedDateNow}. Previous Chat Messages by users: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
-            "Create a story from the plotline below presented" :
-            "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. use the above context as your knowledge sources as ${personality}, only reference the previous chat messages by users if they relate to the question or story.\n\n`,
-        timestamp: admin.database.ServerValue.TIMESTAMP
-      });
-
-      // Use GPT to talk back in chat
-      if (answerInChat) {
-        lastMessageArray.forEach((messageObject: any) => {
-          if (messageObject.role && messageObject.content) {
-            promptArray.push({ "role": messageObject.role, "content": messageObject.content });
+          if (result.metadata && result.metadata.username && result.metadata.timestamp) {
+            userContext += `User ${result.metadata.username} asked: ${result.pageContent} on ${formattedDate}, `;
           }
-          counter++;
         });
-        // add the current message to the promptArray with the final personality prompt
-        promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n\n Question: ${message}\n\nAnswer:` });
-        // save the last message in the array for the next prompt
-        lastMessageArray.push({ "role": "user", "content": `${message}` });
 
-        console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
+        console.log(`${chatNamespace}: Personality ${personality} Historical userContext for ${tags.username}: ${userContext}`);
 
-        fetch(`https://api.openai.com/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openApiKey}`,
-          },
-          body: JSON.stringify({
-            model: llm,
-            max_tokens: maxTokens,
-            temperature: temperature,
-            top_p: 1,
-            n: 1,
-            stream: false,
-            messages: promptArray,
-          }),
-        })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
-            }
-            return response.json();
-          })
-          .then(data => {
-            if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-              const aiMessage = data.choices[0].message;
-              console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
-
-              console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
-
-              gptAnswer = aiMessage.content;
-              client.say(channel, aiMessage.content);
-
-              lastMessageArray.push({ aiMessage });
-            } else {
-              console.error('No choices returned from OpenAI!\n');
-              console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
-            }
-          })
-          .catch(error => console.error('An error occurred:', error));
+        // store the user message in the database
+        await storeUserMessage(tags.username, message, chatNamespace, personality);
+      } catch (error) {
+        console.error(`${chatNamespace}: ${personality} Error storing user ${tags.username} message ${message} error: ${error}`);
       }
-    } else {
-      // Handle the case when the first word does not match any personality
-      client.say(channel, `Sorry, I can only respond if the message starts with a recognized personality "<personality> <question>".\n${helpMessage}`);
+    }
+
+    // Add the command to the Realtime Database
+    const newCommandRef = db.ref(`commands/${channelName}`).push();
+    newCommandRef.set({
+      channelName: channelName,
+      type: isStory ? 'episode' : 'question',
+      title: personality === 'passthrough' ? "REPLAY: " + message : `${tags.username} ${isStory ? "asked to create the story" : "asked the question"}: ` + message,
+      username: tags.username, // Add this line to record the username
+      personality: personality,
+      namespace: namespace,
+      refresh: refresh,
+      prompt: personality === 'passthrough' ?
+        '' :
+        `\nThe date is is currently ${formattedDateNow}. Previous Chat Messages by users: ${userContext}.\nEnd of Previous Chat Messages.\n\n${prompt}\n${isStory ?
+          "Create a story from the plotline below presented" :
+          "Answer the question below asked "} by the Twitch chat user ${tags.username} speaking to them directly. use the above context as your knowledge sources as ${personality}, only reference the previous chat messages by users if they relate to the question or story.\n\n`,
+      timestamp: admin.database.ServerValue.TIMESTAMP
+    });
+
+    // Use GPT to talk back in chat
+    if (answerInChat) {
+      lastMessageArray.forEach((messageObject: any) => {
+        if (messageObject.role && messageObject.content) {
+          promptArray.push({ "role": messageObject.role, "content": messageObject.content });
+        }
+        counter++;
+      });
+      // add the current message to the promptArray with the final personality prompt
+      promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n\n Question: ${message}\n\nAnswer:` });
+      // save the last message in the array for the next prompt
+      lastMessageArray.push({ "role": "user", "content": `${message}` });
+
+      console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
+
+      fetch(`https://api.openai.com/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openApiKey}`,
+        },
+        body: JSON.stringify({
+          model: llm,
+          max_tokens: maxTokens,
+          temperature: temperature,
+          top_p: 1,
+          n: 1,
+          stream: false,
+          messages: promptArray,
+        }),
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+            const aiMessage = data.choices[0].message;
+            console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
+
+            console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
+
+            gptAnswer = aiMessage.content;
+            client.say(channel, aiMessage.content);
+
+            lastMessageArray.push({ aiMessage });
+          } else {
+            console.error('No choices returned from OpenAI!\n');
+            console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
+          }
+        })
+        .catch(error => console.error('An error occurred:', error));
     }
   }
 });
