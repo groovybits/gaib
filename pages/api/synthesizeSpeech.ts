@@ -47,33 +47,46 @@ const handler = async (req: NextApiRequestWithUser, res: NextApiResponse) => {
       audioConfig: { audioEncoding: 'MP3' as const },
     };
 
+    const MAX_RETRIES = 3; // You can adjust this value according to your needs
+
     try {
-      client.synthesizeSpeech(request, (err: Error | null | undefined, response: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechResponse | null | undefined) => {
+      client.synthesizeSpeech(request, async (err: any, response: any) => {
         if (err) {
           console.error(`Error in synthesizing speech for name: ${name}, languageCode: ${languageCode}, ssmlGender: ${ssmlGender}:`, err);
           console.error(`Request: ${JSON.stringify(request)}`);
           res.status(500).json({ message: 'Error in synthesizing speech' });
         } else {
-          // If we are saving to a file, we don't need to return the audio
           if (audioFile !== '') {
             // Save the audio to a file in the GCS bucket
             const file = storage.bucket(bucketName).file(audioFile);
-            const stream = file.createWriteStream({
-              metadata: {
-                contentType: 'audio/mpeg',
-              },
-            });
-            stream.on('error', (err) => {
-              console.error(`Error in saving audio to file ${audioFile}:`, err);
-              res.status(500).json({ message: 'Error in saving audio to file' });
-            });
-            stream.on('finish', () => {
-              if (debug) {
-                console.log(`Saved audio to file ${audioFile}`);
-              }
-              res.status(200).json({ message: 'Saved audio to file' });
-            });
-            stream.end(response!.audioContent);
+
+            let retries = 0;
+            const uploadAudio = () => {
+              const stream = file.createWriteStream({
+                metadata: {
+                  contentType: 'audio/mpeg',
+                },
+              });
+              stream.on('error', (err) => {
+                if (retries < MAX_RETRIES) {
+                  console.error(`Error in saving audio to file ${audioFile}, retrying... Attempt ${retries + 1}:`, err);
+                  retries++;
+                  uploadAudio(); // Retry the upload
+                } else {
+                  console.error(`Error in saving audio to file ${audioFile} after ${MAX_RETRIES} attempts:`, err);
+                  res.status(500).json({ message: 'Error in saving audio to file' });
+                }
+              });
+              stream.on('finish', () => {
+                if (debug) {
+                  console.log(`Saved audio to file ${audioFile}`);
+                }
+                res.status(200).json({ message: 'Saved audio to file' });
+              });
+              stream.end(response!.audioContent);
+            };
+
+            uploadAudio(); // Start the upload process
             return;
           }
 
