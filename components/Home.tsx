@@ -29,6 +29,7 @@ import { fetchEventSourceWithAuth, fetchWithAuth } from '@/utils/fetchWithAuth';
 import ModelNameDropdown from '@/components/ModelNameDropdown';
 import FastModelNameDropdown from '@/components/FastModelNameDropdown';
 import { create } from 'lodash';
+import FaceComponent from './FaceComponent';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -70,6 +71,7 @@ function Home({ user }: HomeProps) {
   const [loadingOSD, setLoadingOSD] = useState<string>('Welcome to Groovy the AI Bot.');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
+  const [audioUrl, setAudioUrl] = useState<string>('');
   const [gender, setGender] = useState('FEMALE');
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('buddha');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
@@ -1177,6 +1179,7 @@ function Home({ user }: HomeProps) {
                     if (response.ok) {
                       try {
                         await speakAudioUrl(sentence.audioFile);
+                        setAudioUrl(sentence.audioFile);
                         console.log("Audio played successfully");
                       } catch (error) {
                         console.error(`PlaybackDisplay: An error occurred while playing ${sentence.audioFile}:\n${error}`);
@@ -1254,6 +1257,7 @@ function Home({ user }: HomeProps) {
       let story: Story | undefined = storyQueue.shift();
       if (story == undefined) {
         console.error("StoryQueue: Story is undefined!");
+        isBuildingRef.current = false;
         return;
       }
 
@@ -2410,7 +2414,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isFullScreen ? styles.fullScreenOSD : styles.osd
                     }>
-                      {(!isDisplayingRef.current) && playQueue.length > 0 ? (
+                      {(!isDisplayingRef.current) && episodes.length > 0 ? (
                         <>
                           <div className={styles.generatedImage}>
                             <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
@@ -2422,10 +2426,10 @@ function Home({ user }: HomeProps) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {[...playQueue].reverse().map((episode, index) => (
+                                {[...episodes].reverse().map((episode, index) => (
                                   <tr key={index}>
                                     <td>
-                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {playQueue.length - index}: &quot;{episode.query}&quot;</p>
+                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
                                     </td>
                                   </tr>
                                 ))}
@@ -2444,14 +2448,34 @@ function Home({ user }: HomeProps) {
                       }}
                       type="button"
                     >
-                      {loadingOSD}&nbsp;&nbsp;{(isBuildingRef.current || isSubmitQueueRef.current || episodes.length > 0)
+                      {
+                        loadingOSD
+                      }&nbsp;&nbsp; {
+                        isBuildingRef.current ? 'Building' : '.'
+                      } {
+                        isSubmitQueueRef.current ? 'Submitting' : '.'
+                      } {
+                        episodes.length > 0 ? `Episodes:${episodes.length}` : '.'
+                      } {
+                        isSpeaking ? 'Speaking' : '.'
+                      } {
+                        isDisplayingRef.current ? 'Displaying' : '.'
+                      } {
+                        playQueue.length > 0 ? `Queue:${playQueue.length}` : '.'
+                      }
+                      {/*{loadingOSD}&nbsp;&nbsp;{(isBuildingRef.current || isSubmitQueueRef.current || episodes.length > 0)
                         ? `(Loading)`
                           : (isSpeaking || isDisplayingRef.current || playQueue.length > 0)
                         ? '(Playing)'
-                          : `(Ready for questions)`}
+                      : `(Ready for questions)`}*/}
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
+                        {/*<FaceComponent
+                          audioPath={audioUrl}
+                          imagePath={imageUrl}
+                          modelPath={process.env.NEXT_PUBLIC_MODEL_PATH ? process.env.NEXT_PUBLIC_MODEL_PATH : '' } // TODO: Add model path
+                    />*/}
                         <img
                           src={imageUrl}
                           alt="Buddha"
