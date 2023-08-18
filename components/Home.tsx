@@ -124,6 +124,7 @@ function Home({ user }: HomeProps) {
   const imageSource = process.env.NEXT_PUBLIC_IMAGE_SERVICE || 'pexels'; // 'pexels' or 'deepai' or 'openai' or 'getimgai'
   const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
+  const lastStatusMessage = useRef<string>('');
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -246,10 +247,10 @@ function Home({ user }: HomeProps) {
       let summary: string = '';
 
       // Create a title for the story from the first sentence
-      title = story.rawText.substring(0, 100);  // Limit the title to 100 characters
+      title = story.title.slice(0,30);  // Limit the title to 100 characters
 
       // Create a brief introduction of the story from the second sentence
-      const introduction = story.rawText.length > 1 ? story.rawText.substring(100, 100) : '';  // Limit the introduction to 100 characters
+      const introduction = story.rawText.length > 1 ? story.rawText.substring(0, 30) : '';  // Limit the introduction to 100 characters
 
       // Create the summary
       if (story.isStory) {
@@ -399,7 +400,7 @@ function Home({ user }: HomeProps) {
     }
 
     const processTwitchChat = async () => {
-      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current && episodes.length <= 1) {
+      if (isFetching && channelId !== '' && twitchChatEnabled && !isProcessingTwitchRef.current) {
         isProcessingTwitchRef.current = true;
         try {
           await fetchEpisodeData();
@@ -417,7 +418,7 @@ function Home({ user }: HomeProps) {
     }
 
     // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(processTwitchChat, 30000);  // Then every N seconds
+    const intervalId = setInterval(processTwitchChat, 10000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [channelId, twitchChatEnabled, isFetching, episodes, user, isProcessingTwitchRef, selectedPersonality, selectedNamespace, parseQuestion]);
@@ -785,7 +786,7 @@ function Home({ user }: HomeProps) {
     }, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [submitQueue, isFetching, isSpeaking, isProcessingRef, listening, episodes]);
+  }, [submitQueue, isFetching, isSpeaking, isSubmitQueueRef, listening, episodes]);
 
   useEffect(() => {
     async function fetchData() {
@@ -2462,12 +2463,13 @@ function Home({ user }: HomeProps) {
                         isDisplayingRef.current ? 'Displaying' : '.'
                       } {
                         playQueue.length > 0 ? `Queue:${playQueue.length}` : '.'
+                      } {
+                        isProcessingRef.current ? 'Processing' : '.'
+                      } {
+                        isProcessingTwitchRef.current ? '[*]' : '.' 
+                      } {
+                        lastStatusMessage.current ? lastStatusMessage.current : '.'
                       }
-                      {/*{loadingOSD}&nbsp;&nbsp;{(isBuildingRef.current || isSubmitQueueRef.current || episodes.length > 0)
-                        ? `(Loading)`
-                          : (isSpeaking || isDisplayingRef.current || playQueue.length > 0)
-                        ? '(Playing)'
-                      : `(Ready for questions)`}*/}
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
