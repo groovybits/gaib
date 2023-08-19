@@ -160,6 +160,7 @@ export const speakerConfigs: Record<string, SpeakerConfig> = {
 export const PERSONALITY_IMAGES = {
   // TODO: add images for specific personalities
   groovy: 'https://storage.googleapis.com/gaib/images/1.png',
+  anime: 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png',
 };
 
 /* 
