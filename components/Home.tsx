@@ -372,7 +372,7 @@ function Home({ user }: HomeProps) {
           episodeCount: episodeCount,
           gptModel: modelName,
           gptFastModel: fastModelName,
-          gptPrompt: buildPrompt(selectedPersonality as keyof typeof PERSONALITY_PROMPTS, isStory),
+          gptPrompt: buildPrompt(selectedPersonality as keyof typeof PERSONALITY_PROMPTS, item.type == 'episode' ? true : false),
           defaultGender: gender,
           speakingLanguage: audioLanguage,
           subtitleLanguage: subtitleLanguage,
@@ -567,19 +567,21 @@ function Home({ user }: HomeProps) {
           let voiceRate = 1.0;
           let voicePitch = 0.0;
           let personalityGender: string = gender;
-          if (PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS]) {
-            let personalityVoice = PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS];
-            if (personalityVoice.model != '') {
-              voiceModel = personalityVoice.model;
-            }
-            if (personalityVoice.rate != 1.0) {
-              voiceRate = personalityVoice.rate;
-            }
-            if (personalityVoice.pitch != 0.0) {
-              voicePitch = personalityVoice.pitch;
-            }
-            if (personalityVoice.gender != '') {
-              personalityGender = personalityVoice.gender;
+          if (localEpisode.type !== 'episode') {
+            if (PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS]) {
+              let personalityVoice = PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS];
+              if (personalityVoice.model != '') {
+                voiceModel = personalityVoice.model;
+              }
+              if (personalityVoice.rate != 1.0) {
+                voiceRate = personalityVoice.rate;
+              }
+              if (personalityVoice.pitch != 0.0) {
+                voicePitch = personalityVoice.pitch;
+              }
+              if (personalityVoice.gender != '') {
+                personalityGender = personalityVoice.gender;
+              }
             }
           }
 
@@ -1449,7 +1451,7 @@ function Home({ user }: HomeProps) {
         let genderMarkedNames: any[] = [];
         let detectedGender: string = story.defaultGender;
         let currentSpeaker: string = story.personality;
-        let defaultVoiceModel: string = story.defaultVoiceModel;
+        let defaultVoiceModel: string = story.isStory ? '' : story.defaultVoiceModel;
         let isContinuingToSpeak = false;
         let isSceneChange = false;
         let lastSpeaker = '';
@@ -1882,7 +1884,7 @@ function Home({ user }: HomeProps) {
                   let currentAudioLanguage = audioLanguage;
                   let currentModel = model;
                   const { language: detectedLanguage, model: detectedModel }  = selectVoiceModel(cleanText, detectedGender);
-                  if (detectedModel !== '' && audioLanguage != detectedLanguage) {
+                  if (detectedModel !== '' && audioLanguage != detectedLanguage && !story.isStory) {
                     currentModel = detectedModel;
                     currentAudioLanguage = detectedLanguage;
                   }
@@ -1911,7 +1913,7 @@ function Home({ user }: HomeProps) {
           lastSpeaker = currentSpeaker;
 
           // If there is a current scene, add the sentence to it
-          if (scene && (cleanText !== '' || translationEntry !== '') && audioFile !== '') {
+          if (scene && (cleanText !== '' || translationEntry !== '')) {
             scene.sentences.push({
               id: sentenceId++,
               text: translationEntry != '' ? translationEntry : sentence,
@@ -1920,7 +1922,7 @@ function Home({ user }: HomeProps) {
               gender: detectedGender,  // or another gender related to the sentence
               language: audioLanguage,  // or another language related to the sentence
               model: model,  // or another model related to the sentence
-              audioFile: `https://storage.googleapis.com/${bucketName}/${audioFile}`,  // or another audio file related to the sentence
+              audioFile: audioFile != '' ? `https://storage.googleapis.com/${bucketName}/${audioFile}` : '',  // or another audio file related to the sentence
             });
           }
         }
