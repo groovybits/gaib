@@ -996,6 +996,58 @@ function Home({ user }: HomeProps) {
     return ssmlSentence;
   }
 
+  let maleVoiceModels = {
+    'en-US': ['en-US-Neural2-J', 'en-US-Neural2-D', 'en-US-Neural2-I', 'en-US-Neural2-A'],
+    'ja-JP': ['ja-JP-Neural2-C', 'ja-JP-Neural2-D', 'ja-JP-Wavenet-C', 'ja-JP-Wavenet-D'],
+    'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
+    'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
+  };
+
+  let femaleVoiceModels = {
+    'en-US': ['en-US-Neural2-H', 'en-US-Neural2-E', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-C'],
+    'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
+    'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+    'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+  };
+
+  let neutralVoiceModels = {
+    'en-US': ['en-US-Neural2-H', 'en-US-Neural2-C', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-E'],
+    'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
+    'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
+    'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
+  };
+
+  let defaultModels = {
+    'en-US': 'en-US-Neural2-H',
+    'ja-JP': 'ja-JP-Neural2-B',
+    'es-US': 'es-US-Wavenet-A',
+    'en-GB': 'en-GB-Wavenet-A'
+  };
+
+  function selectVoiceModel(text: string, gender: string): { language: string, model: string } {
+    // Regular expression to detect Japanese characters (Kanji, Hiragana, Katakana)
+    const japaneseRegex = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/;
+
+    // Regular expression to detect Spanish characters (e.g., accented vowels)
+    const spanishRegex = /[áéíóúñ]/;
+
+    // Mapping based on gender
+    const voiceMapping = gender === 'MALE' ? maleVoiceModels : femaleVoiceModels;
+
+    // Check for Japanese characters
+    if (japaneseRegex.test(text)) {
+      return { language: 'ja-JP', model: voiceMapping['ja-JP'][0] }; // Select the first Japanese voice model based on gender
+    }
+
+    // Check for Spanish characters
+    if (spanishRegex.test(text)) {
+      return { language: 'es-US', model: voiceMapping['es-US'][0] }; // Select the first Spanish voice model based on gender
+    }
+
+    // Don't change the model
+    return { language: '', model: '' }; 
+  }
+
   function removeMarkdownAndSpecialSymbols(text: string): string {
     // Remove markdown formatting
     const markdownRegex = /(\*{1,3}|_{1,3}|`{1,3}|~~|\[\[|\]\]|!\[|\]\(|\)|<[^>]+>|\d+\.\s|\#+\s)/g;
@@ -1401,34 +1453,6 @@ function Home({ user }: HomeProps) {
         let isContinuingToSpeak = false;
         let isSceneChange = false;
         let lastSpeaker = '';
-
-        let maleVoiceModels = {
-          'en-US': ['en-US-Neural2-J', 'en-US-Neural2-D', 'en-US-Neural2-I', 'en-US-Neural2-A'],
-          'ja-JP': ['ja-JP-Neural2-C', 'ja-JP-Neural2-D', 'ja-JP-Wavenet-C', 'ja-JP-Wavenet-D'],
-          'es-US': ['es-US-Wavenet-B', 'es-US-Wavenet-C', 'es-US-Wavenet-B', 'es-US-Wavenet-C'],
-          'en-GB': ['en-GB-Wavenet-B', 'en-GB-Wavenet-D', 'en-GB-Wavenet-B', 'en-GB-Wavenet-D']
-        };
-
-        let femaleVoiceModels = {
-          'en-US': ['en-US-Neural2-H', 'en-US-Neural2-E', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-C'],
-          'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
-          'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-          'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-        };
-
-        let neutralVoiceModels = {
-          'en-US': ['en-US-Neural2-H', 'en-US-Neural2-C', 'en-US-Neural2-F', 'en-US-Neural2-G', 'en-US-Neural2-E'],
-          'ja-JP': ['ja-JP-Neural2-B', 'ja-JP-Wavenet-A', 'ja-JP-Wavenet-B', 'ja-JP-Standard-A'],
-          'es-US': ['es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A', 'es-US-Wavenet-A'],
-          'en-GB': ['en-GB-Wavenet-A', 'en-GB-Wavenet-C', 'en-GB-Wavenet-F', 'en-GB-Wavenet-A']
-        };
-
-        let defaultModels = {
-          'en-US': 'en-US-Neural2-H',
-          'ja-JP': 'ja-JP-Neural2-B',
-          'es-US': 'es-US-Wavenet-A',
-          'en-GB': 'en-GB-Wavenet-A'
-        };
 
         if (gender == `MALE`) {
           defaultModels = {
@@ -1855,9 +1879,16 @@ function Home({ user }: HomeProps) {
                   }, 100);
                 }
                 try {
+                  let currentAudioLanguage = audioLanguage;
+                  const { language: detectedLanguage, model: detectedModel }  = selectVoiceModel(cleanText, detectedGender);
+                  if (detectedModel !== '' && audioLanguage != detectedLanguage) {
+                    model = detectedModel;
+                    currentAudioLanguage = detectedLanguage;
+                  }
+
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
                   const prosodyText = addProsody(story.personality, cleanText);
-                  await speakText(prosodyText, voiceRate, voicePitch, detectedGender, audioLanguage, model, audioFile);
+                  await speakText(prosodyText, voiceRate, voicePitch, detectedGender, currentAudioLanguage, model, audioFile);
 
                   // Check if the audio file exists
                   const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
