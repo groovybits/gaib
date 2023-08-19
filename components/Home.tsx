@@ -560,9 +560,9 @@ function Home({ user }: HomeProps) {
           }
 
           // Override the imageUrl with ones from PERSONALITY_IMAGES if the personality is in the list
-          let imageUrl = '';
+          let personalityImageUrl = '';
           if (PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES]) {
-            imageUrl = PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES];
+            personalityImageUrl = PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES];
             setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: imageUrl }));
           }
 
@@ -596,7 +596,7 @@ function Home({ user }: HomeProps) {
             prompt: localEpisode.prompt,
             tokens: tokens,
             scenes: [],
-            imageUrl: imageUrl,
+            imageUrl: personalityImageUrl,
             imagePrompt: '',
             timestamp: Date.now(),
             personality: localEpisode.personality,
@@ -832,7 +832,17 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     async function fetchData() {
       if (!isDisplayingRef.current) {
-        if (!personalityImageUrls[selectedPersonality]) {
+        // Override the imageUrl with ones from PERSONALITY_IMAGES if the personality is in the list
+        let personalityImageUrl = '';
+        let localPersonality = selectedPersonality;
+        if (PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES]) {
+          personalityImageUrl = PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES];
+          setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: imageUrl }));
+        }
+
+        if (personalityImageUrl != '') {
+          setImageUrl(personalityImageUrl);
+        } else if (!personalityImageUrls[selectedPersonality]) {
           let imageId = uuidv4().replace(/-/g, '');
           let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(selectedPersonality, false).slice(0, 2000), true, '', selectedPersonality, imageId);
           if (gaibImage !== '') {
@@ -1260,8 +1270,17 @@ function Home({ user }: HomeProps) {
         setSubtitle(`Finished playing ${playStory.title.slice(0,50)}.`);
 
         try {
+
+          let personalityImageUrl = '';
+          let localPersonality = selectedPersonality;
+          if (PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES]) {
+            personalityImageUrl = PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES];
+            setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: imageUrl }));
+          }
           // get an image generated from the personality
-          if (!personalityImageUrls[selectedPersonality]) {
+          if (personalityImageUrl != '') {
+            setImageUrl(personalityImageUrl);
+          } else if (!personalityImageUrls[selectedPersonality]) {
             let imageId = uuidv4().replace(/-/g, '');
             let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(selectedPersonality, false).slice(0, 2000), true, '', selectedPersonality, imageId);
             if (gaibImage !== '') {

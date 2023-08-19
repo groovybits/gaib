@@ -210,8 +210,8 @@ export const PERSONALITY_VOICE_MODELS = {
   donaldtrump: {
     gender: 'MALE',
     model: 'en-US-Neural2-I',      // Voice model for the "donaldtrump" personality
-    pitch: -18.0,       // Default pitch for the "donaldtrump" personality
-    rate: 0.80,        // Default speaking rate for the "donaldtrump" personality
+    pitch: -20.0,       // Default pitch for the "donaldtrump" personality
+    rate: 0.75,        // Default speaking rate for the "donaldtrump" personality
   },
 };
 
