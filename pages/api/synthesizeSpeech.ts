@@ -42,11 +42,11 @@ const handler = async (req: NextApiRequestWithUser, res: NextApiResponse) => {
     const client = new TextToSpeechClient({ credentials });
 
     const request = {
-      input: { text },
+      input: { ssml: text },
       voice: { name: name, languageCode: languageCode, ssmlGender: ssmlGender as protos.google.cloud.texttospeech.v1.SsmlVoiceGender },
       audioConfig: { audioEncoding: 'MP3' as const, speakingRate: speakingRate, pitch: pitch }, // Include speakingRate and pitch
     };
-    
+
     const MAX_RETRIES = 3; // You can adjust this value according to your needs
 
     try {

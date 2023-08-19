@@ -10,6 +10,7 @@ import {
   PERSONALITY_GENDERS,
   PERSONALITY_IMAGES,
   PERSONALITY_VOICE_MODELS,
+  speakerConfigs,
   buildPrompt,
   buildCondensePrompt,
 } from '@/config/personalityPrompts';
@@ -33,6 +34,7 @@ import ModelNameDropdown from '@/components/ModelNameDropdown';
 import FastModelNameDropdown from '@/components/FastModelNameDropdown';
 import { create } from 'lodash';
 import FaceComponent from './FaceComponent';
+import { SpeakerConfig } from '@/types/speakerConfig';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -58,7 +60,7 @@ function Home({ user }: HomeProps) {
   });
 
   const { messages, pending, history, pendingSourceDocs } = messageState;
-  const { speakText, stopSpeaking, speakAudioUrl } = useSpeakText();
+  const { speakText, stopSpeaking, pauseSpeaking, resumeSpeaking, speakAudioUrl } = useSpeakText();
 
   const [listening, setListening] = useState<boolean>(false);
   const [stoppedManually, setStoppedManually] = useState<boolean>(true);
@@ -81,7 +83,7 @@ function Home({ user }: HomeProps) {
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
   const [isPaused, setIsPaused] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const isSpeakingRef = useRef<boolean>(false);
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [tokensCount, setTokensCount] = useState<number>(300);
@@ -623,19 +625,41 @@ function Home({ user }: HomeProps) {
           episodeIdRef.current = story.id;
 
           if (story.imageUrl != '') {
-            setImageUrl(story.imageUrl);
+            if (!isDisplayingRef.current) {
+              setImageUrl(story.imageUrl);
+            }
             setPersonalityImageUrls((state) => ({ ...state, [story.personality]: story.imageUrl }));
+          } if (localEpisode.personality === 'passthrough') {
+            // Passthrough image from  query
+            let gaibImage = await generateImageUrl(story.query, true, '', localEpisode.personality, localStoryId);
+            if (gaibImage !== '') {
+              if (!isDisplayingRef.current) {
+                setImageUrl(gaibImage);
+              }
+              story.imageUrl = gaibImage;
+            } else {
+              if (!isDisplayingRef.current) {
+                setImageUrl(await getGaib());
+              }
+              story.imageUrl = await getGaib();
+            }
           } else if (!personalityImageUrls[localEpisode.personality]) {
             let imageId = uuidv4().replace(/-/g, '');
             let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', localEpisode.personality, imageId);
             if (gaibImage !== '') {
-              setImageUrl(gaibImage);
+              if (!isDisplayingRef.current) {
+                setImageUrl(gaibImage);
+              }
               setPersonalityImageUrls((state) => ({ ...state, [localEpisode.personality]: gaibImage }));
             } else {
-              setImageUrl(await getGaib());
+              if (!isDisplayingRef.current) {
+                setImageUrl(await getGaib());
+              }
             }
           } else {
-            setImageUrl(personalityImageUrls[localEpisode.personality]);
+            if (!isDisplayingRef.current) {
+              setImageUrl(personalityImageUrls[localEpisode.personality]);
+            }
           }
 
           try {
@@ -825,7 +849,7 @@ function Home({ user }: HomeProps) {
     }, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [submitQueue, isFetching, isSpeaking, isSubmitQueueRef, listening, episodes]);
+  }, [submitQueue, isFetching, isSubmitQueueRef, listening, episodes]);
 
   useEffect(() => {
     async function fetchData() {
@@ -950,6 +974,27 @@ function Home({ user }: HomeProps) {
       return { image: '', prompt: imagePrompt };
     }
   };
+
+  function addProsody(speaker: string, sentence: string): string {
+    const config: SpeakerConfig = speakerConfigs[speaker] || speakerConfigs['generic'];
+    let ssmlSentence = `<prosody rate="${config.rate}" pitch="${config.pitch}">${sentence}</prosody>`;
+
+    if (config.emphasisWords) {
+      config.emphasisWords.forEach(word => {
+        const emphasisTag = `<emphasis level="strong">${word}</emphasis>`;
+        ssmlSentence = ssmlSentence.split(word).join(emphasisTag);
+      });
+    }
+
+    if (config.pauses) {
+      config.pauses.forEach(pause => {
+        const pauseTag = `${pause.word}<break time="${pause.duration}"/>`;
+        ssmlSentence = ssmlSentence.split(pause.word).join(pauseTag);
+      });
+    }
+
+    return ssmlSentence;
+  }
 
   function removeMarkdownAndSpecialSymbols(text: string): string {
     // Remove markdown formatting
@@ -1193,23 +1238,20 @@ function Home({ user }: HomeProps) {
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
     const playQueueDisplay = async () => {
-      if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
+      if (playQueue.length > 0 && !isSpeakingRef.current && !isDisplayingRef.current) {
         isDisplayingRef.current = true;
+        isSpeakingRef.current = true;
         const playStory = playQueue[0];  // Get the first story
         try {
           console.log(`PlayQueaue: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
-
-          setIsSpeaking(true);
 
           setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
           setLoadingOSD(`Playing ${playStory.isStory ? "story" : "question"} [${playStory.title.slice(0, 20)}...] by ${playStory.personality}.`);
           setLastStory(playStory.shareUrl);
           if (playStory.imageUrl != '' && playStory.imageUrl != null && playStory.imageUrl != undefined && typeof playStory.imageUrl != 'object') {
             setImageUrl(playStory.imageUrl);
-          } else {
-            setImageUrl(await getGaib());
           }
-
+          
           // This function needs to be async to use await inside
           async function playScenes() {
             // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
@@ -1221,17 +1263,32 @@ function Home({ user }: HomeProps) {
                 }
                 if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
                   setImageUrl(sentence.imageUrl);
-                } else {
-                  setImageUrl(await getGaib());
                 }
                 if (sentence.audioFile != '' && sentence.audioFile.match(/\.mp3$/)) {
                   try {
                     const response = await fetch(sentence.audioFile, { method: 'HEAD' });
                     if (response.ok) {
                       try {
+                        // Set a flag to track if the operation has timed out
+                        let hasTimedOut = false;
+
+                        // Set a timeout to trigger after N seconds
+                        const timeout = setTimeout(() => {
+                          hasTimedOut = true;
+                        }, 60000);
+
                         await speakAudioUrl(sentence.audioFile);
-                        setAudioUrl(sentence.audioFile);
-                        console.log("Audio played successfully");
+
+                        // Clear the timeout since the function completed successfully
+                        clearTimeout(timeout);
+
+                        // Check if the operation timed out and handle accordingly
+                        if (hasTimedOut) {
+                          console.error(`PlaybackDisplay: Timed out while playing ${sentence.audioFile}`);
+                        } else {
+                          setAudioUrl(sentence.audioFile);
+                          console.log("Audio played successfully");
+                        }
                       } catch (error) {
                         console.error(`PlaybackDisplay: An error occurred while playing ${sentence.audioFile}:\n${error}`);
                       }
@@ -1241,6 +1298,10 @@ function Home({ user }: HomeProps) {
                   } catch (error) {
                     console.error(`PlaybackDisplay: An error occurred while fetching ${sentence.audioFile}:\n${error}`);
                   }
+                }
+                // check if we need to stop speaking
+                if (!isSpeakingRef.current) {
+                  break;
                 }
               }
             }
@@ -1259,6 +1320,15 @@ function Home({ user }: HomeProps) {
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
+
+        // Images and Passthrough wait for 10 seconds before playing the next story
+        if (playStory.personality == 'passthrough') {
+          // sleep for 10 seconds
+          await new Promise(r => setTimeout(r, 5000));
+        } else {
+          // wait 3 seconds after story before ending
+          await new Promise(r => setTimeout(r, 3000));
+        }
 
         setLoadingOSD(`Finished playing ${playStory.title.slice(0, 30)}.`);
         setSubtitle(`Finished playing ${playStory.title.slice(0, 50)}.`);
@@ -1279,8 +1349,6 @@ function Home({ user }: HomeProps) {
             if (gaibImage !== '') {
               setImageUrl(gaibImage);
               setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: gaibImage }));
-            } else {
-              setImageUrl(await getGaib());
             }
           } else {
             setImageUrl(personalityImageUrls[localPersonality]);
@@ -1293,7 +1361,7 @@ function Home({ user }: HomeProps) {
         setLoadingOSD(`Ready to play a story or answer a question.`);
 
         isDisplayingRef.current = false;
-        setIsSpeaking(false);
+        isSpeakingRef.current = false;
       }
     };
 
@@ -1303,7 +1371,7 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(playQueueDisplay, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [playQueue, isSpeaking, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setIsSpeaking, setLoadingOSD, setImageUrl, setLastStory]);
+  }, [playQueue, isSpeakingRef, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setLoadingOSD, setImageUrl, setLastStory]);
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
@@ -1461,26 +1529,30 @@ function Home({ user }: HomeProps) {
         }
 
         // Create personality main image
-        if (!personalityImageUrls[story.personality]) {
-          let imageId = uuidv4().replace(/-/g, '');
-          let gaibImage = await generateImageUrl("Portrait shot of the personality: " +
-            buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', story.personality, imageId);
-          if (gaibImage !== '') {
-            setPersonalityImageUrls((state) => ({ ...state, [story.personality]: gaibImage }));
-            lastImage = gaibImage;
+        if (story.personality !== 'passthrough') {
+          if (!personalityImageUrls[story.personality]) {
+            let imageId = uuidv4().replace(/-/g, '');
+            let gaibImage = await generateImageUrl("Portrait shot of the personality: " +
+              buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', story.personality, imageId);
+            if (gaibImage !== '') {
+              setPersonalityImageUrls((state) => ({ ...state, [story.personality]: gaibImage }));
+              lastImage = gaibImage;
+            }
+          } else {
+            lastImage = personalityImageUrls[story.personality];
           }
+          imageCount++;
+          promptImages.push(lastImage);
+          promptImageTexts.push("Description of Personality: " + story.personality.toUpperCase());
         } else {
-          lastImage = personalityImageUrls[story.personality];
+          lastImage = story.imageUrl;
         }
-        imageCount++;
-        promptImages.push(lastImage);
-        promptImageTexts.push("Description of Personality: " + story.personality.toUpperCase());
 
         const titleScreenImage: string = lastImage;
         const titleScreenText: string = firstSentence;
 
         // Load the image if we are not playing something else already
-        if (!isDisplayingRef.current && !isSpeaking) {
+        if (!isDisplayingRef.current && !isSpeakingRef.current) {
           setImageUrl(titleScreenImage);
           setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}.\n[${story.tokens} GPT tokens generated]`);
         }
@@ -1489,15 +1561,19 @@ function Home({ user }: HomeProps) {
         let sentencesToSpeak = [] as string[];
 
         // add to the beginning of the scentences to speek the query and the title if it is a question
-        if (story.isStory) {
-          sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
+        if (story.personality !== 'passthrough') {
+          if (story.isStory) {
+            sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
+          } else {
+            sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
+          }
+          currentSceneText = story.query + "\n\n";
+          sceneCount++;
+          sceneTexts.push(currentSceneText);
+          currentSceneText = "";
         } else {
-          sentencesToSpeak.push(`SCENE: \n\n${story.query}`);
+          combinedSentences = [`SCENE\n\n${story.query}`];
         }
-        currentSceneText = story.query + "\n\n";
-        sceneCount++;
-        sceneTexts.push(currentSceneText);
-        currentSceneText = "";
 
         let dotsStatus = ".";
         for (const sentence of combinedSentences) {
@@ -1780,7 +1856,8 @@ function Home({ user }: HomeProps) {
                 }
                 try {
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                  await speakText(cleanText, voiceRate, voicePitch, detectedGender, audioLanguage, model, audioFile);
+                  const prosodyText = addProsody(story.personality, cleanText);
+                  await speakText(prosodyText, voiceRate, voicePitch, detectedGender, audioLanguage, model, audioFile);
 
                   // Check if the audio file exists
                   const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
@@ -1847,7 +1924,7 @@ function Home({ user }: HomeProps) {
       }
       isBuildingRef.current = false;
     }
-  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, imageUrl, setSubtitle, setLoadingOSD, gender, audioLanguage, subtitleLanguage, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeaking, startTime, selectedTheme, isFetching, user, query, isBuildingRef, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
+  }, [messages, conversationHistory, twitchChatEnabled, speechOutputEnabled, speakText, stopSpeaking, isFullScreen, imageUrl, setSubtitle, setLoadingOSD, gender, audioLanguage, subtitleLanguage, isPaused, isSpeakingRef, startTime, selectedTheme, isFetching, user, query, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage, isFullScreen, isPaused, isSpeakingRef, startTime, selectedTheme, isFetching, user, query, isBuildingRef, playQueue, setPlayQueue, selectedPersonality, selectedNamespace, debug, translateText, subtitleLanguage]);
 
   // take an Episode and parse the question and return the Episode with the parts filled out from the question
   function parseQuestion(episode: Episode): Episode {
@@ -2174,7 +2251,7 @@ function Home({ user }: HomeProps) {
         // Set a new timeout to stop the recognition after 10 seconds of no speaking
         const newTimeoutID = setTimeout(() => {
           recognition.stop();
-          if (!stopWordDetected.current && !isSpeaking && startWordDetected.current) {
+          if (!stopWordDetected.current && !isSpeakingRef.current && startWordDetected.current) {
             console.log(`Speech recognition timed out with voiceQuery results, voiceQuery: '${voiceQuery.slice(0, 16)}...'`);
             setSpeechRecognitionComplete(true);
             timeoutDetected.current = true;
@@ -2194,20 +2271,20 @@ function Home({ user }: HomeProps) {
           console.log('Speech recognition aborted.');
         } else if (event.error === 'network') {
           console.log('Network error occurred.');
-        } else if (!stoppedManually && !isSpeaking && !timeoutDetected.current) {
+        } else if (!stoppedManually && !isSpeakingRef.current && !timeoutDetected.current) {
           startSpeechRecognition();
         } else {
-          console.error(`recognition.onerror: Error occurred in recognition: ${event.error}, stoppedManually: ${stoppedManually}, isSpeaking: ${isSpeaking}, timeoutDetected: ${timeoutDetected.current}`);
+          console.error(`recognition.onerror: Error occurred in recognition: ${event.error}, stoppedManually: ${stoppedManually}, isSpeaking: ${isSpeakingRef.current}, timeoutDetected: ${timeoutDetected.current}`);
         }
       };
     } else {
       console.log('Speech Recognition API is not supported in this browser.');
     }
-  }, [listening, stoppedManually, recognition, setListening, setVoiceQuery, setSpeechRecognitionComplete, timeoutDetected, startWordDetected, stopWordDetected, setTimeoutID, isSpeaking, voiceQuery]);
+  }, [listening, stoppedManually, recognition, setListening, setVoiceQuery, setSpeechRecognitionComplete, timeoutDetected, startWordDetected, stopWordDetected, setTimeoutID, isSpeakingRef, voiceQuery]);
 
   // Add a useEffect hook to call handleSubmit whenever the query state changes
   useEffect(() => {
-    if (voiceQuery && speechRecognitionComplete && timeoutDetected.current && !stopWordDetected.current && !isSpeaking) {
+    if (voiceQuery && speechRecognitionComplete && timeoutDetected.current && !stopWordDetected.current && !isSpeakingRef.current) {
       console.log(`useEffect: Queing voiceQuery: '${voiceQuery.slice(0, 80)}...'`);
       let episode: Episode = {
         title: voiceQuery,
@@ -2240,17 +2317,17 @@ function Home({ user }: HomeProps) {
         startSpeechRecognition();
       }
     }
-  }, [voiceQuery, speechRecognitionComplete, isSpeaking, stoppedManually, isStory, episodes, startSpeechRecognition, selectedNamespace, selectedPersonality]);
+  }, [voiceQuery, speechRecognitionComplete, isSpeakingRef, stoppedManually, isStory, episodes, startSpeechRecognition, selectedNamespace, selectedPersonality]);
 
   // Add a useEffect hook to start the speech recognition when the component mounts
   useEffect(() => {
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      if (!listening && !isSpeaking && !stoppedManually && !voiceQuery) {
+      if (!listening && !isSpeakingRef.current && !stoppedManually && !voiceQuery) {
         console.log(`useEffect: Starting speech recognition, stoppedManually: ${stoppedManually}`);
         startSpeechRecognition();
       }
     }
-  }, [listening, isSpeaking, voiceQuery, stoppedManually, startSpeechRecognition]);
+  }, [listening, isSpeakingRef, voiceQuery, stoppedManually, startSpeechRecognition]);
 
   // speech toggle
   const handleSpeechToggle = () => {
@@ -2307,8 +2384,13 @@ function Home({ user }: HomeProps) {
 
   // replay episode from history using passthrough REPLAY: <story> submit mock handlesubmit
   const handleReplay = () => {
+    if (!latestMessage.message || latestMessage.message === '') {
+      console.log(`Replay is skipping empty message: ${JSON.stringify(latestMessage, null, 2)}`);
+      alert(`Replay is skipping empty message.`);
+      return;
+    }
     let episode: Episode = {
-      title: `REPLAY: ${latestMessage.message}`,
+      title: `${latestMessage.message}`,
       type: isStory ? 'episode' : 'question',
       username: 'voice',
       namespace: '',
@@ -2334,11 +2416,29 @@ function Home({ user }: HomeProps) {
 
   // stop speaking
   const handleStop = () => {
-    stopSpeaking();
-    setIsPaused(false);
-    setIsSpeaking(false);
+    // If using Web Speech API, stop it first.
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
+    }
+
+    // Stop any audio playback from the useSpeakText hook.
+    isDisplayingRef.current = false;
+
+    // Reset state variables.
+    isSpeakingRef.current = false;
+    if (isPaused) {
+      setIsPaused(false);
+      resumeSpeaking();
+    }
+  };
+
+  const handlePause = () => {
+    if (isPaused) {
+      resumeSpeaking();
+      setIsPaused(false);
+    } else {
+      setIsPaused(true);
+      pauseSpeaking();
     }
   };
 
@@ -2517,7 +2617,7 @@ function Home({ user }: HomeProps) {
                       } {
                         episodes.length > 0 ? `Episodes:${episodes.length}` : '.'
                       } {
-                        isSpeaking ? 'Speaking' : '.'
+                        isSpeakingRef.current ? 'Speaking' : '.'
                       } {
                         isDisplayingRef.current ? 'Displaying' : '.'
                       } {
@@ -2574,14 +2674,13 @@ function Home({ user }: HomeProps) {
                     >
                       {!stoppedManually ? 'Voice Input Off' : 'Voice Input On'}
                     </button>&nbsp;&nbsp;&nbsp;&nbsp;
-                    {isSpeaking ? (
+                    {isDisplayingRef.current ? (
                       <>
                         <button
                           title="Stop Speaking"
                           onClick={handleStop}
                           type="button"
-                          disabled={!isSpeaking}
-                          className={`${styles.footer} ${isSpeaking ? styles.listening : ''}`}
+                          className={`${styles.footer} ${isSpeakingRef.current ? styles.listening : ''}`}
                         >Stop Speaking</button> &nbsp;&nbsp;&nbsp;&nbsp;
                       </>
                     ) : (
@@ -2593,11 +2692,28 @@ function Home({ user }: HomeProps) {
                           className={`${styles.footer}`}
                         >Replay</button> &nbsp;&nbsp;&nbsp;&nbsp;</>
                     )}
+                    {isSpeakingRef.current && isPaused ? (
+                      <>
+                        <button
+                          title="Resume"
+                          onClick={handlePause}
+                          type="button"
+                          className={`${styles.footer} ${isSpeakingRef.current ? styles.listening : ''}`}
+                        >Resume Play</button> &nbsp;&nbsp;&nbsp;&nbsp;
+                      </>
+                    ) : isSpeakingRef.current && !isPaused ? (
+                      <>
+                        <button
+                          title="Pause"
+                          onClick={handlePause}
+                          type="button"
+                          className={`${styles.footer}`}
+                        >Pause</button> &nbsp;&nbsp;&nbsp;&nbsp;</>
+                    ) : (<></>)}
                     <button
                       title="Clear History"
                       onClick={handleClear}
                       type="button"
-                      disabled={isSpeaking}
                       className={styles.footer}
                     >Clear Chat History</button>&nbsp;&nbsp;&nbsp;&nbsp;
                     <button

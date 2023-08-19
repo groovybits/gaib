@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import firebase from 'firebase/app';
 import { fetchWithAuth } from '@/utils/fetchWithAuth';
 
 export const useSpeakText: any = () => {
@@ -9,6 +8,18 @@ export const useSpeakText: any = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+    }
+  };
+
+  const pauseSpeaking = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+  };
+
+  const resumeSpeaking = () => {
+    if (audioRef.current) {
+      audioRef.current.play();
     }
   };
 
@@ -49,7 +60,7 @@ export const useSpeakText: any = () => {
             body: JSON.stringify({ text, rate, pitch, ssmlGender, languageCode, name, audioFile }), // Include rate and pitch
           });
         }
-        
+
         if (!response.ok) {
           throw new Error('Error in synthesizing speech, statusText: ' + response.statusText);
         }
@@ -111,5 +122,5 @@ export const useSpeakText: any = () => {
     });
   };
 
-  return { speakText, stopSpeaking, speakAudioUrl };
+  return { speakText, stopSpeaking, pauseSpeaking, resumeSpeaking, speakAudioUrl };
 };

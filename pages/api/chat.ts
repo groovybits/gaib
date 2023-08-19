@@ -16,6 +16,8 @@ import {
   buildPrompt,
   buildCondensePrompt,
 } from '@/config/personalityPrompts';
+import nlp from 'compromise/three';
+import { forEach } from 'lodash';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.DEBUG ? Boolean(process.env.DEBUG) : false;
@@ -180,7 +182,7 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
     };
 
     // check if question string starts with the string "REPLAY:" and if so then just return it using the sendData function and then end the response
-    if (question.startsWith('REPLAY:') || localPersonality === 'Passthrough' || question.startsWith(`!image`)) {
+    if (question.startsWith('REPLAY:') || localPersonality === 'passthrough' || question.startsWith(`!image`)) {
       if (question.startsWith(`!image`)) {
         question.replace(`!image:`, 'REPLAY: ').replace(`!image `, 'REPLAY: ');
         console.log(`ChatAPI: Image Question: ${question}`);
@@ -194,7 +196,10 @@ export default async function handler(req: NextApiRequestWithUser, res: NextApiR
         Connection: 'keep-alive',
       });
       sendData(JSON.stringify({ data: '' }));
-      sendData(JSON.stringify({ data: question.replace('REPLAY:', '').replace('!image:','').replace('!image','') }));
+      let sentences = nlp(question.replace('REPLAY:', '').replace('!image:', '').replace('!image', '')).sentences().out('array');
+      forEach(sentences, (sentence) => {
+        sendData(JSON.stringify({ data: sentence }));
+      });
       sendData('[DONE]');
       res.end();
       return;
