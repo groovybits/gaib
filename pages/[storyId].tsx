@@ -21,7 +21,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const [leftHover, setLeftHover] = useState(false);
   const [rightHover, setRightHover] = useState(false);
   const [currentSentence, setCurrentSentence] = useState(0); // Add this line to keep track of the current sentence
-  const { stopSpeaking, speakAudioUrl } = useSpeakText();
+  const { stopSpeaking, speakAudioUrl, resumeSpeaking, pauseSpeaking } = useSpeakText();
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [autoPage, setAutoPage] = useState(true);
   const isSpeakingRef = useRef(false);
