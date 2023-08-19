@@ -7,7 +7,6 @@ import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import {
   PERSONALITY_PROMPTS,
-  PERSONALITY_GENDERS,
   PERSONALITY_IMAGES,
   PERSONALITY_VOICE_MODELS,
   speakerConfigs,
@@ -553,13 +552,8 @@ function Home({ user }: HomeProps) {
           // Main Key we use for the story ID
           let localStoryId = uuidv4().replace(/-/g, '');
 
-          let personalityGender: string = gender;
+          // Set the personality
           const localPersonality: keyof typeof PERSONALITY_PROMPTS = localEpisode.personality as keyof typeof PERSONALITY_PROMPTS;
-
-          // Override personalityGender with ones from PERSONALITY_GENDERS if the personality is in the list
-          if (PERSONALITY_GENDERS[localPersonality as keyof typeof PERSONALITY_GENDERS]) {
-            personalityGender = PERSONALITY_GENDERS[localPersonality as keyof typeof PERSONALITY_GENDERS];
-          }
 
           // Override the imageUrl with ones from PERSONALITY_IMAGES if the personality is in the list
           let personalityImageUrl = '';
@@ -572,6 +566,7 @@ function Home({ user }: HomeProps) {
           let voiceModel = '';
           let voiceRate = 1.0;
           let voicePitch = 0.0;
+          let personalityGender: string = gender;
           if (PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS]) {
             let personalityVoice = PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS];
             if (personalityVoice.model != '') {
@@ -975,8 +970,13 @@ function Home({ user }: HomeProps) {
     }
   };
 
-  function addProsody(speaker: string, sentence: string): string {
-    const config: SpeakerConfig = speakerConfigs[speaker] || speakerConfigs['generic'];
+  function addProsody(speaker: string, sentence: string, rate: number, pitch: number): string {
+    let config: SpeakerConfig = speakerConfigs[speaker] || speakerConfigs['generic'];
+    if (!speakerConfigs[speaker]) {
+      console.log(`addProsody: speaker ${speaker} not found in speakerConfigs`);
+      config.rate = rate;
+      config.pitch = pitch;
+    }
     let ssmlSentence = `<prosody rate="${config.rate}" pitch="${config.pitch}">${sentence}</prosody>`;
 
     if (config.emphasisWords) {
@@ -1888,7 +1888,7 @@ function Home({ user }: HomeProps) {
                   }
 
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                  const prosodyText = addProsody(story.personality, cleanText);
+                  const prosodyText = addProsody(story.personality, cleanText, voiceRate, voicePitch);
                   await speakText(prosodyText, voiceRate, voicePitch, detectedGender, currentAudioLanguage, currentModel, audioFile);
 
                   // Check if the audio file exists
