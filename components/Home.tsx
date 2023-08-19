@@ -1880,15 +1880,16 @@ function Home({ user }: HomeProps) {
                 }
                 try {
                   let currentAudioLanguage = audioLanguage;
+                  let currentModel = model;
                   const { language: detectedLanguage, model: detectedModel }  = selectVoiceModel(cleanText, detectedGender);
                   if (detectedModel !== '' && audioLanguage != detectedLanguage) {
-                    model = detectedModel;
+                    currentModel = detectedModel;
                     currentAudioLanguage = detectedLanguage;
                   }
 
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
                   const prosodyText = addProsody(story.personality, cleanText);
-                  await speakText(prosodyText, voiceRate, voicePitch, detectedGender, currentAudioLanguage, model, audioFile);
+                  await speakText(prosodyText, voiceRate, voicePitch, detectedGender, currentAudioLanguage, currentModel, audioFile);
 
                   // Check if the audio file exists
                   const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
