@@ -250,7 +250,7 @@ function Home({ user }: HomeProps) {
       let summary: string = '';
 
       // Create a title for the story from the first sentence
-      title = story.title.slice(0,30);  // Limit the title to 100 characters
+      title = story.title.slice(0, 30);  // Limit the title to 100 characters
 
       // Create a brief introduction of the story from the second sentence
       const introduction = story.rawText.length > 1 ? story.rawText.substring(0, 30) : '';  // Limit the introduction to 100 characters
@@ -622,19 +622,17 @@ function Home({ user }: HomeProps) {
           // Set current episode ID
           episodeIdRef.current = story.id;
 
-          if (!personalityImageUrls[localEpisode.personality]) {
-            // Generate image here...
-            if (!personalityImageUrls[localEpisode.personality]) {
-              let imageId = uuidv4().replace(/-/g, '');
-              let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', localEpisode.personality, imageId);
-              if (gaibImage !== '') {
-                setImageUrl(gaibImage);
-                setPersonalityImageUrls((state) => ({ ...state, [localEpisode.personality]: gaibImage }));
-              } else {
-                setImageUrl(await getGaib());
-              }
+          if (story.imageUrl != '') {
+            setImageUrl(story.imageUrl);
+            setPersonalityImageUrls((state) => ({ ...state, [story.personality]: story.imageUrl }));
+          } else if (!personalityImageUrls[localEpisode.personality]) {
+            let imageId = uuidv4().replace(/-/g, '');
+            let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', localEpisode.personality, imageId);
+            if (gaibImage !== '') {
+              setImageUrl(gaibImage);
+              setPersonalityImageUrls((state) => ({ ...state, [localEpisode.personality]: gaibImage }));
             } else {
-              setImageUrl(personalityImageUrls[localEpisode.personality]);
+              setImageUrl(await getGaib());
             }
           } else {
             setImageUrl(personalityImageUrls[localEpisode.personality]);
@@ -842,19 +840,20 @@ function Home({ user }: HomeProps) {
 
         if (personalityImageUrl != '') {
           setImageUrl(personalityImageUrl);
+          setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: personalityImageUrl }));
         } else if (!personalityImageUrls[selectedPersonality]) {
           let imageId = uuidv4().replace(/-/g, '');
-          let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(selectedPersonality, false).slice(0, 2000), true, '', selectedPersonality, imageId);
+          let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localPersonality, false).slice(0, 2000), true, '', localPersonality, imageId);
           if (gaibImage !== '') {
             setImageUrl(gaibImage);
-            setPersonalityImageUrls((state) => ({ ...state, [selectedPersonality]: gaibImage }));
+            setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: gaibImage }));
           } else {
             setImageUrl(await getGaib());
           }
         } else {
-          setImageUrl(personalityImageUrls[selectedPersonality]);
+          setImageUrl(personalityImageUrls[localPersonality]);
         }
-        setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
+        setSubtitle(`-*- ${localPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
       }
     }
 
@@ -1195,15 +1194,15 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     const playQueueDisplay = async () => {
       if (playQueue.length > 0 && !isSpeaking && !isDisplayingRef.current) {
+        isDisplayingRef.current = true;
         const playStory = playQueue[0];  // Get the first story
         try {
           console.log(`PlayQueaue: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
 
-          isDisplayingRef.current = true;
           setIsSpeaking(true);
 
           setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
-          setLoadingOSD(`Playing ${playStory.isStory ? "story" : "question"} [${playStory.title.slice(0,20)}...] by ${playStory.personality}.`);
+          setLoadingOSD(`Playing ${playStory.isStory ? "story" : "question"} [${playStory.title.slice(0, 20)}...] by ${playStory.personality}.`);
           setLastStory(playStory.shareUrl);
           if (playStory.imageUrl != '' && playStory.imageUrl != null && playStory.imageUrl != undefined && typeof playStory.imageUrl != 'object') {
             setImageUrl(playStory.imageUrl);
@@ -1255,22 +1254,16 @@ function Home({ user }: HomeProps) {
           }
 
           setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
-
-          isDisplayingRef.current = false;
-          setIsSpeaking(false);
         } catch (error) {
           console.error('An error occurred in the processQueue function:', error); // Check for any errors
-          isDisplayingRef.current = false;
-          setIsSpeaking(false);
         }
         // Reset the subtitle after all sentences have been spoken
         stopSpeaking();
 
-        setLoadingOSD(`Finished playing ${playStory.title.slice(0,30)}.`);
-        setSubtitle(`Finished playing ${playStory.title.slice(0,50)}.`);
+        setLoadingOSD(`Finished playing ${playStory.title.slice(0, 30)}.`);
+        setSubtitle(`Finished playing ${playStory.title.slice(0, 50)}.`);
 
         try {
-
           let personalityImageUrl = '';
           let localPersonality = selectedPersonality;
           if (PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES]) {
@@ -1280,17 +1273,17 @@ function Home({ user }: HomeProps) {
           // get an image generated from the personality
           if (personalityImageUrl != '') {
             setImageUrl(personalityImageUrl);
-          } else if (!personalityImageUrls[selectedPersonality]) {
+          } else if (!personalityImageUrls[localPersonality]) {
             let imageId = uuidv4().replace(/-/g, '');
-            let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(selectedPersonality, false).slice(0, 2000), true, '', selectedPersonality, imageId);
+            let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localPersonality, false).slice(0, 2000), true, '', localPersonality, imageId);
             if (gaibImage !== '') {
               setImageUrl(gaibImage);
-              setPersonalityImageUrls((state) => ({ ...state, [selectedPersonality]: gaibImage }));
+              setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: gaibImage }));
             } else {
               setImageUrl(await getGaib());
             }
           } else {
-            setImageUrl(personalityImageUrls[selectedPersonality]);
+            setImageUrl(personalityImageUrls[localPersonality]);
           }
         } catch (error) {
           console.error('An error occurred in the getGaib function:', error); // Check for any errors
@@ -1298,6 +1291,9 @@ function Home({ user }: HomeProps) {
 
         setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
         setLoadingOSD(`Ready to play a story or answer a question.`);
+
+        isDisplayingRef.current = false;
+        setIsSpeaking(false);
       }
     };
 
@@ -1484,7 +1480,7 @@ function Home({ user }: HomeProps) {
         const titleScreenText: string = firstSentence;
 
         // Load the image if we are not playing something else already
-        if (!isDisplayingRef.current) {
+        if (!isDisplayingRef.current && !isSpeaking) {
           setImageUrl(titleScreenImage);
           setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}.\n[${story.tokens} GPT tokens generated]`);
         }
@@ -2529,7 +2525,7 @@ function Home({ user }: HomeProps) {
                       } {
                         isProcessingRef.current ? 'Processing' : '.'
                       } {
-                        isProcessingTwitchRef.current ? '[*]' : '.' 
+                        isProcessingTwitchRef.current ? '[*]' : '.'
                       } {
                         lastStatusMessage.current ? lastStatusMessage.current : '.'
                       }

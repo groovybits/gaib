@@ -193,25 +193,29 @@ export const PERSONALITY_IMAGES = {
 
 /* 
 Female:
-en-US-Neural2-G
-en-US-Neural2-H
+en-US-Neural2-C - Higher
+en-US-Neural2-E - High
+en-US-Neural2-G - Deep
+en-US-Neural2-H - Deeper
 
 Male:
-en-US-Neural2-I
-en-US-Neural2-J
+en-US-Neural2-I - Higher
+en-US-Neural2-A - High
+en-US-Neural2-D - Deep
+en-US-Neural2-J - Deeper
 */
 export const PERSONALITY_VOICE_MODELS = {
   groovy: {
     gender: 'MALE',
-    model: 'en-US-Neural2-J',      // Voice model for the "groovy" personality
+    model: 'en-US-Neural2-D',      // Voice model for the "groovy" personality
     pitch: -20.0,       // Default pitch for the "groovy" personality
     rate: 0.81,        // Default speaking rate for the "groovy" personality
   },
   donaldtrump: {
     gender: 'MALE',
-    model: 'en-US-Neural2-I',      // Voice model for the "donaldtrump" personality
-    pitch: -20.0,       // Default pitch for the "donaldtrump" personality
-    rate: 0.75,        // Default speaking rate for the "donaldtrump" personality
+    model: 'en-US-Neural2-D',      // Voice model for the "donaldtrump" personality
+    pitch: -15.0,       // Default pitch for the "donaldtrump" personality
+    rate: 0.60,        // Default speaking rate for the "donaldtrump" personality
   },
   mickeymouse: {
     gender: 'MALE',
@@ -221,10 +225,28 @@ export const PERSONALITY_VOICE_MODELS = {
   },
   god: {
     gender: 'MALE',
-    model: 'en-US-Neural2-I',
-    pitch: -18.0,
-    rate: 0.85,
+    model: 'en-US-Neural2-D',
+    pitch: -20.0,
+    rate: 0.70,
   },
+  jesus: {
+    gender: 'MALE',
+    model: 'en-US-Neural2-D',
+    pitch: -12.0,
+    rate: 0.80,
+  },
+  yoda: {
+    gender: 'MALE',
+    model: 'en-US-Neural2-I',
+    pitch: -5.0,
+    rate: 0.40,
+  },
+  brittanyspears: {
+    gender: 'FEMALE',
+    model: 'en-US-Neural2-H',
+    pitch: -5.0,
+    rate: 0.60,
+  }
 };
 
 export const PERSONALITY_PROMPTS = {
