@@ -5,7 +5,6 @@ import Link from 'next/link';
 import copy from 'copy-to-clipboard';
 import { NextPage, NextPageContext } from 'next';
 import Head from 'next/head';
-import PexelsCredit from '@/components/PexelsCredit';
 import { ParsedUrlQuery } from 'querystring';
 import Layout from '@/components/Layout';
 import { Story } from '@/types/story'; // Import the new Story type
@@ -105,6 +104,10 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
       if (selectedStory.scenes) {
         let spoke = false;
         let spokenText = '';
+
+        if (selectedStory.personality === 'passthrough') {
+          setViewTranscript(true);
+        }
 
         // Speak the text if autoSpeak is enabled and the current sentence has an audio file
         if (autoSpeak && selectedStory.scenes
@@ -312,7 +315,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                       <>
                         <img
                           src={imageUrl}
-                          alt="Scene"
+                          alt={`Scene ${currentScene + 1}}`}
                         />
                         <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
                           <p>{useSubtitles ? sentenceText : ''}</p>
@@ -322,7 +325,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                       <>
                         <img
                           src={selectedStory.imageUrl}
-                          alt="Scene"
+                          alt="Transcript"
                         />
                         <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
                           <p>{selectedStory.scenes && selectedStory.scenes[currentScene].sentences && selectedStory.scenes[currentScene].sentences.length > 0 ? selectedStory.scenes[currentScene].sentences.map(sentence => sentence.text).join(' ') : selectedStory.prompt}</p>
@@ -330,7 +333,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                       </>
                       ) :
                         <div className={isFullScreen ? `${styles.readerFullScreenSubtitle}` : styles.subtitle}>
-                          <p>selectedStory.prompt</p>
+                          <p>{selectedStory.rawText != '' ? selectedStory.rawText : selectedStory.query != '' ? selectedStory.query : selectedStory.title }</p>
                         </div>
                     }
                     <>
@@ -394,19 +397,20 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
                   </div>
                 </div>
               </div>
-              <Link href="/feed" className={styles.footer}>
-                <a>Story Board</a>
-              </Link>&nbsp;&nbsp;|&nbsp;&nbsp;
+             
               <button className={styles.footer} onClick={toggleSpeakingText}>{autoSpeak ? 'Stop Playing' : 'Start Playing'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={resetState}>Reset</button>&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;
+              {/*<button className={styles.footer} onClick={resetState}>Reset</button>&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => setUseSubtitles(!useSubtitles)}>{useSubtitles ? 'Hide Subtitles' : 'Show Subtitles'}</button>&nbsp;&nbsp;|&nbsp;&nbsp;
               <button className={styles.footer} disabled={isSpeakingRef.current} onClick={() => setViewTranscript(!viewTranscript)}>{viewTranscript ? 'Hide Transcript' : 'Show Transcript'}</button>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleShareClick(storyId) }}>Copy Link</button>&nbsp;&nbsp;|&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/}
+              <button className={styles.footer} onClick={() => { storyId && handleShareClick(storyId) }}>Copy Link</button>{/*&nbsp;&nbsp;|&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => { storyId && handleFacebookShareClick(storyId) }}>Share on Facebook</button>&nbsp;&nbsp;|&nbsp;&nbsp;
               <button className={styles.footer} onClick={() => { storyId && handleLinkedInShareClick(storyId) }}>Share on LinkedIn</button>&nbsp;&nbsp;|&nbsp;&nbsp;
-              <button className={styles.footer} onClick={() => { storyId && handleTwitterShareClick(storyId) }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;
-
+                        <button className={styles.footer} onClick={() => { storyId && handleTwitterShareClick(storyId) }}>Share on Twitter</button>&nbsp;&nbsp;&nbsp;&nbsp;*/}
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <Link href="/feed" className={styles.footer}>
+                <a>Story Board</a>
+              </Link>
             </div>
             <div className={styles.feedSection}>
               <div className={styles.feed}>
