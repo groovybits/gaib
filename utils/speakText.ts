@@ -14,7 +14,8 @@ export const useSpeakText: any = () => {
 
   const speakText = async (
     text: string,
-    rate: number = 1,
+    rate: number = 1, // Default speaking rate
+    pitch: number = 0, // Default pitch
     ssmlGender: string = 'FEMALE',
     languageCode: string = 'en-US',
     name: string = '',
@@ -34,22 +35,21 @@ export const useSpeakText: any = () => {
         }
 
         let response = null;
+        // Update both the API call branches to include the rate and pitch parameters
         if (name === '') {
-          //console.log(`Synthesizing speech ${ssmlGender} ${languageCode} for text: ${text}`);
           response = await fetchWithAuth(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', },
-            body: JSON.stringify({ text, rate, ssmlGender, languageCode }),
+            body: JSON.stringify({ text, rate, pitch, ssmlGender, languageCode }), // Include rate and pitch
           });
         } else {
-          //console.log(`Synthesizing speech ${ssmlGender} ${name} ${languageCode} for text: ${text}`);
           response = await fetchWithAuth(`${apiBaseUrl}/api/synthesizeSpeech`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', },
-            body: JSON.stringify({ text, rate, ssmlGender, languageCode, name, audioFile }),
+            body: JSON.stringify({ text, rate, pitch, ssmlGender, languageCode, name, audioFile }), // Include rate and pitch
           });
         }
-
+        
         if (!response.ok) {
           throw new Error('Error in synthesizing speech, statusText: ' + response.statusText);
         }

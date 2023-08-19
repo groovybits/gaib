@@ -42,6 +42,9 @@ export type Story = {
     gptModel: string;
     gptFastModel: string;
     defaultGender: string;
+    defaultVoiceModel: string;
+    defaultVoicePitch: number;
+    defaultVoiceRate: number;
     speakingLanguage: string;
     subtitleLanguage: string;
     gptPrompt: string;

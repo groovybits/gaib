@@ -7,6 +7,9 @@ import { Document } from 'langchain/document';
 import { useSpeakText } from '@/utils/speakText';
 import {
   PERSONALITY_PROMPTS,
+  PERSONALITY_GENDERS,
+  PERSONALITY_IMAGES,
+  PERSONALITY_VOICE_MODELS,
   buildPrompt,
   buildCondensePrompt,
 } from '@/config/personalityPrompts';
@@ -73,7 +76,7 @@ function Home({ user }: HomeProps) {
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [audioUrl, setAudioUrl] = useState<string>('');
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('buddha');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('groovy');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
@@ -548,6 +551,41 @@ function Home({ user }: HomeProps) {
           // Main Key we use for the story ID
           let localStoryId = uuidv4().replace(/-/g, '');
 
+          let personalityGender: string = gender;
+          const localPersonality: keyof typeof PERSONALITY_PROMPTS = localEpisode.personality as keyof typeof PERSONALITY_PROMPTS;
+
+          // Override personalityGender with ones from PERSONALITY_GENDERS if the personality is in the list
+          if (PERSONALITY_GENDERS[localPersonality as keyof typeof PERSONALITY_GENDERS]) {
+            personalityGender = PERSONALITY_GENDERS[localPersonality as keyof typeof PERSONALITY_GENDERS];
+          }
+
+          // Override the imageUrl with ones from PERSONALITY_IMAGES if the personality is in the list
+          let imageUrl = '';
+          if (PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES]) {
+            imageUrl = PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES];
+            setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: imageUrl }));
+          }
+
+          // Override the voiceModel with ones from PERSONALITY_VOICE_MODELS if the personality is in the list
+          let voiceModel = '';
+          let voiceRate = 1.0;
+          let voicePitch = 0.0;
+          if (PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS]) {
+            let personalityVoice = PERSONALITY_VOICE_MODELS[localPersonality as keyof typeof PERSONALITY_VOICE_MODELS];
+            if (personalityVoice.model != '') {
+              voiceModel = personalityVoice.model;
+            }
+            if (personalityVoice.rate != 1.0) {
+              voiceRate = personalityVoice.rate;
+            }
+            if (personalityVoice.pitch != 0.0) {
+              voicePitch = personalityVoice.pitch;
+            }
+            if (personalityVoice.gender != '') {
+              personalityGender = personalityVoice.gender;
+            }
+          }
+
           // setup the story structure
           let story: Story = {
             title: '',
@@ -558,7 +596,7 @@ function Home({ user }: HomeProps) {
             prompt: localEpisode.prompt,
             tokens: tokens,
             scenes: [],
-            imageUrl: '',
+            imageUrl: imageUrl,
             imagePrompt: '',
             timestamp: Date.now(),
             personality: localEpisode.personality,
@@ -572,8 +610,11 @@ function Home({ user }: HomeProps) {
             episodeCount: episodeCount,
             gptModel: modelName,
             gptFastModel: fastModelName,
-            gptPrompt: buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, localEpisode.type === 'episode' ? true : false),
-            defaultGender: gender,
+            gptPrompt: buildPrompt(localPersonality, localEpisode.type === 'episode' ? true : false),
+            defaultGender: personalityGender,
+            defaultVoiceModel: voiceModel,
+            defaultVoiceRate: voiceRate,
+            defaultVoicePitch: voicePitch,
             speakingLanguage: audioLanguage,
             subtitleLanguage: subtitleLanguage,
           }
@@ -1271,8 +1312,9 @@ function Home({ user }: HomeProps) {
 
         let voiceModels: { [key: string]: string } = {};
         let genderMarkedNames: any[] = [];
-        let detectedGender: string = gender;
-        let currentSpeaker: string = 'buddha';
+        let detectedGender: string = story.defaultGender;
+        let currentSpeaker: string = story.personality;
+        let defaultVoiceModel: string = story.defaultVoiceModel;
         let isContinuingToSpeak = false;
         let isSceneChange = false;
         let lastSpeaker = '';
@@ -1314,8 +1356,10 @@ function Home({ user }: HomeProps) {
           };
         }
         // Define default voice model for language
-        let defaultModel = audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
+        const defaultModel = defaultVoiceModel != '' ? defaultVoiceModel : audioLanguage in defaultModels ? defaultModels[audioLanguage as keyof typeof defaultModels] : "";
         let model = defaultModel;
+        let voiceRate = story.defaultVoiceRate;
+        let voicePitch = story.defaultVoicePitch;
 
         // Extract gender markers from the entire message
         const genderMarkerMatches = message.match(/(\w+)\s*\[(f|m|n|F|M|N)\]|(\w+):\s*\[(f|m|n|F|M|N)\]/gi);
@@ -1653,7 +1697,7 @@ function Home({ user }: HomeProps) {
           // If the speaker has changed or if it's a scene change, switch back to the default voice
           if (!speakerChanged && (sentence.startsWith('*') || sentence.startsWith('-'))) {
             detectedGender = gender;
-            currentSpeaker = 'buddha';
+            currentSpeaker = 'groovy';
             model = defaultModel;
             console.log(`Switched back to default voice. Gender: ${detectedGender}, Model: ${model}`);
             isSceneChange = true;  // Reset the scene change flag
@@ -1721,7 +1765,7 @@ function Home({ user }: HomeProps) {
                 }
                 try {
                   audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-                  await speakText(cleanText, 1, detectedGender, audioLanguage, model, audioFile);
+                  await speakText(cleanText, voiceRate, voicePitch, detectedGender, audioLanguage, model, audioFile);
 
                   // Check if the audio file exists
                   const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
@@ -1852,7 +1896,7 @@ function Home({ user }: HomeProps) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localEpisode.personality = 'buddha' as keyof typeof PERSONALITY_PROMPTS;
+            localEpisode.personality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
@@ -2084,10 +2128,10 @@ function Home({ user }: HomeProps) {
             }
           }
 
-          // If the transcript includes the word "hey buddha", set the start word detected ref to true
-          if (spokenInput.toLowerCase().includes("hey buddha") || spokenInput.toLowerCase().includes("hey buddha")) {
-            // trim off the text prefixing "hey gabe" or "hey buddha" in the spokenInput
-            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey buddha|hey buddha)/gi, '').trim();
+          // If the transcript includes the word "hey groovy", set the start word detected ref to true
+          if (spokenInput.toLowerCase().includes("hey groovy") || spokenInput.toLowerCase().includes("hey groovy")) {
+            // trim off the text prefixing "hey gabe" or "hey groovy" in the spokenInput
+            spokenInput = spokenInput.toLowerCase().replace(/.*?(hey groovy|hey groovy)/gi, '').trim();
             startWordDetected.current = true;
           } else if (!startWordDetected.current) {
             console.log(`Speech recognition onresult: Start word not detected, spokenInput: '${spokenInput.slice(0, 16)}...'`);
@@ -2095,8 +2139,8 @@ function Home({ user }: HomeProps) {
             spokenInput = '';
           }
 
-          // If the transcript includes the word "stop buddha", stop the recognition
-          if (spokenInput.toLowerCase().includes("stop buddha") || spokenInput.toLowerCase().includes("stop buddha")) {
+          // If the transcript includes the word "stop groovy", stop the recognition
+          if (spokenInput.toLowerCase().includes("stop groovy") || spokenInput.toLowerCase().includes("stop groovy")) {
             stopWordDetected.current = true;
             recognition.stop();
             setVoiceQuery('');
