@@ -213,6 +213,18 @@ export const PERSONALITY_VOICE_MODELS = {
     pitch: -20.0,       // Default pitch for the "donaldtrump" personality
     rate: 0.75,        // Default speaking rate for the "donaldtrump" personality
   },
+  mickeymouse: {
+    gender: 'MALE',
+    model: 'en-US-Neural2-J',
+    pitch: 15.0,
+    rate: 1.07,
+  },
+  god: {
+    gender: 'MALE',
+    model: 'en-US-Neural2-I',
+    pitch: -18.0,
+    rate: 0.85,
+  },
 };
 
 export const PERSONALITY_PROMPTS = {
