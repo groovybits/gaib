@@ -146,7 +146,6 @@ export const speakerConfigs: Record<string, SpeakerConfig> = {
   'condensednews': { rate: 0.3, pitch: 0 }, // Fast-paced
   'happyfunnews': { rate: 0.2, pitch: 5 }, // Upbeat
   'newsreporter': { rate: 0.1, pitch: 0 }, // Formal
-  'anime': { rate: 0.2, pitch: 3 }, // Energetic
   'poet': { rate: -0.1, pitch: 2 }, // Thoughtful, expressive
   'songwriter': { rate: 0, pitch: 1 },
   'therapist': { rate: -0.2, pitch: 4 }, // Calm, soothing
@@ -166,6 +165,7 @@ export const PERSONALITY_IMAGES = {
 
 /* 
 Female:
+en-US-Neural2-F - Highest
 en-US-Neural2-C - Higher
 en-US-Neural2-E - High
 en-US-Neural2-G - Deep
@@ -222,9 +222,9 @@ export const PERSONALITY_VOICE_MODELS = {
   },
   animeidol: {
     gender: 'FEMALE',
-    model: 'en-US-Neural2-H',
-    pitch: 10,
-    rate: 1.0,
+    model: 'en-US-Neural2-F',
+    pitch: 15,
+    rate: 1.2,
   },
   hal9000: {
     gender: 'MALE',
