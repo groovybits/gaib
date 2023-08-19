@@ -28,6 +28,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
   const isSpeakingRef = useRef(false);
   const [useSubtitles, setUseSubtitles] = useState(true);
   const [viewTranscript, setViewTranscript] = useState(false);
+  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
 
   useEffect(() => {
     if (storyId && typeof storyId === 'string') {
@@ -252,7 +253,7 @@ const Global: NextPage<{ initialStory: Story | null }> = ({ initialStory }) => {
 
   if (selectedStory) {
     const currentSceneData = selectedStory.scenes ? selectedStory.scenes[currentScene] : null; // Get current scene data
-    const imageUrl = currentSceneData ? currentSceneData.imageUrl : selectedStory.imageUrl; // Use image from the current scene
+    const imageUrl = currentSceneData && currentSceneData.imageUrl != '' ? currentSceneData.imageUrl : selectedStory.imageUrl != '' ? selectedStory.imageUrl : defaultGaib; // Use image from the current scene
 
     // Get the text from the current sentence in the current scene
     let sentenceText = '';
