@@ -2689,11 +2689,15 @@ function Home({ user }: HomeProps) {
                         )}
                       </>
                     )}
-                    <div className={
-                      isDisplayingRef.current ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
-                    }>
-                      {subtitle}
-                    </div>
+                    {!useFaceAPI ? (
+                      <div className={
+                        isDisplayingRef.current ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+                      }>
+                        {subtitle}
+                      </div>
+                    ) : (
+                      <></>
+                    )}
                   </div>
                 ) : (
                   <div className={styles.generatedTerminal}>
