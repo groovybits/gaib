@@ -34,6 +34,9 @@ import FastModelNameDropdown from '@/components/FastModelNameDropdown';
 import { create } from 'lodash';
 import FaceComponent from './FaceComponent';
 import { SpeakerConfig } from '@/types/speakerConfig';
+import dynamic from 'next/dynamic';
+
+const FaceComponent2D = dynamic(() => import('./FaceComponent2D'), { ssr: false });
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -129,6 +132,7 @@ function Home({ user }: HomeProps) {
   const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
   const lastStatusMessage = useRef<string>('');
+  const useFaceAPI = process.env.NEXT_PUBLIC_USE_FACEAPI === 'true';
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -1047,7 +1051,7 @@ function Home({ user }: HomeProps) {
     }
 
     // Don't change the model
-    return { language: '', model: '' }; 
+    return { language: '', model: '' };
   }
 
   function removeMarkdownAndSpecialSymbols(text: string): string {
@@ -1305,7 +1309,7 @@ function Home({ user }: HomeProps) {
           if (playStory.imageUrl != '' && playStory.imageUrl != null && playStory.imageUrl != undefined && typeof playStory.imageUrl != 'object') {
             setImageUrl(playStory.imageUrl);
           }
-          
+
           // This function needs to be async to use await inside
           async function playScenes() {
             // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
@@ -1883,7 +1887,7 @@ function Home({ user }: HomeProps) {
                 try {
                   let currentAudioLanguage = audioLanguage;
                   let currentModel = model;
-                  const { language: detectedLanguage, model: detectedModel }  = selectVoiceModel(cleanText, detectedGender);
+                  const { language: detectedLanguage, model: detectedModel } = selectVoiceModel(cleanText, detectedGender);
                   if (detectedModel !== '' && audioLanguage != detectedLanguage && !story.isStory) {
                     currentModel = detectedModel;
                     currentAudioLanguage = detectedLanguage;
@@ -2666,15 +2670,23 @@ function Home({ user }: HomeProps) {
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
-                        {/*<FaceComponent
-                          audioPath={audioUrl}
-                          imagePath={imageUrl}
-                          modelPath={process.env.NEXT_PUBLIC_MODEL_PATH ? process.env.NEXT_PUBLIC_MODEL_PATH : '' } // TODO: Add model path
-                    />*/}
-                        <img
-                          src={imageUrl}
-                          alt="Buddha"
-                        />
+                        {useFaceAPI ? (
+                          <>
+                            <FaceComponent2D
+                              imagePath={imageUrl}
+                              audioPath={audioUrl}
+                              subtitle={subtitle}
+                              maskPath='https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/examples/examples-browser/public/github_link_icon.png'
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <img
+                              src={imageUrl}
+                              alt="Groovy"
+                            />
+                          </>
+                        )}
                       </>
                     )}
                     <div className={
