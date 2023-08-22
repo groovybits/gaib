@@ -263,9 +263,10 @@ client.on('message', async (channel: any, tags: {
     }
 
     let userContext = '';
-    if (storeUserMessages && personality && personality != '' && personality != 'passthrough') {
+    if (storeUserMessages === true && personality !== '') {
       try {
-        const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 10);
+        // search for related conversations
+        const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 3);
 
         // read the results and build the userContext
         // results can be like:
@@ -273,7 +274,6 @@ client.on('message', async (channel: any, tags: {
         //   { "pageContent": "would you like to see the ocean?", "metadata": { "namespace": "chathistory", 
         //     "timestamp": 1692077316671, "type": "message", "username": "testuser" } }]
         results.forEach((result: any) => {
-
           const date = new Date(result.metadata.timestamp);
           const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
 
