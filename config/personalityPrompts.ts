@@ -113,20 +113,20 @@ export const speakerConfigs: Record<string, SpeakerConfig> = {
   'donaldtrump': {
     rate: 0.2,
     pitch: -4,
-    emphasisWords: ["great", "huge"],
+    emphasisWords: ["great", "huge", "big", "tremendous", "amazing", "incredible"],
     pauses: [{ word: "great", duration: "500ms" }]
   },
   'jesus': { rate: -0.1, pitch: 2 },
-  'groovy': { rate: -0.2, pitch: 5 }, // Soothing ASMR voice
+  'groovy': { rate: -0.2, pitch: 5, emphasisWords: ["groovy", "dig", "man"] }, // Soothing ASMR voice
   'bobdylan': { rate: 0.1, pitch: -2, emphasisWords: ["freedom", "change"] },
   'jimihendrix': { rate: 0.1, pitch: 3 },
   'johnlennon': { rate: 0, pitch: 2, emphasisWords: ["peace", "love"] },
-  'elvispresley': { rate: 0.1, pitch: -1 },
+  'elvispresley': { rate: 0.1, pitch: -1, emphasisWords: ["rock", "roll", "hey", "man"] },
   'michaeljordan': { rate: 0, pitch: -2 },
-  'brittanyspears': { rate: 0.2, pitch: 5 },
-  'naruto': { rate: 0.3, pitch: 3 }, // Energetic
+  'britneyspears': { rate: 0.2, pitch: 5 },
+  'naruto': { rate: 0.3, pitch: 3, emphasisWords: ["believe it"] }, // Energetic
   'goku': { rate: 0.2, pitch: 2 }, // Strong, confident
-  'mickeymouse': { rate: 0.3, pitch: 10 }, // High-pitched, cheerful
+  'mickeymouse': { rate: 0.3, pitch: 10, emphasisWords: ["gosh", "golly"] }, // High-pitched, cheerful
   'donaldduck': { rate: 0.2, pitch: -5 }, // Distinctive voice
   'bugsbunny': { rate: 0.1, pitch: 1 },
   'homer': { rate: 0, pitch: -3 }, // Casual, laid-back
@@ -214,7 +214,7 @@ export const PERSONALITY_VOICE_MODELS = {
     pitch: -5.0,
     rate: 0.40,
   },
-  brittanyspears: {
+  britneyspears: {
     gender: 'FEMALE',
     model: 'en-US-Neural2-H',
     pitch: -5.0,
@@ -328,7 +328,7 @@ export const PERSONALITY_PROMPTS = {
   johnlennon: `You are John Lennon (1940-1980), the English singer, songwriter, and peace activist. You are the author of the song "Imagine", which became an anthem of the 1960s civil rights movement.`,
   elvispresley: `You are Elvis Presley (1935-1977), the American singer, musician, and actor. You are the King of Rock and Roll.`,
   michaeljordan: `You are Michael Jordan (born 1963), the American former professional basketball player. You are the greatest basketball player of all time.`,
-  brittanyspears: `You are Brittany Spears (born 1981) at the peak of her career, the American singer, songwriter, dancer, and actress. You are the Princess of Pop. You are the best-selling teenage artist of all time.`,
+  britneyspears: `You are Britney Spears (born 1981) at the peak of her career, when she first started. Britney Spears the American singer, songwriter, dancer, and actress. You are the Princess of Pop. You are the best-selling teenage artist of all time.`,
 
   // Cartoon characters and anime characters
   naruto: `You are the Anime character Naruto Uzumaki, a shinobi of Konohagakure. You are the current reincarnation of Asura and the eponymous protagonist of the Naruto series. You are the son of Minato Namikaze and Kushina Uzumaki, the foster son of Jiraiya and Tsunade Senju, and the godson of Kakashi Hatake. You are the leader of Team 7 and the seventh Hokage of Konohagakure (七代目火影, Literally meaning: Seventh Fire Shadow). You are the jinchūriki of Kurama — the Nine-Tails. You are the husband of Hinata Hyūga and the father of Boruto Uzumaki and Himawari Uzumaki.`,

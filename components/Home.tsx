@@ -35,6 +35,7 @@ import { create } from 'lodash';
 import FaceComponent from './FaceComponent';
 import { SpeakerConfig } from '@/types/speakerConfig';
 import dynamic from 'next/dynamic';
+import { isWithFaceDetection } from 'face-api.js';
 
 const FaceComponent2D = dynamic(() => import('./FaceComponent2D'), { ssr: false });
 
@@ -1335,7 +1336,19 @@ function Home({ user }: HomeProps) {
                           hasTimedOut = true;
                         }, 60000);
 
-                        await speakAudioUrl(sentence.audioFile);
+                        setAudioUrl(sentence.audioFile);
+                        // check if we are playing the audio through the animmation library, if so we need to wait for it to finish and not play it here
+                        if (useFaceAPI && isFullScreen) {
+                          // measure subtitle length and derive how long it will take to speak
+                          let subtitleLength = sentence.text.length;
+                          let audioLength = subtitleLength / 10;
+                          if (audioLength < 1) {
+                            audioLength = 1;
+                          }
+                          await new Promise(r => setTimeout(r, audioLength * 1000));
+                        } else {
+                          await speakAudioUrl(sentence.audioFile);
+                        }
 
                         // Clear the timeout since the function completed successfully
                         clearTimeout(timeout);
@@ -1344,7 +1357,6 @@ function Home({ user }: HomeProps) {
                         if (hasTimedOut) {
                           console.error(`PlaybackDisplay: Timed out while playing ${sentence.audioFile}`);
                         } else {
-                          setAudioUrl(sentence.audioFile);
                           console.log("Audio played successfully");
                         }
                       } catch (error) {
@@ -1453,7 +1465,7 @@ function Home({ user }: HomeProps) {
 
         let voiceModels: { [key: string]: string } = {};
         let genderMarkedNames: any[] = [];
-        let detectedGender: string = story.defaultGender;
+        let detectedGender: string = story.isStory ? gender : story.defaultGender;
         let currentSpeaker: string = story.personality;
         let defaultVoiceModel: string = story.isStory ? '' : story.defaultVoiceModel;
         let isContinuingToSpeak = false;
@@ -2670,13 +2682,13 @@ function Home({ user }: HomeProps) {
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
-                        {useFaceAPI ? (
+                        {useFaceAPI && isFullScreen ? (
                           <>
                             <FaceComponent2D
                               imagePath={imageUrl}
                               audioPath={audioUrl}
                               subtitle={subtitle}
-                              maskPath='https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/examples/examples-browser/public/github_link_icon.png'
+                              maskPath='https://storage.googleapis.com/gaib/animations/anime_mouth.png'
                             />
                           </>
                         ) : (
@@ -2689,7 +2701,7 @@ function Home({ user }: HomeProps) {
                         )}
                       </>
                     )}
-                    {!useFaceAPI ? (
+                    {!useFaceAPI || !isFullScreen ? (
                       <div className={
                         isDisplayingRef.current ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                       }>
