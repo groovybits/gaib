@@ -279,16 +279,21 @@ client.on('message', async (channel: any, tags: {
 
           if (result.metadata && result.metadata.username && result.metadata.timestamp) {
             userContext += `User ${result.metadata.username} asked: ${result.pageContent} on ${formattedDate}, `;
+            console.log(`Chat History ${chatNamespace}: Using Personality ${personality} Related conversation for ${tags.username}: ${JSON.stringify(result)}`);
+          } else {
+            console.log(`Chat History ${chatNamespace}: Not using Personality ${personality} Related conversation for ${tags.username}: ${JSON.stringify(result)}`);
           }
         });
 
-        console.log(`${chatNamespace}: Personality ${personality} Historical userContext for ${tags.username}: ${userContext}`);
+        console.log(`Derived ${chatNamespace}: Personality ${personality} Historical userContext for ${tags.username}: ${userContext}`);
 
         // store the user message in the database
         await storeUserMessage(tags.username, message, chatNamespace, personality);
       } catch (error) {
         console.error(`${chatNamespace}: ${personality} Error storing user ${tags.username} message ${message} error: ${error}`);
       }
+    } else {
+      console.log(`${chatNamespace}: ${personality} Not storing user ${tags.username} message ${message}`);
     }
 
     // Add the command to the Realtime Database
