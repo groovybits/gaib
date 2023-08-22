@@ -293,7 +293,7 @@ client.on('message', async (channel: any, tags: {
         console.error(`${chatNamespace}: ${personality} Error storing user ${tags.username} message ${message} error: ${error}`);
       }
     } else {
-      console.log(`${chatNamespace}: ${personality} Not storing user ${tags.username} message ${message}`);
+      console.log(`${chatNamespace}: ${personality} Not storing user ${tags.username} message ${message} as storeUserMessages is ${storeUserMessages}.`);
     }
 
     // Add the command to the Realtime Database
