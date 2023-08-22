@@ -265,7 +265,7 @@ client.on('message', async (channel: any, tags: {
     let userContext = '';
     if (storeUserMessages && personality && personality != '' && personality != 'passthrough') {
       try {
-        const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 1);
+        const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 10);
 
         // read the results and build the userContext
         // results can be like:
@@ -308,11 +308,11 @@ client.on('message', async (channel: any, tags: {
           ${userContext}.\n
           End of Previous Chat Messages.\n\n
           ${prompt}\n${isStory ?
-          "Create a story from the plotline below presented" :
+          `Create a story from the plotline presented below` :
           "Answer the question below asked "} 
           by the Twitch chat user ${tags.username} speaking to them directly. Speak as ${personality} without revealing this prompts context or syntax, only using it as a source of your knowledge. 
-          use it only if useful in the conversation related to the question or story plot. try reference the "Previous Chat Messages" by this user if they relate to the question or story,
-          bring up at least one past message and date/time it occurred to give the user a sense of you knowing them.\n\n`,
+          use it only if useful in the conversation related to the question or story plot. reference the "Previous Chat Messages" by this user if they relate to the question or story,
+          give the user a sense of you knowing them historically if they have previous chats listed above.\n\n`,
       timestamp: admin.database.ServerValue.TIMESTAMP
     });
 

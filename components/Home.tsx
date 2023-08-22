@@ -1596,7 +1596,7 @@ function Home({ user }: HomeProps) {
         // Load the image if we are not playing something else already
         if (!isDisplayingRef.current && !isSpeakingRef.current) {
           setImageUrl(titleScreenImage);
-          setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}.\n[${story.tokens} GPT tokens generated]`);
+          setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode" : "Question"}: ${story.query}.\n[${story.tokens} GPT tokens generated]`);
         }
 
         // Extract the scene texts from the message
@@ -1740,7 +1740,7 @@ function Home({ user }: HomeProps) {
         for (let sentence of sentencesToSpeak) {
           if (!isDisplayingRef.current) {
             dotsStatus += ".";
-            setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode:" : "Question"}: ${story.query}\n${dotsStatus}\n[${story.tokens} GPT tokens generated]`);
+            setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode" : "Question"}: ${story.query}\n${dotsStatus}\n[${story.tokens} GPT tokens generated]`);
             if (dotsStatus.length > 10) {
               dotsStatus = ".";
             }
