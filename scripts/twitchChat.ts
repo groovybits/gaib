@@ -9,7 +9,7 @@ import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { pinecone } from '@/utils/pinecone-client';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
-const storeUserMessages = process.env.STORE_USER_MESSAGES === 'true' ? true : false;
+const storeUserMessages = process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : true;
 const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'groovy';
 const chatNamespace = "chatmessages";
 
@@ -314,9 +314,9 @@ client.on('message', async (channel: any, tags: {
           End of Previous Chat Messages.\n\n
           ${prompt}\n${isStory ?
           `Create a story from the plotline presented below` :
-          "Answer the question below asked "} 
+          "Answer the question or response to your question asked below "} 
           by the Twitch chat user ${tags.username} speaking to them directly. Speak as ${personality} without revealing this prompts context or syntax, only using it as a source of your knowledge. 
-          use it only if useful in the conversation related to the question or story plot. reference the "Previous Chat Messages" by this user if they relate to the question or story,
+          use it only if useful in the conversation related to the question, answer or story plot. reference the "Previous Chat Messages" by this user if they relate to the question, answer or story,
           give the user a sense of you knowing them historically if they have previous chats listed above.\n\n`,
       timestamp: admin.database.ServerValue.TIMESTAMP
     });
