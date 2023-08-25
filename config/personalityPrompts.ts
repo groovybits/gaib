@@ -159,8 +159,12 @@ export const speakerConfigs: Record<string, SpeakerConfig> = {
 export const PERSONALITY_IMAGES = {
   // TODO: add images for specific personalities
   groovy: 'https://storage.googleapis.com/gaib/images/1.png',
-  animeidol: 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png',
+  animeidol: 'https://storage.googleapis.com/gaib/video/animeidol.mp4',
   anime: 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png',
+};
+
+export const PERSONALITY_MOUTHS = {
+  animeidol: 'https://storage.googleapis.com/gaib/mouths/animeidol_mouth_open.png',
 };
 
 /* 
@@ -228,7 +232,7 @@ export const PERSONALITY_VOICE_MODELS = {
   },
   hal9000: {
     gender: 'MALE',
-    model: '',
+    model: 'en-US-Neural2-I',
     pitch: 0.0,
     rate: 0.70,
   },

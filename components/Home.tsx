@@ -8,6 +8,7 @@ import { useSpeakText } from '@/utils/speakText';
 import {
   PERSONALITY_PROMPTS,
   PERSONALITY_IMAGES,
+  PERSONALITY_MOUTHS,
   PERSONALITY_VOICE_MODELS,
   speakerConfigs,
   buildPrompt,
@@ -36,8 +37,10 @@ import FaceComponent from './FaceComponent';
 import { SpeakerConfig } from '@/types/speakerConfig';
 import dynamic from 'next/dynamic';
 import { isWithFaceDetection } from 'face-api.js';
+import { AnimateStoryHandle } from './AnimateStory';
 
 const FaceComponent2D = dynamic(() => import('./FaceComponent2D'), { ssr: false });
+const AnimateStory = dynamic(() => import('./AnimateStory'), { ssr: false });
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -134,6 +137,8 @@ function Home({ user }: HomeProps) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
   const lastStatusMessage = useRef<string>('');
   const useFaceAPI = process.env.NEXT_PUBLIC_USE_FACEAPI === 'true';
+  const [storyIndex, setStoryIndex] = useState(0); // Keep track of the current story index
+  const animateStoryRef = useRef<AnimateStoryHandle | null>(null);
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -247,6 +252,25 @@ function Home({ user }: HomeProps) {
     setModalIsOpen(false);
     setNews([]); // Clear the news feed
     setIsFetching(true);
+  };
+
+  // Callback to be called when a story finishes playing
+  const handleAnimationCompletion = () => {
+    if (storyIndex < playQueue.length - 1) {
+      // More stories to play
+      console.log(`handleAnimationCompletion: Story #${storyIndex} ${playQueue.length > 0 ? playQueue[storyIndex].title : ''} completed, moving to next story...`);
+      setStoryIndex(storyIndex + 1); // Move to the next story
+    } else {
+      // No more stories to play
+      console.log(`handleAnimationCompletion: Story #${storyIndex} ${playQueue.length > 0 ? playQueue[storyIndex].title : ''} completed, no more stories to play.`);
+    }
+  };
+
+  const isPlaybackInProgress = () => {
+    if (animateStoryRef.current && typeof animateStoryRef.current?.isPlaybackInProgress === 'function') {
+      return animateStoryRef.current?.isPlaybackInProgress() ?? false;
+    }
+    return false;
   };
 
   const twitchStory = async (story: Story): Promise<boolean> => {
@@ -627,7 +651,7 @@ function Home({ user }: HomeProps) {
           episodeIdRef.current = story.id;
 
           if (story.imageUrl != '') {
-            if (!isDisplayingRef.current) {
+            if (!isDisplayingRef.current && !isPlaybackInProgress()) {
               setImageUrl(story.imageUrl);
             }
             setPersonalityImageUrls((state) => ({ ...state, [story.personality]: story.imageUrl }));
@@ -635,12 +659,12 @@ function Home({ user }: HomeProps) {
             // Passthrough image from  query
             let gaibImage = await generateImageUrl(story.query, true, '', localEpisode.personality, localStoryId);
             if (gaibImage !== '') {
-              if (!isDisplayingRef.current) {
+              if (!isDisplayingRef.current && !isPlaybackInProgress()) {
                 setImageUrl(gaibImage);
               }
               story.imageUrl = gaibImage;
             } else {
-              if (!isDisplayingRef.current) {
+              if (!isDisplayingRef.current && !isPlaybackInProgress()) {
                 setImageUrl(await getGaib());
               }
               story.imageUrl = await getGaib();
@@ -649,17 +673,17 @@ function Home({ user }: HomeProps) {
             let imageId = uuidv4().replace(/-/g, '');
             let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', localEpisode.personality, imageId);
             if (gaibImage !== '') {
-              if (!isDisplayingRef.current) {
+              if (!isDisplayingRef.current && !isPlaybackInProgress()) {
                 setImageUrl(gaibImage);
               }
               setPersonalityImageUrls((state) => ({ ...state, [localEpisode.personality]: gaibImage }));
             } else {
-              if (!isDisplayingRef.current) {
+              if (!isDisplayingRef.current && !isPlaybackInProgress()) {
                 setImageUrl(await getGaib());
               }
             }
           } else {
-            if (!isDisplayingRef.current) {
+            if (!isDisplayingRef.current && !isPlaybackInProgress()) {
               setImageUrl(personalityImageUrls[localEpisode.personality]);
             }
           }
@@ -785,7 +809,7 @@ function Home({ user }: HomeProps) {
                         } else {
                           console.log(`handleSubmitQueue: No data returned from the server.`);
                         }
-                        if (!isDisplayingRef.current) {
+                        if (!isDisplayingRef.current && !isPlaybackInProgress()) {
                           dotsStatus += ".";
                           setSubtitle(`-*- ${localEpisode.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}\n[${tokens} GPT tokens generated]`);
                           if (dotsStatus.length > 10) {
@@ -855,7 +879,7 @@ function Home({ user }: HomeProps) {
 
   useEffect(() => {
     async function fetchData() {
-      if (!isDisplayingRef.current) {
+      if (!isDisplayingRef.current && !isPlaybackInProgress()) {
         // Override the imageUrl with ones from PERSONALITY_IMAGES if the personality is in the list
         let personalityImageUrl = '';
         let localPersonality = selectedPersonality;
@@ -1297,141 +1321,8 @@ function Home({ user }: HomeProps) {
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
     const playQueueDisplay = async () => {
-      if (playQueue.length > 0 && !isSpeakingRef.current && !isDisplayingRef.current) {
-        isDisplayingRef.current = true;
-        isSpeakingRef.current = true;
-        const playStory = playQueue[0];  // Get the first story
-        try {
-          console.log(`PlayQueaue: Displaying Recieved Story #${playQueue.length}: ${playStory.title}\n${JSON.stringify(playStory)}\n`);
-
-          setSubtitle(`Title: ${playStory.title}`); // Clear the subtitle
-          setLoadingOSD(`Playing ${playStory.isStory ? "story" : "question"} [${playStory.title.slice(0, 20)}...] by ${playStory.personality}.`);
-          setLastStory(playStory.shareUrl);
-          if (playStory.imageUrl != '' && playStory.imageUrl != null && playStory.imageUrl != undefined && typeof playStory.imageUrl != 'object') {
-            setImageUrl(playStory.imageUrl);
-          }
-
-          // This function needs to be async to use await inside
-          async function playScenes() {
-            // parse the playStory and display it as subtitles, images, and audio, use speakAudioUrl(url) to play the audio
-            for (let scene of playStory.scenes) {
-              for (let sentence of scene.sentences) {
-                console.log(`PlayQueue: Displaying Sentence #${sentence.id}: ${sentence.text}\n${JSON.stringify(sentence)}\nImage: ${sentence.imageUrl})\n`)
-                if (sentence.text != '') {
-                  setSubtitle(sentence.text);
-                }
-                if (sentence.imageUrl != '' && sentence.imageUrl != null && sentence.imageUrl != undefined && typeof sentence.imageUrl != 'object') {
-                  setImageUrl(sentence.imageUrl);
-                }
-                if (sentence.audioFile != '' && sentence.audioFile.match(/\.mp3$/)) {
-                  try {
-                    const response = await fetch(sentence.audioFile, { method: 'HEAD' });
-                    if (response.ok) {
-                      try {
-                        // Set a flag to track if the operation has timed out
-                        let hasTimedOut = false;
-
-                        // Set a timeout to trigger after N seconds
-                        const timeout = setTimeout(() => {
-                          hasTimedOut = true;
-                        }, 60000);
-
-                        setAudioUrl(sentence.audioFile);
-                        // check if we are playing the audio through the animmation library, if so we need to wait for it to finish and not play it here
-                        if (useFaceAPI && isFullScreen) {
-                          // measure subtitle length and derive how long it will take to speak
-                          let subtitleLength = sentence.text.length;
-                          let audioLength = subtitleLength / 10;
-                          if (audioLength < 1) {
-                            audioLength = 1;
-                          }
-                          await new Promise(r => setTimeout(r, audioLength * 1000));
-                        } else {
-                          await speakAudioUrl(sentence.audioFile);
-                        }
-
-                        // Clear the timeout since the function completed successfully
-                        clearTimeout(timeout);
-
-                        // Check if the operation timed out and handle accordingly
-                        if (hasTimedOut) {
-                          console.error(`PlaybackDisplay: Timed out while playing ${sentence.audioFile}`);
-                        } else {
-                          console.log("Audio played successfully");
-                        }
-                      } catch (error) {
-                        console.error(`PlaybackDisplay: An error occurred while playing ${sentence.audioFile}:\n${error}`);
-                      }
-                    } else {
-                      console.error(`File not found at ${sentence.audioFile}`);
-                    }
-                  } catch (error) {
-                    console.error(`PlaybackDisplay: An error occurred while fetching ${sentence.audioFile}:\n${error}`);
-                  }
-                }
-                // check if we need to stop speaking
-                if (!isSpeakingRef.current) {
-                  break;
-                }
-              }
-            }
-          }
-
-          try {
-            // Call the function
-            await playScenes();
-          } catch (error) {
-            console.error('An error occurred in the playScenes function:', error); // Check for any errors
-          }
-
-          setPlayQueue(prevQueue => prevQueue.slice(1));  // Remove the first story from the queue
-        } catch (error) {
-          console.error('An error occurred in the processQueue function:', error); // Check for any errors
-        }
-        // Reset the subtitle after all sentences have been spoken
-        stopSpeaking();
-
-        // Images and Passthrough wait for 10 seconds before playing the next story
-        if (playStory.personality == 'passthrough') {
-          // sleep for 10 seconds
-          await new Promise(r => setTimeout(r, 5000));
-        } else {
-          // wait 3 seconds after story before ending
-          await new Promise(r => setTimeout(r, 3000));
-        }
-
-        setLoadingOSD(`Finished playing ${playStory.title.slice(0, 30)}.`);
-        setSubtitle(`Finished playing ${playStory.title.slice(0, 50)}.`);
-
-        try {
-          let personalityImageUrl = '';
-          let localPersonality = selectedPersonality;
-          if (PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES]) {
-            personalityImageUrl = PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES];
-            setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: imageUrl }));
-          }
-          // get an image generated from the personality
-          if (personalityImageUrl != '') {
-            setImageUrl(personalityImageUrl);
-          } else if (!personalityImageUrls[localPersonality]) {
-            let imageId = uuidv4().replace(/-/g, '');
-            let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localPersonality, false).slice(0, 2000), true, '', localPersonality, imageId);
-            if (gaibImage !== '') {
-              setImageUrl(gaibImage);
-              setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: gaibImage }));
-            }
-          } else {
-            setImageUrl(personalityImageUrls[localPersonality]);
-          }
-        } catch (error) {
-          console.error('An error occurred in the getGaib function:', error); // Check for any errors
-        }
-
-        setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
-        setLoadingOSD(`Ready to play a story or answer a question.`);
-
-        isDisplayingRef.current = false;
-        isSpeakingRef.current = false;
+      if (playQueue.length > 0 && (storyIndex + 1) < playQueue.length) {
+        //handleAnimationCompletion();
       }
     };
 
@@ -1441,7 +1332,7 @@ function Home({ user }: HomeProps) {
     const intervalId = setInterval(playQueueDisplay, 1000);  // Then every N seconds
 
     return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [playQueue, isSpeakingRef, isDisplayingRef, stopSpeaking, speakAudioUrl, setSubtitle, setLoadingOSD, setImageUrl, setLastStory]);
+  }, [playQueue, storyIndex]);
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
@@ -1594,7 +1485,7 @@ function Home({ user }: HomeProps) {
         const titleScreenText: string = firstSentence;
 
         // Load the image if we are not playing something else already
-        if (!isDisplayingRef.current && !isSpeakingRef.current) {
+        if (!isDisplayingRef.current && !isSpeakingRef.current && !isPlaybackInProgress()) {
           setImageUrl(titleScreenImage);
           setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode" : "Question"}: ${story.query}.\n[${story.tokens} GPT tokens generated]`);
         }
@@ -1670,7 +1561,7 @@ function Home({ user }: HomeProps) {
           }
 
           // Display the loading OSD if we are not playing something else already
-          if (!isDisplayingRef.current) {
+          if (!isDisplayingRef.current && !isSpeakingRef.current && !isPlaybackInProgress()) {
             dotsStatus += ".";
             setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${dotsStatus}\n[${story.tokens} GPT tokens generated]`);
             if (dotsStatus.length > 10) {
@@ -1738,7 +1629,7 @@ function Home({ user }: HomeProps) {
 
         // Create Audio MP3s for each sentence
         for (let sentence of sentencesToSpeak) {
-          if (!isDisplayingRef.current) {
+          if (!isDisplayingRef.current && !isSpeakingRef.current && !isPlaybackInProgress()) {
             dotsStatus += ".";
             setSubtitle(`-*- ${story.personality.toUpperCase()} -*- \nPreparing your ${story.isStory ? "Story" : "Questions Answer"}.\n${story.isStory ? "Episode" : "Question"}: ${story.query}\n${dotsStatus}\n[${story.tokens} GPT tokens generated]`);
             if (dotsStatus.length > 10) {
@@ -1953,7 +1844,7 @@ function Home({ user }: HomeProps) {
           // Share the story after building it before displaying it
           let shareUrl = await shareStory(story, isFetching);
 
-          if (shareUrl != '' && isDisplayingRef.current === false) {
+          if (shareUrl != '' && isDisplayingRef.current === false && !isSpeakingRef.current && !isPlaybackInProgress()) {
             setLoadingOSD(`Episode shared to: ${shareUrl}!`);
           }
         } catch (error) {
@@ -2301,7 +2192,7 @@ function Home({ user }: HomeProps) {
         // Set a new timeout to stop the recognition after 10 seconds of no speaking
         const newTimeoutID = setTimeout(() => {
           recognition.stop();
-          if (!stopWordDetected.current && !isSpeakingRef.current && startWordDetected.current) {
+          if (!stopWordDetected.current && !isSpeakingRef.current && !isPlaybackInProgress() && startWordDetected.current) {
             console.log(`Speech recognition timed out with voiceQuery results, voiceQuery: '${voiceQuery.slice(0, 16)}...'`);
             setSpeechRecognitionComplete(true);
             timeoutDetected.current = true;
@@ -2334,7 +2225,7 @@ function Home({ user }: HomeProps) {
 
   // Add a useEffect hook to call handleSubmit whenever the query state changes
   useEffect(() => {
-    if (voiceQuery && speechRecognitionComplete && timeoutDetected.current && !stopWordDetected.current && !isSpeakingRef.current) {
+    if (voiceQuery && speechRecognitionComplete && timeoutDetected.current && !stopWordDetected.current && !isSpeakingRef.current && !isPlaybackInProgress()) {
       console.log(`useEffect: Queing voiceQuery: '${voiceQuery.slice(0, 80)}...'`);
       let episode: Episode = {
         title: voiceQuery,
@@ -2372,7 +2263,7 @@ function Home({ user }: HomeProps) {
   // Add a useEffect hook to start the speech recognition when the component mounts
   useEffect(() => {
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      if (!listening && !isSpeakingRef.current && !stoppedManually && !voiceQuery) {
+      if (!listening && !isSpeakingRef.current && !isPlaybackInProgress() && !stoppedManually && !voiceQuery) {
         console.log(`useEffect: Starting speech recognition, stoppedManually: ${stoppedManually}`);
         startSpeechRecognition();
       }
@@ -2624,7 +2515,7 @@ function Home({ user }: HomeProps) {
                     <div className={
                       isFullScreen ? styles.fullScreenOSD : styles.osd
                     }>
-                      {(!isDisplayingRef.current) && episodes.length > 0 ? (
+                      {(!isDisplayingRef.current && !isPlaybackInProgress()) && episodes.length > 0 ? (
                         <>
                           <div className={styles.generatedImage}>
                             <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
@@ -2667,9 +2558,9 @@ function Home({ user }: HomeProps) {
                       } {
                         episodes.length > 0 ? `Episodes:${episodes.length}` : '.'
                       } {
-                        isSpeakingRef.current ? 'Speaking' : '.'
+                        isSpeakingRef.current || isPlaybackInProgress() ? 'Speaking' : '.'
                       } {
-                        isDisplayingRef.current ? 'Displaying' : '.'
+                        isDisplayingRef.current || isPlaybackInProgress() ? 'Displaying' : '.'
                       } {
                         playQueue.length > 0 ? `Queue:${playQueue.length}` : '.'
                       } {
@@ -2682,13 +2573,14 @@ function Home({ user }: HomeProps) {
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
-                        {useFaceAPI && isFullScreen ? (
+                        {useFaceAPI ? (
                           <>
-                            <FaceComponent2D
-                              imagePath={imageUrl}
-                              audioPath={audioUrl}
-                              subtitle={subtitle}
-                              maskPath='https://storage.googleapis.com/gaib/animations/anime_mouth.png'
+                            <AnimateStory
+                              ref={animateStoryRef}
+                              story={playQueue[storyIndex]}
+                              onCompletion={handleAnimationCompletion}
+                              defaultImage={imageUrl}
+                              defaultSubtitle={subtitle}
                             />
                           </>
                         ) : (
@@ -2701,9 +2593,9 @@ function Home({ user }: HomeProps) {
                         )}
                       </>
                     )}
-                    {!useFaceAPI || !isFullScreen ? (
+                    {!useFaceAPI ? (
                       <div className={
-                        isDisplayingRef.current ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
+                        (isDisplayingRef.current || isPlaybackInProgress()) ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
                       }>
                         {subtitle}
                       </div>
@@ -2736,13 +2628,13 @@ function Home({ user }: HomeProps) {
                     >
                       {!stoppedManually ? 'Voice Input Off' : 'Voice Input On'}
                     </button>&nbsp;&nbsp;&nbsp;&nbsp;
-                    {isDisplayingRef.current ? (
+                    {(isDisplayingRef.current || isPlaybackInProgress()) ? (
                       <>
                         <button
                           title="Stop Speaking"
                           onClick={handleStop}
                           type="button"
-                          className={`${styles.footer} ${isSpeakingRef.current ? styles.listening : ''}`}
+                          className={`${styles.footer} ${(isSpeakingRef.current || isPlaybackInProgress()) ? styles.listening : ''}`}
                         >Stop Speaking</button> &nbsp;&nbsp;&nbsp;&nbsp;
                       </>
                     ) : (
@@ -2754,7 +2646,7 @@ function Home({ user }: HomeProps) {
                           className={`${styles.footer}`}
                         >Replay</button> &nbsp;&nbsp;&nbsp;&nbsp;</>
                     )}
-                    {isSpeakingRef.current && isPaused ? (
+                    {(isSpeakingRef.current || isPlaybackInProgress()) && isPaused ? (
                       <>
                         <button
                           title="Resume"
@@ -2763,7 +2655,7 @@ function Home({ user }: HomeProps) {
                           className={`${styles.footer} ${isSpeakingRef.current ? styles.listening : ''}`}
                         >Resume Play</button> &nbsp;&nbsp;&nbsp;&nbsp;
                       </>
-                    ) : isSpeakingRef.current && !isPaused ? (
+                    ) : (isSpeakingRef.current || isPlaybackInProgress()) && !isPaused ? (
                       <>
                         <button
                           title="Pause"
@@ -2894,7 +2786,7 @@ function Home({ user }: HomeProps) {
                       name="userInput"
                       placeholder={
                         (selectedPersonality == 'passthrough') ? 'Passthrough mode, replaying your input...' :
-                          isDisplayingRef.current
+                          (isDisplayingRef.current || isPlaybackInProgress())
                             ? isStory
                               ? `Writing your story...`
                               : `Answering your question...`
@@ -2913,7 +2805,7 @@ function Home({ user }: HomeProps) {
                   {/* Personality prompt text entry box */}
                   <div className={styles.cloudform}>
                     <textarea
-                      readOnly={isDisplayingRef.current || (selectedPersonality == 'passthrough')}
+                      readOnly={isDisplayingRef.current || isPlaybackInProgress() || (selectedPersonality == 'passthrough')}
                       ref={textAreaPersonalityRef}
                       id="customPrompt"
                       name="customPrompt"
@@ -2946,7 +2838,7 @@ function Home({ user }: HomeProps) {
                   <div className={styles.cloudform}>
                     <div className={styles.cloudform}>
                       <textarea
-                        readOnly={isDisplayingRef.current || (selectedPersonality == 'passthrough')}
+                        readOnly={isDisplayingRef.current || isPlaybackInProgress() || (selectedPersonality == 'passthrough')}
                         ref={textAreaCondenseRef}
                         id="condensePrompt"
                         name="condensePrompt"

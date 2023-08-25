@@ -1,7 +1,7 @@
 [
   {
     "origin": ["http://localhost:3000", "https://gaib.groovy.org", "https://ai.groovy.org", "storage.googleapis.com"],
-    "responseHeader": ["Content-Type"],
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
     "method": ["GET", "HEAD", "DELETE"],
     "maxAgeSeconds": 3600
   }

@@ -11,13 +11,15 @@ interface FaceComponentProps {
   maskPath: string; // Path to the mask or image to overlay on the mouth
 }
 
+const debug = true;// process.env.DEBUG === 'true' ? true : false;
+
 const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, subtitle, maskPath }) => {
   const faceContainerRef = useRef<HTMLDivElement | null>(null);
   const maskSpritesRef = useRef<Sprite[]>([]); // Keep track of mask sprites
   const appRef = useRef<Application | null>(null); // Ref to store the PixiJS application
-  const audioElementRef = useRef<HTMLAudioElement | null>(null); // Ref to store the audio element
   const subtitleTextRef = useRef<Text | null>(null); // Ref to store the PixiJS Text object for subtitles
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null); // Ref to store the video element
 
   const playAudio = (audioUrl: string) => {
     // Stop any existing audio playback
@@ -30,9 +32,20 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
     audioRef.current = audio;
     audio.play();
 
+    // Play the video if it's a video
+    if (videoElementRef.current) {
+      videoElementRef.current.currentTime = 0; // Rewind the video to the start
+      videoElementRef.current.play();
+    }
+
     // Handle the 'ended' event
     audio.addEventListener('ended', () => {
-      // Perform any actions needed when the audio ends, such as stopping speaking animation
+      // Pause the video if it's a video
+      if (videoElementRef.current) {
+        videoElementRef.current.currentTime = 0; // Rewind the video to the start
+        videoElementRef.current.pause();
+      }
+      // Perform any other actions needed when the audio ends, such as stopping speaking animation
     }, false);
   };
 
@@ -55,6 +68,9 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
       faceContainerRef.current.appendChild(app.view as unknown as HTMLElement);
     }
 
+    // Check if the imagePath is a video
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(imagePath);
+
     // Load image and mask into PixiJS sprite using the shared loader
     const loader: PIXI.Loader = PIXI.Loader.shared;
 
@@ -72,13 +88,32 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
 
     // Load image and mask into PixiJS sprite using the shared loader
     loader.load((loader: PIXI.Loader, resources: Partial<Record<string, PIXI.LoaderResource>>) => {
-      const imageResource = resources[imagePath];
+      const imageOrVideoResource = resources[imagePath];
       const maskResource = resources[maskPath];
 
-      console.log(`Resources loaded: ${imageResource} ${maskResource}`);
+      console.log(`Resources loaded: ${imageOrVideoResource} ${maskResource}`);
 
-      if (imageResource && maskResource) {
-        const sprite = new Sprite(imageResource.texture);
+      if (imageOrVideoResource && maskResource) {
+        let sprite: PIXI.Sprite;
+        if (isVideo) {
+          // Create a video texture from the video resource
+          const videoElement = imageOrVideoResource.data as HTMLVideoElement;
+          const videoTexture = PIXI.Texture.from(imageOrVideoResource.data as HTMLVideoElement);
+          sprite = new PIXI.Sprite(videoTexture);
+
+          // Set the loop property to true
+          videoElement.loop = true;
+          videoElement.muted = true;
+          videoElementRef.current = videoElement; // Store the video element in the ref
+
+          // Play the video
+          videoElementRef.current.currentTime = 0; // Rewind the video to the start
+          videoElement.pause();
+        } else {
+          // Create a sprite from the image resource
+          sprite = new PIXI.Sprite(imageOrVideoResource.texture);
+        }
+
         const scalingFactor = Math.min(containerWidth / desiredWidth, containerHeight / desiredHeight);
         sprite.width = desiredWidth * scalingFactor;
         sprite.height = desiredHeight * scalingFactor;
@@ -94,6 +129,8 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
           fontFamily: 'Trebuchet MS',
           lineHeight: 48, // 1.2 times the font size
           align: 'center',
+          wordWrap: true, // Enable word wrap
+          wordWrapWidth: containerWidth - 40, // Set word wrap width with some padding
           dropShadow: true,
           dropShadowAngle: Math.PI / 6,
           dropShadowBlur: 3,
@@ -105,6 +142,7 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
         text.x = containerWidth / 2; // Centered on the container
         text.y = sprite.y + sprite.height - 24 * 1.2 * 10; // N lines up from the bottom of the image
         text.anchor.x = 0.5; // Center-align the text
+        text.zIndex = 2; // Set the zIndex of the text object
         app.stage.addChild(text);
         subtitleTextRef.current = text; // Store the text object in the ref
 
@@ -138,76 +176,100 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
         };
 
         const throttledDetection = throttle(async () => {
-          const extract = app.renderer.plugins.extract;
-          const faceCanvas = extract.canvas(app.stage);
-          const faceContext = faceCanvas.getContext('2d', { willReadFrequently: true });
-          const faceImageData = faceContext?.getImageData(0, 0, faceCanvas.width, faceCanvas.height);
-          const detections = await faceapi.detectAllFaces(faceCanvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-          console.log(`Face detections: ${detections}`);
+          // Check if audio is playing
+          //if (audioRef.current && !audioRef.current.paused) {
+            // Play the video if it's a video
+            /*if (videoElementRef.current) {
+              videoElementRef.current.play();
+            }*/
+            const extract = app.renderer.plugins.extract;
+            const faceCanvas = extract.canvas(app.stage);
+            const faceContext = faceCanvas.getContext('2d', { willReadFrequently: true });
+            //const faceImageData = faceContext?.getImageData(0, 0, faceCanvas.width, faceCanvas.height);
+            const detections = await faceapi.detectAllFaces(faceCanvas, new faceapi.SsdMobilenetv1Options()).withFaceLandmarks();
+            console.log(`Face detections: ${detections}`);
 
-          // Remove existing mask sprites
-          maskSpritesRef.current.forEach((maskSprite) => app.stage.removeChild(maskSprite));
-          maskSpritesRef.current = [];
+            // Remove existing mask sprites
+            maskSpritesRef.current.forEach((maskSprite) => app.stage.removeChild(maskSprite));
+            maskSpritesRef.current = [];
 
-          // Overlay masks based on detections
-          detections.forEach((detection) => {
-            const mouth = detection.landmarks.getMouth();
-            const mouthPosition = {
-              x: (mouth[0].x + mouth[6].x) / 2,
-              y: (mouth[2].y + mouth[10].y) / 2,
-            };
+            // Overlay masks based on detections
+            detections.forEach((detection) => {
+              const mouth = detection.landmarks.getMouth();
+              const mouthPosition = {
+                x: (mouth[0].x + mouth[6].x) / 2,
+                y: (mouth[2].y + mouth[10].y) / 2,
+              };
 
-            // Adjust the mouth position based on the volume
-            const volume = getVolume();
-            const volumeScale = volume / 255; // Normalize the volume to [0, 1]
-            const mouthOffset = 10 * volumeScale; // Adjust this value as needed
+              // Get the volume and calculate the mouth scale
+              const volume = getVolume();
+              const volumeScale = volume / 255;
+              const mouthScale = 1 + 0.3 * volumeScale; // Adjust scaling factor as needed
 
-            console.log(`Detected mouth position: x=${mouthPosition.x}, y=${mouthPosition.y}`);
+              console.log(`Detected mouth position: x=${mouthPosition.x}, y=${mouthPosition.y}`);
 
-            // Draw a debug marker at the detected mouth position
-            const debugMarker = new PIXI.Graphics();
-            debugMarker.beginFill(0xFF0000); // Red color
-            debugMarker.drawCircle(mouthPosition.x, mouthPosition.y, 5); // Draw a small circle
-            debugMarker.endFill();
-            app.stage.addChild(debugMarker);
+              // Draw a debug marker at the detected mouth position
+              if (debug) {
+                const debugMarker = new PIXI.Graphics();
+                debugMarker.beginFill(0xFF0000); // Red color
+                debugMarker.drawCircle(mouthPosition.x, mouthPosition.y, 5); // Draw a small circle
+                debugMarker.endFill();
+                app.stage.addChild(debugMarker);
+                debugMarker.zIndex = 999; // Set a high zIndex for the debug marker
+              }
 
-            // Create mask sprite
-            const maskSprite = new Sprite(maskResource.texture);
+              // Create mask sprite
+              const maskSprite = new Sprite(maskResource.texture);
 
-            // Scale the mask
-            const mouthWidth = Math.abs(mouth[0].x - mouth[6].x);
-            const mouthHeight = Math.abs(mouth[2].y - mouth[10].y);
-            const maskScale = Math.max(mouthWidth / maskSprite.width, mouthHeight / maskSprite.height);
-            maskSprite.scale.set(maskScale);
+              maskSprite.scale.set(mouthScale, mouthScale);
 
-            // Position the mask sprite
-            maskSprite.x = mouthPosition.x - (maskSprite.width * maskScale) / 2 - mouthOffset; // Adjusted x position
-            maskSprite.y = mouthPosition.y - (maskSprite.height * maskScale) / 2;
+              // Position the mask at the detected mouth position
+              maskSprite.position.set(mouthPosition.x, mouthPosition.y);
 
-            // Optional: Apply additional offsets if needed (adjust these values as required)
-            maskSprite.x += 10; // Offset value for the x-axis
-            maskSprite.y += 5; // Offset value for the y-axis
+              // Position the mask sprite
+              //maskSprite.x = mouthPosition.x - (maskSprite.width * maskScale) / 2; // Adjusted x position
+              //maskSprite.y = mouthPosition.y - (maskSprite.height * maskScale) / 2;
 
-            app.stage.sortableChildren = true; // Enable sorting based on zIndex
-            sprite.zIndex = 0; // Set the zIndex of the sprite
-            maskSprite.zIndex = 1; // Set the zIndex of the maskSprite
-            text.zIndex = 2; //  Set the subtitle Text object
-            debugMarker.zIndex = 999; // Set a high zIndex for the debug marker
+              // Optional: Apply additional offsets if needed (adjust these values as required)
+              maskSprite.x -= 5; // Offset value for the x-axis
+              maskSprite.y -= 3; // Offset value for the y-axis
 
-            console.log(`Mask position: x=${maskSprite.x}, y=${maskSprite.y}, width=${maskSprite.width}, height=${maskSprite.height}`);
+              app.stage.sortableChildren = true; // Enable sorting based on zIndex
+              sprite.zIndex = 0; // Set the zIndex of the sprite
+              maskSprite.zIndex = 1; // Set the zIndex of the maskSprite
+              text.zIndex = 2; //  Set the subtitle Text object
 
-            // Add elements to the stage
-            app.stage.addChild(sprite);
-            app.stage.addChild(maskSprite);
-            app.stage.addChild(text);
+              console.log(`Mask position: x=${maskSprite.x}, y=${maskSprite.y}, width=${maskSprite.width}, height=${maskSprite.height}`);
 
-            // Enable sorting based on zIndex
-            app.stage.sortableChildren = true;
+              // Add elements to the stage
+              app.stage.addChild(sprite);
+              app.stage.addChild(maskSprite);
+              app.stage.addChild(text);
 
-            // Add to mask sprites ref
-            maskSpritesRef.current.push(maskSprite);
-          });
-        }, 10);
+              // Enable sorting based on zIndex
+              app.stage.sortableChildren = true;
+
+              // Add to mask sprites ref
+              maskSpritesRef.current.push(maskSprite);
+            });
+
+            // Emit a custom event if faces are detected
+            if (detections.length > 0) {
+              const faceDetectedEvent = new Event('faceDetected');
+              window.dispatchEvent(faceDetectedEvent);
+            }
+          /*} else {
+            // Pause the video if it's a video
+            if (videoElementRef.current) {
+              videoElementRef.current.currentTime = 0; // Rewind the video to the start
+              videoElementRef.current.pause();
+            }
+
+            // Emit a custom event if no face is detected
+            const noFaceDetectedEvent = new Event('noFaceDetected');
+            window.dispatchEvent(noFaceDetectedEvent);
+          }*/
+          }, 100);
 
         app.ticker.add(throttledDetection);
       }
@@ -230,6 +292,26 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
       }
     };
   }, [imagePath, maskPath]);
+
+  useEffect(() => {
+    const handleFaceDetected = () => {
+      // Code to execute when a face is detected
+      console.log(`Face detected`);
+    };
+
+    const handleNoFaceDetected = () => {
+      // Code to execute when no face is detected
+      console.log(`No face detected`);
+    };
+
+    window.addEventListener('faceDetected', handleFaceDetected);
+    window.addEventListener('noFaceDetected', handleNoFaceDetected);
+
+    return () => {
+      window.removeEventListener('faceDetected', handleFaceDetected);
+      window.removeEventListener('noFaceDetected', handleNoFaceDetected);
+    };
+  }, []);
 
   useEffect(() => {
     // Resize handler
@@ -260,9 +342,16 @@ const FaceComponent2D: React.FC<FaceComponentProps> = ({ audioPath, imagePath, s
 
   useEffect(() => {
     // Play the audio when the component mounts or when the audioPath prop changes
-    console.log(`Playing audio: ${audioPath}`);
-    playAudio(audioPath);
+    if (audioPath !== '') {
+      console.log(`Playing audio: ${audioPath}`);
+      playAudio(audioPath);
+    } else if (videoElementRef.current) {
+      videoElementRef.current.currentTime = 0; // Rewind the video to the start
+      videoElementRef.current.pause(); // Optionally, you can play the video from the beginning
+    }
   }, [audioPath]);
+
+  
 
   return (
     <div ref={faceContainerRef} style={{ position: 'relative', width: '100%', height: '100%' }}>
