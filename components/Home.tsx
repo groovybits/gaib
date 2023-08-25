@@ -139,6 +139,7 @@ function Home({ user }: HomeProps) {
   const useFaceAPI = process.env.NEXT_PUBLIC_USE_FACEAPI === 'true';
   const [storyIndex, setStoryIndex] = useState(0); // Keep track of the current story index
   const animateStoryRef = useRef<AnimateStoryHandle | null>(null);
+  const [currentStory, setCurrentStory] = useState<Story | null>(null);
 
   function countTokens(textString: string): number {
     let totalTokens = 0;
@@ -254,23 +255,54 @@ function Home({ user }: HomeProps) {
     setIsFetching(true);
   };
 
-  // Callback to be called when a story finishes playing
-  const handleAnimationCompletion = () => {
-    if (storyIndex < playQueue.length - 1) {
-      // More stories to play
-      console.log(`handleAnimationCompletion: Story #${storyIndex} ${playQueue.length > 0 ? playQueue[storyIndex].title : ''} completed, moving to next story...`);
-      setStoryIndex(storyIndex + 1); // Move to the next story
-    } else {
-      // No more stories to play
-      console.log(`handleAnimationCompletion: Story #${storyIndex} ${playQueue.length > 0 ? playQueue[storyIndex].title : ''} completed, no more stories to play.`);
-    }
-  };
-
   const isPlaybackInProgress = () => {
     if (animateStoryRef.current && typeof animateStoryRef.current?.isPlaybackInProgress === 'function') {
       return animateStoryRef.current?.isPlaybackInProgress() ?? false;
     }
     return false;
+  };
+
+  const startPlayback = async () => {
+    if (animateStoryRef.current && typeof animateStoryRef.current?.startPlayback === 'function') {
+      animateStoryRef.current?.startPlayback();
+    } else {
+      console.error('animateStoryRef.current.startPlayback is not a function');
+      console.log('animateStoryRef.current:', animateStoryRef.current);
+    }
+    return false;
+  };
+
+  const stopPlayback = async (): Promise<boolean> => {
+    if (animateStoryRef.current && typeof animateStoryRef.current?.stopPlayback === 'function') {
+      animateStoryRef.current?.stopPlayback();
+    } else {
+      console.error('animateStoryRef.current.stopPlayback is not a function');
+    }
+    return false;
+  };
+
+  // Playback Queue processing of stories after they are generated
+  useEffect(() => {
+    const playQueueDisplay = () => {
+      if (playQueue.length > 0 && currentStory === null) {
+        const nextStory: Story = playQueue.shift() as Story; // Remove the first story from the queue
+        setCurrentStory(nextStory); // Set the story to play
+      }
+    };
+
+    playQueueDisplay();
+    const intervalId = setInterval(playQueueDisplay, 1000);
+    return () => clearInterval(intervalId);
+  }, [playQueue, currentStory]);
+
+  // Callback to be called when a story finishes playing
+  // Callback to be called when a story finishes playing
+  const handleAnimationCompletion = () => {
+    if (playQueue.length > 0) {
+      setCurrentStory(playQueue[0]); // Set the next story from the queue
+    } else {
+      setCurrentStory(null); // No more stories to play
+    }
   };
 
   const twitchStory = async (story: Story): Promise<boolean> => {
@@ -1317,22 +1349,6 @@ function Home({ user }: HomeProps) {
     // failed to fetch image, leave the image as is
     return '';
   }
-
-  // Playback Queue processing of stories after they are generated
-  useEffect(() => {
-    const playQueueDisplay = async () => {
-      if (playQueue.length > 0 && (storyIndex + 1) < playQueue.length) {
-        //handleAnimationCompletion();
-      }
-    };
-
-    playQueueDisplay();  // Run immediately on mount
-
-    // check if there are any episodes left, if so we don't need to sleep
-    const intervalId = setInterval(playQueueDisplay, 1000);  // Then every N seconds
-
-    return () => clearInterval(intervalId);  // Clear interval on unmount
-  }, [playQueue, storyIndex]);
 
   // Generate a new story when the query input has been added to
   useEffect(() => {
@@ -2577,7 +2593,7 @@ function Home({ user }: HomeProps) {
                           <>
                             <AnimateStory
                               ref={animateStoryRef}
-                              story={playQueue[storyIndex]}
+                              story={currentStory}
                               onCompletion={handleAnimationCompletion}
                               defaultImage={imageUrl}
                               defaultSubtitle={subtitle}

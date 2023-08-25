@@ -5,7 +5,7 @@ import { Story, Scene } from '@/types/story';
 import { set } from 'lodash';
 
 export interface AnimateStoryProps {
-  story: Story;
+  story: Story | null;
   defaultImage: string;
   defaultSubtitle: string;
   onCompletion?: () => void;
@@ -13,6 +13,8 @@ export interface AnimateStoryProps {
 
 export interface AnimateStoryHandle {
   isPlaybackInProgress: () => boolean;
+  startPlayback: () => void;
+  stopPlayback: () => void;
 }
 
 const AnimateStory = forwardRef<AnimateStoryHandle, AnimateStoryProps>((props, ref): JSX.Element | null => {
@@ -41,9 +43,23 @@ const AnimateStory = forwardRef<AnimateStoryHandle, AnimateStoryProps>((props, r
     console.error(`AnimateStory: Container not found, Story Image: ${props.story ? props.story?.imageUrl : props.defaultImage}, defaultImage: ${props.defaultImage}, defaultSubtitle: ${props.defaultSubtitle} Scenes Length: ${props.story && props.story.scenes ? props.story?.scenes?.length : ''}`);
   }
 
+  const startPlayback = () => {
+    // Logic to start playing the story
+    console.log(`startPlayback: Playing ${props.story ? props.story.title : ''} ${props.story && props.story.scenes ? props.story.scenes.length : ''} scenes.`);
+    playStory(props.story as Story);
+  };
+
+  const stopPlayback = () => {
+    // Logic to stop playing the story
+    stopSpeaking();
+    stopVideo();
+  };
+
   // Expose the isPlaybackInProgress method
   useImperativeHandle(ref, () => ({
     isPlaybackInProgress: () => isPlaybackInProgressRef.current,
+    startPlayback: () => startPlayback(),
+    stopPlayback: () => stopPlayback(),
   }));
 
   const pauseSpeaking = async () => {
@@ -187,34 +203,58 @@ const AnimateStory = forwardRef<AnimateStoryHandle, AnimateStoryProps>((props, r
     }, Promise.resolve());
   };
 
-  // Playback the story
-  useEffect(() => {
-    if (props.story?.scenes) {
+  const playStory = async (story: Story): Promise<boolean> => {
+    if (props.story && props.story?.scenes) {
       console.log(`playScene: Playing ${props.story ? props.story.title : ''} ${props.story && props.story.scenes ? props.story.scenes.length : ''} scenes.`);
       (async () => {
-        isPlaybackInProgressRef.current = true;
-        for (const scene of props.story.scenes) {
-          console.log(`playScene: Playing ${props.story ? props.story.title : ''} scene ${scene ? scene.id : ''} of ${props.story && props.story.scenes ? props.story.scenes.length : ''} scenes.`);
-          await playScene(scene);
-        }
+        if (props.story) {
+          isPlaybackInProgressRef.current = true;
+          for (const scene of props.story.scenes) {
+            console.log(`playScene: Playing ${props.story ? props.story.title : ''} scene ${scene ? scene.id : ''} of ${props.story && props.story.scenes ? props.story.scenes.length : ''} scenes.`);
+            await playScene(scene);
+          }
 
-        // Reset the image and text to defaults
-        if (isVideoRef.current && videoElementRef.current) {
-          await stopVideo();
-        }
+          // Reset the image and text to defaults
+          if (isVideoRef.current && videoElementRef.current) {
+            await stopVideo();
+          }
 
-        if (subtitleTextRef.current) {
-          subtitleTextRef.current.text = props.defaultSubtitle;
-        }
-        isPlaybackInProgressRef.current = false;
+          if (subtitleTextRef.current) {
+            subtitleTextRef.current.text = props.defaultSubtitle;
+          }
+          console.log(`playScene: Finished playing ${props.story ? props.story.title : ''} ${props.story && props.story.scenes ? props.story.scenes.length : ''} scenes.`);
 
-        // Call the onCompletion callback
-        props.onCompletion?.();
-        console.log(`playScene: Finished playing ${props.story ? props.story.title : ''} ${props.story && props.story.scenes ? props.story.scenes.length : ''} scenes.`);
+          // Call the onCompletion callback
+          props.onCompletion?.();
+
+          isPlaybackInProgressRef.current = false;
+        } else {
+          console.error(`playScene: story is null`);
+        }
       })();
+      return true;
     } else {
-      console.log(`playScene: story.scenes is null or empty`);
+      console.error(`playStory: story.scenes is null or empty`);
+      return false;
     }
+  };
+
+  // Playback the story
+  useEffect(() => {
+    const play = async () => {
+      if (!isPlaybackInProgressRef.current && props.story && props.story.scenes) {
+        await playStory(props.story as Story);
+      } else {
+        console.log(`play: playback ${isPlaybackInProgressRef ? "on" : "off"}.`);
+      }
+    };
+
+    play();
+
+    const intervalId = setInterval(play, 1000);
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [props.story]);
 
   const setupApp = () => {
@@ -342,8 +382,6 @@ const AnimateStory = forwardRef<AnimateStoryHandle, AnimateStoryProps>((props, r
     richText.anchor.x = 0.5; // Center-align the text horizontally
     richText.y = containerHeight - 24 * 1.2 * 10; // N lines up from the bottom of the container
     richText.zIndex = 10; // Set the zIndex of the text object
-
-    console.log(`setupText: richText setup resolution=${richText.x}x${richText.y} anchor=${richText.anchor.x},${richText.anchor.y} zIndex=${richText.zIndex}`);
 
     // Remove the existing sprite from the stage if it exists
     if (appRef.current?.stage) {
@@ -582,8 +620,6 @@ const AnimateStory = forwardRef<AnimateStoryHandle, AnimateStoryProps>((props, r
       } catch (error) {
         console.error(`Error loading Subtitle defaults: ${error}`);
       }
-    } else {
-      console.log(`setupText: playback ${isPlaybackInProgressRef ? "on" : "off"}.`);
     }
   }, [faceContainerRef.current, props.defaultSubtitle]);
 
@@ -597,8 +633,6 @@ const AnimateStory = forwardRef<AnimateStoryHandle, AnimateStoryProps>((props, r
       } catch (error) {
         console.error(`Error loading Image/Video defaults: ${error}`);
       }
-    } else {
-      console.log(`setupVideoOrImage: playback ${isPlaybackInProgressRef ? "on" : "off"}.`);
     }
   }, [faceContainerRef.current, props.defaultImage]);
 
