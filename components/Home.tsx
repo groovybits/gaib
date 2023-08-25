@@ -32,14 +32,10 @@ import GPT3Tokenizer from 'gpt3-tokenizer';
 import { fetchEventSourceWithAuth, fetchWithAuth } from '@/utils/fetchWithAuth';
 import ModelNameDropdown from '@/components/ModelNameDropdown';
 import FastModelNameDropdown from '@/components/FastModelNameDropdown';
-import { create } from 'lodash';
-import FaceComponent from './FaceComponent';
 import { SpeakerConfig } from '@/types/speakerConfig';
 import dynamic from 'next/dynamic';
-import { isWithFaceDetection } from 'face-api.js';
 import { AnimateStoryHandle } from './AnimateStory';
 
-const FaceComponent2D = dynamic(() => import('./FaceComponent2D'), { ssr: false });
 const AnimateStory = dynamic(() => import('./AnimateStory'), { ssr: false });
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
