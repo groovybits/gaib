@@ -284,9 +284,18 @@ function Home({ user }: HomeProps) {
   // Playback Queue processing of stories after they are generated
   useEffect(() => {
     const playQueueDisplay = () => {
-      if (playQueue.length > 0 && currentStory === null) {
+      if (playQueue.length > 0 && currentStory === null && isDisplayingRef.current === false && isSpeakingRef.current === false) {
+        isDisplayingRef.current = true;
+        isSpeakingRef.current = true;
         const nextStory: Story = playQueue.shift() as Story; // Remove the first story from the queue
         setCurrentStory(nextStory); // Set the story to play
+
+        setSubtitle(`Title: ${nextStory.title}`); // Clear the subtitle
+        setLoadingOSD(`Playing ${nextStory.isStory ? "story" : "question"} [${nextStory.title.slice(0, 20)}...] by ${nextStory.personality}.`);
+        setLastStory(nextStory.shareUrl);
+        if (nextStory.imageUrl != '' && nextStory.imageUrl != null && nextStory.imageUrl != undefined && typeof nextStory.imageUrl != 'object') {
+          setImageUrl(nextStory.imageUrl);
+        }
       }
     };
 
@@ -297,11 +306,31 @@ function Home({ user }: HomeProps) {
 
   // Callback to be called when a story finishes playing
   // Callback to be called when a story finishes playing
-  const handleAnimationCompletion = () => {
+  const handleAnimationCompletion = async () => {
     if (playQueue.length > 0) {
+      if (currentStory) {
+        setLoadingOSD(`Finished playing ${currentStory.title.slice(0, 30)}.`);
+        setSubtitle(`Finished playing ${currentStory.title.slice(0, 50)}.`)
+
+        // Images and Passthrough wait for 10 seconds before playing the next story
+        if (currentStory.personality == 'passthrough') {
+          // sleep for 10 seconds
+          await new Promise(r => setTimeout(r, 5000));
+        } else {
+          // wait 3 seconds after story before ending
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      }
       setCurrentStory(playQueue[0]); // Set the next story from the queue
     } else {
       setCurrentStory(null); // No more stories to play
+
+      setSubtitle(`-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
+      setLoadingOSD(`Ready to play a story or answer a question.`);
+
+      isDisplayingRef.current = false;
+      isSpeakingRef.current = false;
+      stopSpeaking();
     }
   };
 
@@ -1857,11 +1886,13 @@ function Home({ user }: HomeProps) {
 
         // share the story
         try {
-          // Share the story after building it before displaying it
-          let shareUrl = await shareStory(story, isFetching);
+          if (story.isStory) {
+            // Share the story after building it before displaying it
+            let shareUrl = await shareStory(story, isFetching);
 
-          if (shareUrl != '' && isDisplayingRef.current === false && !isSpeakingRef.current && !isPlaybackInProgress()) {
-            setLoadingOSD(`Episode shared to: ${shareUrl}!`);
+            if (shareUrl != '' && isDisplayingRef.current === false && !isSpeakingRef.current && !isPlaybackInProgress()) {
+              setLoadingOSD(`Episode shared to: ${shareUrl}!`);
+            }
           }
         } catch (error) {
           console.error(`Error sharing story: ${error}`);
