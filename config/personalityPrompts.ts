@@ -160,6 +160,8 @@ export const PERSONALITY_IMAGES = {
   // TODO: add images for specific personalities
   groovy: 'https://storage.googleapis.com/gaib/images/1.png',
   animeidol: 'https://storage.googleapis.com/gaib/video/animeidol.mp4',
+  mickeymouse: 'https://storage.googleapis.com/gaib/video/mickeymouse.mp4',
+  yoda: 'https://storage.googleapis.com/gaib/video/yoda.mp4',
   anime: 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png',
 };
 
