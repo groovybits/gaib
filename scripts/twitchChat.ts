@@ -49,6 +49,23 @@ async function searchRelatedConversations(query: string, namespace: string, pers
   return await vectorStore.similaritySearch(query, k, { personality: personality, namespace: namespace, username: username, type: 'message' });
 }
 
+// TypeScript function to sanitize input by escaping special characters
+const sanitizeInput = (input: string): string => {
+  const escapeMap: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+    '`': '&#x60;',
+    '=': '&#x3D;',
+    '${': '&#36;&#123;',
+  };
+
+  return input.replace(/[&<>"'`=/\${}]/g, (char) => escapeMap[char]);
+};
+
 // Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert({
@@ -135,6 +152,8 @@ client.on('message', async (channel: any, tags: {
 }, message: any, self: any) => {
   // Ignore messages from the bot itself
   if (self) return;
+
+  message = sanitizeInput(message);
 
   // Ignore messages that have already been processed
   if (processedMessageIds[tags.id]) {
