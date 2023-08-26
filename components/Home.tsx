@@ -3113,9 +3113,9 @@ function Home({ user }: HomeProps) {
                         lastStatusMessage.current ? lastStatusMessage.current : '.'
                       }
                     </button>
-                    {(imageUrl === '') ? "" : (
+                    {(imageUrl === '') ? <div style={{width: "600px", height: "600px"}}></div> : (
                       <>
-                        <div ref={faceContainerRef} style={{ position: 'relative', width: '100%', height: '100%' }}></div> 
+                        <div ref={faceContainerRef} style={{ position: 'relative', width: '100vh', height: '100%' }}></div> 
                       </>
                     )}
                   </div>
