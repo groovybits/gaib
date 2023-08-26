@@ -131,6 +131,9 @@ function Home({ user }: HomeProps) {
   const faceContainerRef = useRef<HTMLDivElement | null>(null);
   const loaderRef = useRef<PIXI.Loader | null>(null);
   const subtitleTextRef = useRef<PIXI.Text | null>(null);
+  const statusBarTextRef = useRef<PIXI.Text | null>(null);
+  const episodeOverlayTextRef = useRef<PIXI.Text | null>(null);
+  const backgroundOverlayTextRef = useRef<PIXI.Graphics | null>(null);
   const videoElementRef = useRef<HTMLVideoElement | null>(null); // Ref to store the video element
   const spriteRef = useRef<PIXI.Sprite | null>(null);
   const isVideoRef = useRef(false);
@@ -286,38 +289,30 @@ function Home({ user }: HomeProps) {
       console.error(`playStory: story is null`);
       return false;
     } else {
-      console.log(`playStory: Playing ${story ? story.title : ''} ${story && story.scenes ? story.scenes.length : ''} scenes.`);
+      console.log(`playStory: Playing ${story.title} ${story.scenes.length} scenes.`);
     }
-    if (story && story?.scenes) {
-      console.log(`playScene: Playing ${story ? story.title : ''} ${story && story.scenes ? story.scenes.length : ''} scenes.`);
-      (async () => {
-        if (story) {
-          for (const scene of story.scenes) {
-            console.log(`playScene: Playing ${story ? story.title : ''} scene ${scene ? scene.id : ''} of ${story && story.scenes ? story.scenes.length : ''} scenes.`);
-            try {
-              await playScene(scene);
-            } catch (error) {
-              console.error(`playScene: Error playing scene ${scene ? scene.id : ''}: ${error}`);
-            }
-          }
 
-          // Reset the image and text to defaults
-          if (isVideoRef.current && videoElementRef.current) {
-            try {
-              await stopVideo();
-            } catch (error) {
-              console.error(`playScene: Error stopping video: ${error}`);
-            }
-          }
-
-          if (subtitleTextRef.current) {
-            subtitleTextRef.current.text = subtitle;
-          }
-          console.log(`playScene: Finished playing ${story ? story.title : ''} ${story && story.scenes ? story.scenes.length : ''} scenes.`);
-        } else {
-          console.error(`playScene: story is null`);
+    if (story.scenes) {
+      console.log(`playScene: Playing ${story.title} ${story.scenes.length} scenes.`);
+      try {
+        for (const scene of story.scenes) {
+          console.log(`playScene: Playing ${story.title} scene ${scene.id} of ${story.scenes.length} scenes.`);
+          await playScene(scene);
         }
-      })();
+      } catch (error) {
+        console.error(`playScene: Error playing scene: ${error}`);
+      }
+
+      // Reset the image and text to defaults
+      if (isVideoRef.current && videoElementRef.current) {
+        try {
+          await stopVideo();
+        } catch (error) {
+          console.error(`playScene: Error stopping video: ${error}`);
+        }
+      }
+
+      console.log(`playScene: Finished playing ${story.title} ${story.scenes.length} scenes.`);
       return true;
     } else {
       console.error(`playStory: story.scenes is null or empty`);
@@ -333,35 +328,45 @@ function Home({ user }: HomeProps) {
         console.error(`AnimateStoryPlay: story is null or story.scenes is null or empty ${story ? story.id : "(story is empty)"} has ${story && story.scenes ? story.scenes.length : "no scenes"}.}`);
         return;
       }
-      if (!isPlaying) {
+      try {
         await playStory(story);
-      } else {
-        console.log(`AnimateStoryPlay: playback is ${isPlaying ? "in progress " : "not in progress"} Story ${story ? "is not empty" : "is empty"}.`);
+      } catch (error) {
+        console.error(`AnimateStoryPlay: Error playing story ${story ? story.id : "(story is empty)"}. ${error}`);
       }
     };
 
-    const playFromQueue = () => {
+    const playFromQueue = async () => {
       if (playQueue.length > 0 && !isPlaying) {
-        setIsPlaying(true);
         const story = removeFromQueue();
-        if (story) {  // Check if the story is not empty
+        if (story) {
           console.log(`Playing story ${story.title} from queue...`);
-          play(story);
+          try {
+            setIsPlaying(true);
+            await play(story);
+          } catch (error) {
+            console.error("An error occurred during playback:", error);
+          }
+          setIsPlaying(false);
         } else {
           console.log("No valid story to play.");
         }
-        setIsPlaying(false);
+        console.log(`playFromQueue: Finished playing story ${story ? story.title : "(story is empty)"}.`);
+
+        // update the subtitle text to the default message
+        if (subtitleTextRef.current) {
+          setLoadingOSD('Welcome to Groovy the AI Bot.');
+        }
       }
     };
 
-    // Only set the interval if there are stories in the queue
-    if (playQueue.length > 0) {
-      const intervalId = setInterval(playFromQueue, 1000);
-      return () => {
-        clearInterval(intervalId);
-      };
-    }
-  }, [playQueue]);
+    // Schedule the first invocation
+    const timeoutId = setTimeout(playFromQueue, 1000);
+
+    // Cleanup
+    return () => {
+      clearTimeout(timeoutId);  // <-- Clear the timeout
+    };
+  }, [playQueue, isPlaying]);
 
   // App setup initialization
   const setupApp = () => {
@@ -417,6 +422,11 @@ function Home({ user }: HomeProps) {
             if (subtitleTextRef.current) {
               subtitleTextRef.current.x = newWidth / 2; // Centered on the container
               subtitleTextRef.current.y = newHeight - 24 * 1.2 * 10; // N lines up from the bottom of the container
+            }
+
+            if (statusBarTextRef.current) {
+              statusBarTextRef.current.x = 2; // Centered on the container
+              statusBarTextRef.current.y = 2; // N lines up from the bottom of the container
             }
 
             // Update the image or video
@@ -502,6 +512,135 @@ function Home({ user }: HomeProps) {
     subtitleTextRef.current = richText;
   };
 
+  const setupStatusBar = () => {
+    const statusBarTextStyle = new TextStyle({
+      fontSize: 24,
+      fontWeight: 'lighter',
+      fill: 'yellow',
+      fontFamily: 'Trebuchet MS',
+      lineHeight: 24, // 1.2 times the font size
+      align: 'left',
+      wordWrap: true, // Enable word wrap
+      wordWrapWidth: containerWidth - 80, // Set word wrap width with some padding
+      dropShadow: true,
+      dropShadowAngle: Math.PI / 6,
+      dropShadowBlur: 3,
+      dropShadowDistance: 6,
+      padding: 4,
+      dropShadowColor: '#000000',
+    });
+
+    const statusBarText = new PIXI.Text("Loading...", statusBarTextStyle);
+    statusBarText.x = 2; // Centered horizontally in the container
+    statusBarText.anchor.x = 0; // Center-align the text horizontally
+    statusBarText.y = 2; // N lines up from the bottom of the container
+    statusBarText.zIndex = 10; // Set the zIndex of the text object
+
+    // Remove the existing sprite from the stage if it exists
+    if (appRef.current?.stage) {
+      if (statusBarTextRef.current) {
+        // Destroy previous texture if it exists
+        appRef.current.stage.removeChild(statusBarTextRef.current);
+        statusBarTextRef.current.texture.destroy(true); // Pass true to destroy the base texture as well
+      }
+      appRef.current.stage.addChild(statusBarText);
+    }
+    statusBarTextRef.current = statusBarText;
+  };
+
+  const setupEpisodeOverlay = (episodes: Episode[]) => {
+    // Define the text style
+    const episodeTextStyle = new PIXI.TextStyle({
+      fontSize: 24,
+      fontWeight: 'lighter',
+      fill: 'yellow',
+      fontFamily: 'Trebuchet MS',
+      lineHeight: 24,
+      align: 'left',
+      wordWrap: false, // Disable word wrapping
+      wordWrapWidth: containerWidth - 20,
+      dropShadow: true,
+      dropShadowAngle: Math.PI / 6,
+      dropShadowBlur: 3,
+      dropShadowDistance: 6,
+      padding: 1,
+      dropShadowColor: '#000000'
+    });
+
+    // Generate the episode text
+    let episodeText = '';
+    episodes.reverse().forEach((episode: Episode, index: number) => {
+      episodeText += `* ${episode.type === 'question' ? "Question" : "Story"} ${episodes.length - index}: ${episode.username} asked "${episode.title}"\n`;
+    });
+
+    // Create the PIXI Text object
+    const episodeOverlayText = new PIXI.Text(episodeText, episodeTextStyle);
+
+    // Create a background using PIXI Graphics
+    const background = new PIXI.Graphics();
+    background.beginFill(0x000000, 0.5); // black color, 0.5 alpha
+
+    // Set background dimensions based on screen size
+    const topBottomBorder = 50; // Set the top and bottom borders
+    const sideBorder = 20; // Set the side borders
+
+    // Set background dimensions to match the text
+    background.drawRect(
+      sideBorder + 10,
+      topBottomBorder + 10,
+      episodeOverlayText.width + 20,  // Add some padding to width
+      episodeOverlayText.height + 20  // Add some padding to height
+    );
+    background.endFill();
+
+    // Set the position for both text and background
+    episodeOverlayText.x = sideBorder + 10; // Slightly offset from the left side border
+    episodeOverlayText.y = topBottomBorder + 10; // Slightly offset from the top border
+
+    background.zIndex = 9;
+    episodeOverlayText.zIndex = 10;
+
+    // Add to the stage
+    if (appRef.current?.stage) {
+      if (episodeOverlayTextRef.current) {
+        // Destroy previous text if it exists
+        appRef.current.stage.removeChild(episodeOverlayTextRef.current);
+        episodeOverlayTextRef.current.texture.destroy(true);
+      }
+      if (backgroundOverlayTextRef.current) {
+        // Destroy previous background if it exists
+        appRef.current.stage.removeChild(backgroundOverlayTextRef.current);
+        backgroundOverlayTextRef.current.destroy(true);
+      }
+      appRef.current.stage.addChild(background);
+      appRef.current.stage.addChild(episodeOverlayText);
+    }
+
+    // Store the reference
+    episodeOverlayTextRef.current = episodeOverlayText;
+    backgroundOverlayTextRef.current = background;
+  };
+
+  // Use the function
+  useEffect(() => {
+    if (episodes.length > 0 && !isPlaying) {
+      setupEpisodeOverlay(episodes);
+    } else {
+      // Remove the overlay if it exists and isPlaying is true
+      if (appRef.current?.stage && episodeOverlayTextRef.current) {
+        appRef.current.stage.removeChild(episodeOverlayTextRef.current);
+        episodeOverlayTextRef.current.texture.destroy(true);
+        episodeOverlayTextRef.current = null;
+      }
+      // Similarly, remove the background if you added one
+      if (appRef.current?.stage && backgroundOverlayTextRef.current) {
+        appRef.current.stage.removeChild(backgroundOverlayTextRef.current);
+        backgroundOverlayTextRef.current.clear();
+        backgroundOverlayTextRef.current = null;
+      }
+    }
+  }, [episodes, isPlaying]);
+
   const setupVideoOrImage = async (imageOrVideo: string) => {
     const isVideo: boolean = /\.(mp4|webm|ogg)$/i.test(imageOrVideo);
     isVideoRef.current = isVideo;
@@ -586,7 +725,7 @@ function Home({ user }: HomeProps) {
           videoSprite.y = containerHeight / 2;
           videoSprite.anchor.set(0.5);
 
-          videoSprite.zIndex = 0;
+          videoSprite.zIndex = 1;
 
           console.log(`setupVideoOrImage: videoSprite setup resolution=${videoSprite.x}x${videoSprite.y} anchor=${videoSprite.anchor.x},${videoSprite.anchor.y} zIndex=${videoSprite.zIndex}`);
 
@@ -664,7 +803,7 @@ function Home({ user }: HomeProps) {
           image.y = containerHeight / 2;
 
           // Add the sprite to the stage
-          image.zIndex = 0;
+          image.zIndex = 1;
 
           console.log(`setupVideoOrImage: image setup resolution=${image.x}x${image.y} anchor=${image.anchor.x},${image.anchor.y} zIndex=${image.zIndex}`);
 
@@ -705,6 +844,8 @@ function Home({ user }: HomeProps) {
       setupApp();
       if (!isPlaying) {
         setupText(subtitle);
+        setupStatusBar();
+        setupEpisodeOverlay(episodes);
         setupVideoOrImage(imageUrl);
       }
     }
@@ -732,6 +873,42 @@ function Home({ user }: HomeProps) {
       }
     }
   }, [faceContainerRef.current, subtitle]);
+
+  useEffect(() => {
+    if (faceContainerRef.current && appRef.current) {
+      // Setup the PIXI app
+      try {
+        // Load the default text
+        if (!isPlaying) {
+          setupStatusBar();
+        }
+      } catch (error) {
+        console.error(`Error loading Subtitle defaults: ${error}`);
+      }
+    }
+  }, [faceContainerRef.current]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (faceContainerRef.current && appRef.current && statusBarTextRef.current) {
+        // Setup the message to replace current text with
+        let message = loadingOSD;
+        let statusDetails =
+          `${isSubmitQueueRef.current
+            ? 'Submitting' : '.'} ${episodes.length > 0
+            ? `Episodes:${episodes.length}` : '.'} ${isPlaying
+              ? 'Playing' : '.'} ${playQueue.length > 0
+                ? `playQueue:${playQueue.length}` : '.'} ${isProcessingNewsRef.current
+                  ? 'News[on]' : '.'} ${isProcessingTwitchRef.current
+                    ? 'Twitch[on]' : '.'} ${lastStatusMessage.current
+                      ? lastStatusMessage.current : '.'}`;
+        statusBarTextRef.current.text = `${message}  ${statusDetails}`;
+      }
+    }, 1000); // Run every 1 second
+
+    // Cleanup interval when the component unmounts
+    return () => clearInterval(intervalId);
+  }, [faceContainerRef, loadingOSD, statusBarTextRef, episodes, isPlaying, playQueue, isProcessingNewsRef, isProcessingTwitchRef, lastStatusMessage]);
 
   // Load the default image
   useEffect(() => {
@@ -1982,7 +2159,7 @@ function Home({ user }: HomeProps) {
       }
       try {
         if (cleanText != '') {
-          setLoadingOSD(`TextToSpeech #${sentenceId} of #${sentencesToSpeak.length} - ${detectedGender}/${model}/${audioLanguage}: [${cleanText.slice(0, 5)}...]`);
+          setLoadingOSD(`TextToSpeech #${sentenceId} of #${sentencesToSpeak.length} - ${detectedGender}/${model}/${audioLanguage}`);
 
           // Try to run speakText to create the audio file
           let attempts = 0;
@@ -2932,18 +3109,18 @@ function Home({ user }: HomeProps) {
   // toggle the full screen state
   const toggleFullScreen = () => {
     const imageContainer = document.querySelector(`.${styles.imageContainer}`);
-    const image = document.querySelector(`.${styles.generatedImage} img`);
+    //const image = document.querySelector(`.${styles.generatedImage} img`);
 
     if (!document.fullscreenElement) {
       if (imageContainer?.requestFullscreen) {
         imageContainer.requestFullscreen();
-        image?.classList.add(styles.fullScreenImage);
+        //image?.classList.add(styles.fullScreenImage);
         setIsFullScreen(true);
       }
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-        image?.classList.remove(styles.fullScreenImage);
+        //image?.classList.remove(styles.fullScreenImage);
         setIsFullScreen(false);
       }
     }
@@ -3040,7 +3217,7 @@ function Home({ user }: HomeProps) {
                   left: isFullScreen ? 0 : "auto",
                   width: isFullScreen ? "auto" : "auto",
                   height: isFullScreen ? "100vh" : "100%",
-                  zIndex: isFullScreen ? 1000 : "auto",
+                  zIndex: isFullScreen ? 1000 : 1,
                   backgroundColor: isFullScreen ? "black" : "transparent",
                 }}
               >
@@ -3058,62 +3235,11 @@ function Home({ user }: HomeProps) {
                 </button>
                 {selectedTheme === 'MultiModal' ? (
                   <div className={styles.generatedImage}>
-                    <div className={
-                      isFullScreen ? styles.fullScreenOSD : styles.osd
-                    }>
-                      {(!isPlaying) && episodes.length > 0 ? (
-                        <>
-                          <div className={styles.generatedImage}>
-                            <table className={`${styles.episodeScreenTable} ${styles.episodeList}`}>
-                              <thead>
-                                <tr>
-                                  <th colSpan={2}>
-                                    <p className={`${styles.header} ${styles.episodeList} ${styles.center}`}>-*- Programming Schedule -*-</p>
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {[...episodes].reverse().map((episode, index) => (
-                                  <tr key={index}>
-                                    <td>
-                                      <p className={`${styles.footer} ${styles.episodeList}`}>* Episode {episodes.length - index}: &quot;{episode.title}&quot;</p>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </>
-                      ) : (<></>)}
-                    </div>
-                    <button
-                      className={styles.loadingOSDButton}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                      }}
-                      type="button"
-                    >
-                      {
-                        loadingOSD
-                      }&nbsp;&nbsp; {
-                        isSubmitQueueRef.current ? 'Submitting' : '.'
-                      } {
-                        episodes.length > 0 ? `Episodes:${episodes.length}` : '.'
-                      } {
-                        isPlaying ? 'Playing' : '.'
-                      } {
-                        playQueue.length > 0 ? `playQueue:${playQueue.length}` : '.'
-                      } {
-                        isProcessingNewsRef.current ? 'News[on]' : '.'
-                      } {
-                        isProcessingTwitchRef.current ? 'Twitch[on]' : '.'
-                      } {
-                        lastStatusMessage.current ? lastStatusMessage.current : '.'
-                      }
-                    </button>
-                    {(imageUrl === '') ? <div style={{width: "600px", height: "600px"}}></div> : (
+                    {(imageUrl === '') ?
+                      <div style={{ width: "600px", height: "600px" }}>
+                        <img src={defaultGaib} alt="Groovy" />
+                      </div>
+                      : (
                       <>
                         <div ref={faceContainerRef} style={{ position: 'relative', width: '100vh', height: '100%' }}></div> 
                       </>
