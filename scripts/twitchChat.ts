@@ -186,9 +186,9 @@ client.on('message', async (channel: any, tags: {
 
     let isStory = false;
     // parse the message to see if it is a question or eipsode request, as a fuzzy nlp type match, where it is free form english chat, it may be called a story too
-    /*if (message.toLowerCase().includes('episode') || message.toLowerCase().includes('story')) {
+    if (message.toLowerCase().includes('episode')) {
       isStory = true;
-    }*/
+    }
 
     let personality = '';
 
