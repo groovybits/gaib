@@ -125,7 +125,6 @@ function Home({ user }: HomeProps) {
   const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
   const lastStatusMessage = useRef<string>('');
-  const useFaceAPI = process.env.NEXT_PUBLIC_USE_FACEAPI === 'true';
   const [storyIndex, setStoryIndex] = useState(0); // Keep track of the current story index
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -3116,28 +3115,8 @@ function Home({ user }: HomeProps) {
                     </button>
                     {(imageUrl === '') ? "" : (
                       <>
-                        {useFaceAPI ? (
-                          <>
-                            <div ref={faceContainerRef} style={{ position: 'relative', width: '100%', height: '100%' }}></div>
-                          </>
-                        ) : (
-                          <>
-                            <img
-                              src={imageUrl}
-                              alt="Groovy"
-                            />
-                          </>
-                        )}
+                        <div ref={faceContainerRef} style={{ position: 'relative', width: '100%', height: '100%' }}></div> 
                       </>
-                    )}
-                    {!useFaceAPI ? (
-                      <div className={
-                        (isPlaying) ? `${isFullScreen ? styles.fullScreenSubtitle : styles.subtitle} ${styles.left}` : isFullScreen ? styles.fullScreenSubtitle : styles.subtitle
-                      }>
-                        {subtitle}
-                      </div>
-                    ) : (
-                      <></>
                     )}
                   </div>
                 ) : (
