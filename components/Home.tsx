@@ -35,6 +35,7 @@ import FastModelNameDropdown from '@/components/FastModelNameDropdown';
 import { SpeakerConfig } from '@/types/speakerConfig';
 import * as PIXI from 'pixi.js';
 import { TextStyle, Text, Sprite } from 'pixi.js';
+import { app } from 'firebase-admin';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -125,7 +126,6 @@ function Home({ user }: HomeProps) {
   const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME ? process.env.NEXT_PUBLIC_GCS_BUCKET_NAME : '';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : '';
   const lastStatusMessage = useRef<string>('');
-  const [storyIndex, setStoryIndex] = useState(0); // Keep track of the current story index
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const faceContainerRef = useRef<HTMLDivElement | null>(null);
@@ -134,10 +134,9 @@ function Home({ user }: HomeProps) {
   const statusBarTextRef = useRef<PIXI.Text | null>(null);
   const episodeOverlayTextRef = useRef<PIXI.Text | null>(null);
   const backgroundOverlayTextRef = useRef<PIXI.Graphics | null>(null);
-  const videoElementRef = useRef<HTMLVideoElement | null>(null); // Ref to store the video element
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null); // Ref to store the video element
   const spriteRef = useRef<PIXI.Sprite | null>(null);
-  const isVideoRef = useRef(false);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideo, setIsVideo] = useState(false);
   const videoReadyRef = useRef(false);
   let videoReadyToPlay = false; // Declare a flag for video readiness
   const appRef = useRef<PIXI.Application | null>(null);
@@ -167,10 +166,9 @@ function Home({ user }: HomeProps) {
 
   // Custom function to play the video
   const playVideo = async () => {
-    if (videoElementRef.current) {
-      await videoElementRef.current.play().then(() => {
+    if (videoElement) {
+      await videoElement.play().then(() => {
         videoReadyToPlay = false; // Reset the flag
-        setIsVideoPlaying(true);
         console.log('Video started playing');
       }).catch((error) => {
         console.error('Error playing video:', error);
@@ -179,17 +177,16 @@ function Home({ user }: HomeProps) {
   };
 
   const pauseVideo = async () => {
-    if (videoElementRef.current) {
-      videoElementRef.current.pause();
+    if (videoElement) {
+      videoElement.pause();
       console.log('Video paused');
     }
   };
 
   const stopVideo = async () => {
-    if (videoElementRef.current) {
-      videoElementRef.current.pause()
-      videoElementRef.current.currentTime = 0;
-      setIsVideoPlaying(false);
+    if (videoElement) {
+      videoElement.pause()
+      videoElement.currentTime = 0;
       videoReadyToPlay = false; // Reset the flag
       console.log('Video stopped');
     }
@@ -211,13 +208,12 @@ function Home({ user }: HomeProps) {
           throw new Error('Audio playback is not available in this environment');
         }
 
-        if (videoElementRef.current && isVideoRef.current) {
+        if (videoElement && isVideo === true) {
           console.log('Attempting to play video...');
-
           // Check if the video is ready to play
           playVideo();
         } else {
-          console.log(`Video is not available, playing only audio isVideoRef: ${isVideoRef.current ? "true" : "false"} videoElementRef: ${videoElementRef.current ? "set" : "unset"}...`)
+          console.log(`Video is not available, playing only audio isVideoRef: ${isVideo ? "true" : "false"} videoElementRef: ${videoElement ? "set" : "unset"}...`)
         }
 
         // Playback the audio using the browser's built-in capabilities.
@@ -228,10 +224,10 @@ function Home({ user }: HomeProps) {
         audio.addEventListener(
           'ended',
           () => {
-            if (isVideoRef.current) { // Check if the video is playing
+            if (isVideo) { // Check if the video is playing
               pauseVideo();
-            } else if (isVideoRef.current && videoElementRef.current) {
-              console.error(`Audio Ended: Video is not playing. isVideoPlaying: ${isVideoPlaying}, isVIdeoRef: ${isVideoRef.current}`);
+            } else if (isVideo && videoElement) {
+              console.error(`Audio Ended: Video is not playing. isPlaying: ${isPlaying}, isVIdeoRef: ${isVideo}`);
             }
             resolve();
           },
@@ -246,7 +242,7 @@ function Home({ user }: HomeProps) {
   };
 
   // Playback audio and subtitle + image or video
-  const playAudioAndSubtitle = async (audioFile: string, subtitle: string, imageUrl?: string) => {
+  const playAudioAndSubtitle = async (audioFile: string, subtitle: string, localImageUrl: string) => {
     return new Promise<void>(async (resolve) => {
       // Update the text without removing and adding to the stage
       if (subtitleTextRef.current) {
@@ -254,16 +250,18 @@ function Home({ user }: HomeProps) {
       }
 
       // Update the image or video
-      if (imageUrl && imageUrl !== '') {
-        if (isVideoRef.current && videoElementRef.current) {
+      const localIsVideo = /\.(mp4|webm|ogg)$/i.test(localImageUrl);
+      setIsVideo(localIsVideo);
+      if (localImageUrl && localImageUrl !== '') {
+        if (localIsVideo && videoElement) {
           // switch out the video if it's different
-          if (imageUrl != currentUrl) {
-            setupVideoOrImage(imageUrl);
+          if (localImageUrl != currentUrl) {
+            setImageUrl(localImageUrl);
           }
         } else {
           // switch out the image if it's different
-          if (imageUrl != currentUrl && spriteRef.current) {
-            const texture = PIXI.Texture.from(imageUrl);
+          if (localImageUrl != currentUrl && spriteRef.current) {
+            const texture = PIXI.Texture.from(localImageUrl);
             spriteRef.current.texture = texture;
             spriteRef.current.texture.update();
           }
@@ -283,7 +281,7 @@ function Home({ user }: HomeProps) {
   const playScene = (scene: Scene) => {
     return scene.sentences.reduce(async (promise, sentence) => {
       await promise;
-      return await playAudioAndSubtitle(sentence.audioFile, sentence.text, sentence.imageUrl || imageUrl);
+      return await playAudioAndSubtitle(sentence.audioFile, sentence.text, sentence.imageUrl || '');
     }, Promise.resolve());
   };
 
@@ -307,7 +305,7 @@ function Home({ user }: HomeProps) {
       }
 
       // Reset the image and text to defaults
-      if (isVideoRef.current && videoElementRef.current) {
+      if (isVideo && videoElement) {
         try {
           await stopVideo();
         } catch (error) {
@@ -358,6 +356,15 @@ function Home({ user }: HomeProps) {
         // update the subtitle text to the default message
         if (subtitleTextRef.current) {
           setLoadingOSD('Welcome to Groovy the AI Bot.');
+          
+          // setup selectedPersonalities image in cache
+          if (selectedPersonality && personalityImageUrls[selectedPersonality]) {
+            setImageUrl(personalityImageUrls[selectedPersonality]);
+          } else {
+            setImageUrl(defaultGaib);
+          }
+          let displayMessage = `-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`;
+          subtitleTextRef.current.text = displayMessage;
         }
       }
     };
@@ -645,8 +652,8 @@ function Home({ user }: HomeProps) {
   }, [episodes, isPlaying]);
 
   const setupVideoOrImage = async (imageOrVideo: string) => {
-    const isVideo: boolean = /\.(mp4|webm|ogg)$/i.test(imageOrVideo);
-    isVideoRef.current = isVideo;
+    const isVideoLocal: boolean = /\.(mp4|webm|ogg)$/i.test(imageOrVideo);
+    setIsVideo(isVideoLocal);
 
     // Check if the video resource already exists in the loader's cache
     if (loaderRef.current && !loaderRef.current.resources[imageOrVideo]) {
@@ -676,61 +683,58 @@ function Home({ user }: HomeProps) {
     // Handler for the 'ended' event
     const endedHandler = () => {
       console.log('Video ended');
-      if (videoElementRef.current) {
-        videoElementRef.current.currentTime = 0;
+      if (videoElement) {
+        videoElement.currentTime = 0;
       }
-      setIsVideoPlaying(false);
       videoReadyToPlay = false; // Reset the flag
     };
 
     /// Handler for the 'canplay' event
     const canplayHandler = () => {
-      console.log(`Video ${imageOrVideo} can play ${videoElementRef.current?.videoWidth}x${videoElementRef.current?.videoHeight} ${videoElementRef.current?.duration}s ${videoElementRef.current?.readyState}`);
+      console.log(`Video ${imageOrVideo} can play ${videoElement?.videoWidth}x${videoElement?.videoHeight} ${videoElement?.duration}s ${videoElement?.readyState}`);
       videoReadyRef.current = true; // Set the video as ready to play
       videoReadyToPlay = true; // Set the flag
     };
 
     // Handler for the 'loadeddata' event
     const loadeddataHandler = () => {
-      console.log('Video data loaded');
+      console.log(`Video data loaded for ${imageOrVideo} ${videoElement?.videoWidth}x${videoElement?.videoHeight} ${videoElement?.duration}s ${videoElement?.readyState}`);
     };
 
     // Handler for the 'error' event
     const errorHandler = () => {
-      console.log(`Video ${imageOrVideo} error occurred ${videoElementRef.current?.error?.code} ${videoElementRef.current?.error?.message}`);
+      console.log(`Video ${imageOrVideo} error occurred ${videoElement?.error?.code} ${videoElement?.error?.message}`);
       videoReadyToPlay = false; // Reset the flag
-      setIsVideoPlaying(false);
     };
 
     // Handler for the 'abort' event
     const abortHandler = () => {
-      console.log(`Video ${imageOrVideo} loading aborted ${videoElementRef.current?.error?.code} ${videoElementRef.current?.error?.message}`);
-      setIsVideoPlaying(false);
+      console.log(`Video ${imageOrVideo} loading aborted ${videoElement?.error?.code} ${videoElement?.error?.message}`);
     };
 
     // Initialize or re-initialize the video element
     const initVideoElement = () => {
-      if (videoElementRef.current) {
-        videoElementRef.current.pause();
-        videoElementRef.current.src = ''; // Clear the existing source
-        videoElementRef.current.load(); // Reset the video element
+      if (videoElement) {
+        videoElement.pause();
+        videoElement.src = ''; // Clear the existing source
+        videoElement.load(); // Reset the video element
       }
     };
 
     // Explicit event listener cleanup
     const removeEventListeners = () => {
-      if (videoElementRef.current) {
-        videoElementRef.current.removeEventListener('loadstart', loadstartHandler);
-        videoElementRef.current.removeEventListener('progress', progressHandler);
-        videoElementRef.current.removeEventListener('ended', endedHandler);
-        videoElementRef.current.removeEventListener('canplay', canplayHandler);
-        videoElementRef.current.removeEventListener('loadeddata', loadeddataHandler);
-        videoElementRef.current.removeEventListener('error', errorHandler);
-        videoElementRef.current.removeEventListener('abort', abortHandler);
+      if (videoElement) {
+        videoElement.removeEventListener('loadstart', loadstartHandler);
+        videoElement.removeEventListener('progress', progressHandler);
+        videoElement.removeEventListener('ended', endedHandler);
+        videoElement.removeEventListener('canplay', canplayHandler);
+        videoElement.removeEventListener('loadeddata', loadeddataHandler);
+        videoElement.removeEventListener('error', errorHandler);
+        videoElement.removeEventListener('abort', abortHandler);
       }
     };
 
-    if (isVideo && loaderRef.current && loaderRef.current.resources[imageOrVideo]) {
+    if (isVideoLocal && loaderRef.current && loaderRef.current.resources[imageOrVideo]) {
       // Re-initialize the video element and remove existing event listeners
       initVideoElement();
       removeEventListeners();
@@ -741,8 +745,14 @@ function Home({ user }: HomeProps) {
 
         if (videoResource) {
           // Create a video texture from the video resource
-          const videoElement: HTMLVideoElement = videoResource.data as HTMLVideoElement;
-          const videoTexture: PIXI.Texture = PIXI.Texture.from(videoResource.data as HTMLVideoElement);
+          const localVideoElement: HTMLVideoElement = videoResource.data as HTMLVideoElement;
+          setVideoElement(localVideoElement);
+          console.log(`setupVideoOrImage: videoResource setup resolution=${localVideoElement.videoWidth}x${localVideoElement.videoHeight}`);
+          if (localVideoElement.videoWidth && localVideoElement.videoHeight) {
+            const originalAspectRatio = localVideoElement.videoWidth / localVideoElement.videoHeight;
+            console.log(`setupVideoOrImage: videoResource setup originalAspectRatio=${originalAspectRatio}`);
+          }
+          const videoTexture: PIXI.Texture = PIXI.Texture.from(localVideoElement);
           const videoSprite: PIXI.Sprite = new PIXI.Sprite(videoTexture as PIXI.Texture);
 
           let originalAspectRatio = 1;
@@ -765,33 +775,36 @@ function Home({ user }: HomeProps) {
           console.log(`setupVideoOrImage: videoSprite setup resolution=${videoSprite.x}x${videoSprite.y} anchor=${videoSprite.anchor.x},${videoSprite.anchor.y} zIndex=${videoSprite.zIndex}`);
 
           // Set the loop property to false
-          videoElement.loop = true;
-          videoElement.muted = true;
-          videoElement.autoplay = false;
-          videoElement.crossOrigin = 'anonymous'; // Allow cross-origin videos
+          if (localVideoElement) {
+            localVideoElement.loop = true;
+            localVideoElement.muted = true;
+            localVideoElement.autoplay = false;
+            localVideoElement.crossOrigin = 'anonymous'; // Allow cross-origin videos
 
-          videoElementRef.current = videoElement; // Store the video element in the ref
-
-          // Explicitly set the src and load the video
-          videoElement.src = imageOrVideo;
-          videoElement.load();
+            // Explicitly set the src and load the video
+            localVideoElement.src = imageOrVideo;
+            localVideoElement.load();
           
-          await playVideo(); // Start playing the video
-          setTimeout(() => {
-            // sleep and let the video play for a bit
-            stopVideo();
-          }, 100);
+            setTimeout(() => {
+              // sleep and let the video play for a bit
+              playVideo(); // Start playing the video            
+            }, 1000);
+            setTimeout(() => {
+              // sleep and let the video play for a bit
+              pauseVideo();
+            }, 1000);
 
-          // Add the event listeners
-          videoElement.addEventListener('loadstart', loadstartHandler);
-          videoElement.addEventListener('progress', progressHandler);
-          videoElement.addEventListener('ended', endedHandler);
-          videoElement.addEventListener('canplay', canplayHandler);
-          videoElement.addEventListener('loadeddata', loadeddataHandler);
-          videoElement.addEventListener('error', errorHandler);
-          videoElement.addEventListener('abort', abortHandler);
+            // Add the event listeners
+            localVideoElement.addEventListener('loadstart', loadstartHandler);
+            localVideoElement.addEventListener('progress', progressHandler);
+            localVideoElement.addEventListener('ended', endedHandler);
+            localVideoElement.addEventListener('canplay', canplayHandler);
+            localVideoElement.addEventListener('loadeddata', loadeddataHandler);
+            localVideoElement.addEventListener('error', errorHandler);
+            localVideoElement.addEventListener('abort', abortHandler);
 
-          console.log(`setupVideoOrImage: videoElement setup resolution=${videoElement.videoWidth}x${videoElement.videoHeight} anchor=${videoSprite.anchor.x},${videoSprite.anchor.y} zIndex=${videoSprite.zIndex}`)
+            console.log(`setupVideoOrImage: videoElement setup resolution=${localVideoElement.videoWidth}x${localVideoElement.videoHeight} anchor=${videoSprite.anchor.x},${videoSprite.anchor.y} zIndex=${videoSprite.zIndex}`)
+          }
 
           // Remove the existing sprite from the stage if it exists
           if (appRef.current?.stage) {
@@ -804,11 +817,6 @@ function Home({ user }: HomeProps) {
           }
           spriteRef.current = videoSprite;
           setCurrentUrl(imageOrVideo);
-
-          // Debugging logs
-          console.log('Autoplay after setting:', videoElement.autoplay); // Should be false
-          console.log('Loop after setting:', videoElement.loop); // Should be true
-          console.log('Muted after setting:', videoElement.muted);       // Should be true
 
           console.log(`Video sprite attached ${imageOrVideo}`); // Log the sprite
         } else {
@@ -866,26 +874,26 @@ function Home({ user }: HomeProps) {
     }
 
     // Return teardown functions to remove the listeners
-    return {
-      teardownLoadstart: () => videoElementRef.current ? videoElementRef.current.removeEventListener('loadstart', loadstartHandler) : null,
-      teardownProgress: () => videoElementRef.current ? videoElementRef.current.removeEventListener('progress', progressHandler) : null,
-      teardownEnded: () => videoElementRef.current ? videoElementRef.current.removeEventListener('ended', endedHandler) : null,
-      teardownCanplay: () => videoElementRef.current ? videoElementRef.current.removeEventListener('canplay', canplayHandler) : null,
-      teardownLoadeddata: () => videoElementRef.current ? videoElementRef.current.removeEventListener('loadeddata', loadeddataHandler) : null,
-      teardownError: () => videoElementRef.current ? videoElementRef.current.removeEventListener('error', errorHandler) : null,
-      teardownAbort: () => videoElementRef.current ? videoElementRef.current.removeEventListener('abort', abortHandler) : null,
+    return () => {
+      removeEventListeners();
     };
   };
 
   // Load App on mount
   useEffect(() => {
     if (faceContainerRef.current && !appRef.current) {
-      setupApp();
-      if (!isPlaying) {
-        setupText(subtitle);
-        setupStatusBar();
-        setupEpisodeOverlay(episodes);
-        setupVideoOrImage(imageUrl);
+      try {
+        setupApp();
+        if (!isPlaying) {
+          setupText(subtitle);
+          setupStatusBar();
+          setupEpisodeOverlay(episodes);
+          setupVideoOrImage(imageUrl);
+        } else {
+          console.log(`setupApp: isPlaying is true, not loading default text, status bar, or image/video`);
+        }
+      } catch (error) {
+        console.error(`Error loading App defaults: ${error}`);
       }
     }
 
@@ -941,7 +949,7 @@ function Home({ user }: HomeProps) {
                   ? 'News[on]' : '.'} ${isProcessingTwitchRef.current
                     ? 'Twitch[on]' : '.'} ${lastStatusMessage.current
                       ? lastStatusMessage.current : '.'}`;
-        statusBarTextRef.current.text = `${message}  ${statusDetails}`;
+        statusBarTextRef.current.text = `     ${message} ${statusDetails}`;
       }
     }, 1000); // Run every 1 second
 
@@ -952,15 +960,15 @@ function Home({ user }: HomeProps) {
   // Load the default image
   useEffect(() => {
     if (faceContainerRef.current && appRef.current && !isPlaying) {
-      // Setup the PIXI app
       try {
         // Load the default image
-        if (!isPlaying) {
-          setupVideoOrImage(imageUrl);
-        }
+        console.log(`setupVideoOrImage: Loading default image ${imageUrl}`);
+        setupVideoOrImage(imageUrl);
       } catch (error) {
         console.error(`Error loading Image/Video defaults: ${error}`);
       }
+    } else {
+      console.log(`setupVideoOrImage: appRef.current is null or isPlaying is true`);
     }
   }, [faceContainerRef.current, imageUrl]);
 
@@ -1367,21 +1375,32 @@ function Home({ user }: HomeProps) {
         }
 
         if (personalityImageUrl != '') {
-          setImageUrl(personalityImageUrl);
           setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: personalityImageUrl }));
         } else if (!personalityImageUrls[selectedPersonality]) {
           let imageId = uuidv4().replace(/-/g, '');
           let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localPersonality, false).slice(0, 2000), true, '', localPersonality, imageId);
           if (gaibImage !== '') {
-            setImageUrl(gaibImage);
             setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: gaibImage }));
-          } else {
-            setImageUrl(await getGaib());
           }
-        } else {
-          setImageUrl(personalityImageUrls[localPersonality]);
         }
-        setSubtitle(`-*- ${localPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`);
+        setLoadingOSD('Welcome to Groovy the AI Bot.');
+
+        // setup selectedPersonalities image in cache
+        let localImageUrl = defaultGaib;
+        if (selectedPersonality && personalityImageUrls[selectedPersonality]) {
+          setImageUrl(personalityImageUrls[selectedPersonality]);
+          localImageUrl = personalityImageUrls[selectedPersonality];
+        } else {
+          setImageUrl(defaultGaib);
+        }
+        let displayMessage = `-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`;
+        if (subtitleTextRef.current) {
+          subtitleTextRef.current.text = displayMessage;
+        } else {
+          setSubtitle(displayMessage);
+        }
+      } else {
+        console.log(`updatePersonality: isPlaying=${isPlaying} so not updating personality`);
       }
     }
 
@@ -1760,7 +1779,7 @@ function Home({ user }: HomeProps) {
         if (imageSource === 'pexels') {
           return data.photos[0].src.large2x;
         } else if ((imageSource === 'deepai' || imageSource == 'openai') && data.output_url) {
-          const imageUrl = data.output_url;
+          const localImageUrl = data.output_url;
           if (data?.duplicate === true) {
             duplicateImage = true;
           }
@@ -1769,7 +1788,7 @@ function Home({ user }: HomeProps) {
             await fetchWithAuth('/api/storeImage', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ imageUrl, episodeId: localEpisodeId, imageUUID: count }),
+              body: JSON.stringify({ localImageUrl, episodeId: localEpisodeId, imageUUID: count }),
             });
           }
           const bucketName = process.env.NEXT_PUBLIC_GCS_BUCKET_NAME || '';
@@ -1777,14 +1796,14 @@ function Home({ user }: HomeProps) {
             return `https://storage.googleapis.com/${bucketName}/images/${localEpisodeId}/${count}.jpg`;
           } else {
             // don't store images in GCS or it is a duplicate image
-            return imageUrl;
+            return localImageUrl;
           }
         } else if (imageSource === 'getimgai' && data.output_url) {
-          const imageUrl = data.output_url;
+          const localImageUrl = data.output_url;
           if (data?.duplicate === true) {
             duplicateImage = true;
           }
-          return imageUrl;
+          return localImageUrl;
         } else {
           console.error('No image found for the given keywords: [', keywords, ']');
         }
@@ -2376,41 +2395,25 @@ function Home({ user }: HomeProps) {
       episodeIdRef.current = story.id;
 
       if (story.imageUrl != '') {
-        if (!isPlaying) {
-          setImageUrl(story.imageUrl);
-        }
         setPersonalityImageUrls((state) => ({ ...state, [story.personality]: story.imageUrl }));
       } if (localEpisode.personality === 'passthrough') {
         // Passthrough image from  query
         let gaibImage = await generateImageUrl(story.query, true, '', localEpisode.personality, localStoryId);
         if (gaibImage !== '') {
-          if (!isPlaying) {
-            setImageUrl(gaibImage);
-          }
           story.imageUrl = gaibImage;
         } else {
-          if (!isPlaying) {
-            setImageUrl(await getGaib());
-          }
           story.imageUrl = await getGaib();
         }
       } else if (!personalityImageUrls[localEpisode.personality]) {
         let imageId = uuidv4().replace(/-/g, '');
         let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localEpisode.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000), true, '', localEpisode.personality, imageId);
         if (gaibImage !== '') {
-          if (!isPlaying) {
-            setImageUrl(gaibImage);
-          }
           setPersonalityImageUrls((state) => ({ ...state, [localEpisode.personality]: gaibImage }));
-        } else {
-          if (!isPlaying) {
-            setImageUrl(await getGaib());
-          }
         }
-      } else {
-        if (!isPlaying) {
-          setImageUrl(personalityImageUrls[localEpisode.personality]);
-        }
+        story.imageUrl = gaibImage;
+      }
+      if (story.imageUrl && story.imageUrl !== '') {
+        setImageUrl(story.imageUrl);
       }
 
       try {
@@ -2535,6 +2538,7 @@ function Home({ user }: HomeProps) {
                       setLoadingOSD(`${tokens} GPT tokens generated...`);
                     } else {
                       console.log(`handleSubmitQueue: No data returned from the server.`);
+                      setLoadingOSD(`${countTokens(pendingMessage)} GPT tokens generated...`);
                     }
                   }
                 },
