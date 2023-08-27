@@ -139,6 +139,7 @@ function Home({ user }: HomeProps) {
   const isVideoRef = useRef(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const videoReadyRef = useRef(false);
+  let videoReadyToPlay = false; // Declare a flag for video readiness
   const appRef = useRef<PIXI.Application | null>(null);
   const audioRef = useRef(new Audio());
   const [containerWidth, setContainerWidth] = useState(0);
@@ -168,6 +169,7 @@ function Home({ user }: HomeProps) {
   const playVideo = async () => {
     if (videoElementRef.current) {
       await videoElementRef.current.play().then(() => {
+        videoReadyToPlay = false; // Reset the flag
         setIsVideoPlaying(true);
         console.log('Video started playing');
       }).catch((error) => {
@@ -188,6 +190,7 @@ function Home({ user }: HomeProps) {
       videoElementRef.current.pause()
       videoElementRef.current.currentTime = 0;
       setIsVideoPlaying(false);
+      videoReadyToPlay = false; // Reset the flag
       console.log('Video stopped');
     }
   }
@@ -208,7 +211,7 @@ function Home({ user }: HomeProps) {
           throw new Error('Audio playback is not available in this environment');
         }
 
-        if (videoElementRef.current && isVideoRef.current) {
+        if (videoElementRef.current && isVideoRef.current && videoReadyToPlay) {
           console.log('Attempting to play video...');
 
           // Check if the video is ready to play
@@ -656,7 +659,7 @@ function Home({ user }: HomeProps) {
 
     // Handler for the 'loadstart' even
     const loadstartHandler = () => {
-      console.log('Load started');
+      console.log(`Load started for ${imageOrVideo}`);
     };
 
     // Handler for the 'progress' event
@@ -665,7 +668,7 @@ function Home({ user }: HomeProps) {
       const currentTime = Date.now();
       // Log progress only if more than 1 second has passed since the last log
       if (currentTime - lastProgressLogTime > 1000) {
-        console.log('Progress event fired');
+        console.log(`Progress event fired ${currentTime - lastProgressLogTime}ms since last log for ${imageOrVideo}`);
         lastProgressLogTime = currentTime;
       }
     };
@@ -676,12 +679,15 @@ function Home({ user }: HomeProps) {
       if (videoElementRef.current) {
         videoElementRef.current.currentTime = 0;
       }
+      setIsVideoPlaying(false);
+      videoReadyToPlay = false; // Reset the flag
     };
 
     /// Handler for the 'canplay' event
     const canplayHandler = () => {
-      console.log('Video can play');
+      console.log(`Video ${imageOrVideo} can play ${videoElementRef.current?.videoWidth}x${videoElementRef.current?.videoHeight} ${videoElementRef.current?.duration}s ${videoElementRef.current?.readyState}`);
       videoReadyRef.current = true; // Set the video as ready to play
+      videoReadyToPlay = true; // Set the flag
     };
 
     // Handler for the 'loadeddata' event
@@ -691,15 +697,44 @@ function Home({ user }: HomeProps) {
 
     // Handler for the 'error' event
     const errorHandler = () => {
-      console.log('Video error occurred');
+      console.log(`Video ${imageOrVideo} error occurred ${videoElementRef.current?.error?.code} ${videoElementRef.current?.error?.message}`);
+      videoReadyToPlay = false; // Reset the flag
+      setIsVideoPlaying(false);
     };
 
     // Handler for the 'abort' event
     const abortHandler = () => {
-      console.log('Video loading aborted');
+      console.log(`Video ${imageOrVideo} loading aborted ${videoElementRef.current?.error?.code} ${videoElementRef.current?.error?.message}`);
+      setIsVideoPlaying(false);
+    };
+
+    // Initialize or re-initialize the video element
+    const initVideoElement = () => {
+      if (videoElementRef.current) {
+        videoElementRef.current.pause();
+        videoElementRef.current.src = ''; // Clear the existing source
+        videoElementRef.current.load(); // Reset the video element
+      }
+    };
+
+    // Explicit event listener cleanup
+    const removeEventListeners = () => {
+      if (videoElementRef.current) {
+        videoElementRef.current.removeEventListener('loadstart', loadstartHandler);
+        videoElementRef.current.removeEventListener('progress', progressHandler);
+        videoElementRef.current.removeEventListener('ended', endedHandler);
+        videoElementRef.current.removeEventListener('canplay', canplayHandler);
+        videoElementRef.current.removeEventListener('loadeddata', loadeddataHandler);
+        videoElementRef.current.removeEventListener('error', errorHandler);
+        videoElementRef.current.removeEventListener('abort', abortHandler);
+      }
     };
 
     if (isVideo && loaderRef.current && loaderRef.current.resources[imageOrVideo]) {
+      // Re-initialize the video element and remove existing event listeners
+      initVideoElement();
+      removeEventListeners();
+
       // Load video into PixiJS sprite using the shared loader
       loaderRef.current.load(async (loader: PIXI.Loader, resources: Partial<Record<string, PIXI.LoaderResource>>) => {
         const videoResource = resources[imageOrVideo];
@@ -737,6 +772,10 @@ function Home({ user }: HomeProps) {
 
           videoElementRef.current = videoElement; // Store the video element in the ref
 
+          // Explicitly set the src and load the video
+          videoElement.src = imageOrVideo;
+          videoElement.load();
+          
           await playVideo(); // Start playing the video
           setTimeout(() => {
             // sleep and let the video play for a bit
