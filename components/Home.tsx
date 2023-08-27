@@ -211,7 +211,7 @@ function Home({ user }: HomeProps) {
           throw new Error('Audio playback is not available in this environment');
         }
 
-        if (videoElementRef.current && isVideoRef.current && videoReadyToPlay) {
+        if (videoElementRef.current && isVideoRef.current) {
           console.log('Attempting to play video...');
 
           // Check if the video is ready to play
