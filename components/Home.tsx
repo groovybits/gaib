@@ -916,7 +916,7 @@ function Home({ user }: HomeProps) {
           setupText(subtitle);
         }
       } catch (error) {
-        console.error(`Error loading Subtitle defaults: ${error}`);
+        console.error(`Error loading Text defaults: ${error}`);
       }
     }
   }, [faceContainerRef.current, subtitle]);
@@ -930,7 +930,7 @@ function Home({ user }: HomeProps) {
           setupStatusBar();
         }
       } catch (error) {
-        console.error(`Error loading Subtitle defaults: ${error}`);
+        console.error(`Error loading Status Bar defaults: ${error}`);
       }
     }
   }, [faceContainerRef.current]);
