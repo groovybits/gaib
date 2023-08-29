@@ -286,6 +286,10 @@ function Home({ user }: HomeProps) {
   };
 
   const playStory = async (story: Story): Promise<boolean> => {
+    if (selectedTheme !== 'MultiModal') {
+      tearDownPIXI();
+      return true;
+    }
     if (!story) {
       console.error(`playStory: story is null`);
       return false;
@@ -354,17 +358,21 @@ function Home({ user }: HomeProps) {
         console.log(`playFromQueue: Finished playing story ${story ? story.title : "(story is empty)"}.`);
 
         // update the subtitle text to the default message
-        if (subtitleTextRef.current) {
-          setLoadingOSD('Welcome to Groovy the AI Bot.');
-          
-          // setup selectedPersonalities image in cache
-          if (selectedPersonality && personalityImageUrls[selectedPersonality]) {
-            setImageUrl(personalityImageUrls[selectedPersonality]);
-          } else {
-            setImageUrl(defaultGaib);
+        if (selectedTheme === 'MultiModal') {
+          if (subtitleTextRef.current) {
+            setLoadingOSD('Welcome to Groovy the AI Bot.');
+
+            // setup selectedPersonalities image in cache
+            if (selectedPersonality && personalityImageUrls[selectedPersonality]) {
+              setImageUrl(personalityImageUrls[selectedPersonality]);
+            } else {
+              setImageUrl(defaultGaib);
+            }
+            let displayMessage = `-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`;
+            subtitleTextRef.current.text = displayMessage;
           }
-          let displayMessage = `-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`;
-          subtitleTextRef.current.text = displayMessage;
+        } else {
+          tearDownPIXI();
         }
       }
     };
@@ -380,6 +388,10 @@ function Home({ user }: HomeProps) {
 
   // App setup initialization
   const setupApp = () => {
+    if (selectedTheme !== 'MultiModal') {
+      tearDownPIXI();
+      return;
+    }
     if (!appRef.current && faceContainerRef.current) {
       let width = faceContainerRef.current?.clientWidth || window.innerWidth;
       let height = faceContainerRef.current?.clientHeight || window.innerHeight;
@@ -417,6 +429,10 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     // Resize handler
     const resizeHandler = () => {
+      if (selectedTheme !== 'MultiModal' || faceContainerRef.current === null) {
+        tearDownPIXI();
+        return;
+      }
       if (faceContainerRef.current) {
         if ((faceContainerRef.current.clientWidth && faceContainerRef.current.clientHeight) || (window.innerWidth && window.innerHeight)) {
           // resize app
@@ -476,8 +492,12 @@ function Home({ user }: HomeProps) {
     return () => {
       console.log(`resizeHandler: Removing resize handler...`);
       try {
-        if (window) {
+        if (window && selectedTheme === 'MultiModal') {
           window.removeEventListener('resize', resizeHandler);
+        }
+        // remove the image and text
+        if (selectedTheme !== 'MultiModal') {
+          tearDownPIXI();
         }
       } catch (error) {
         console.error(`Error in removing resize handler: ${error}`);
@@ -631,8 +651,61 @@ function Home({ user }: HomeProps) {
     backgroundOverlayTextRef.current = background;
   };
 
+  const tearDownPIXI = () => {
+    // Remove all children from the stage
+    appRef.current?.stage.removeChildren();
+
+    // Destroy sprite and its texture
+    if (spriteRef.current) {
+      appRef.current?.stage.removeChild(spriteRef.current);
+      spriteRef.current.texture.destroy(true);
+      spriteRef.current.destroy();
+      spriteRef.current = null;
+    }
+
+    // Destroy video element
+    if (videoElement) {
+      videoElement.pause();
+      videoElement.src = '';
+      videoElement.load();
+    }
+
+    // Destroy subtitle text and its texture
+    if (subtitleTextRef.current) {
+      subtitleTextRef.current.texture.destroy(true);
+      subtitleTextRef.current.destroy();
+      subtitleTextRef.current = null;
+    }
+
+    // Destroy episode overlay text and its texture
+    if (episodeOverlayTextRef.current) {
+      episodeOverlayTextRef.current.texture.destroy(true);
+      episodeOverlayTextRef.current.destroy();
+      episodeOverlayTextRef.current = null;
+    }
+
+    // Destroy background overlay
+    if (backgroundOverlayTextRef.current) {
+      backgroundOverlayTextRef.current.clear();
+      backgroundOverlayTextRef.current.destroy();
+      backgroundOverlayTextRef.current = null;
+    }
+
+    // Destroy the PIXI application instance
+    if (appRef.current) {
+      appRef.current.destroy(true);
+      appRef.current = null;
+    }
+
+    return;
+  };
+
   // Use the function
   useEffect(() => {
+    if (selectedTheme !== 'MultiModal') {
+      tearDownPIXI();
+      return;
+    }
     if (episodes.length > 0 && !isPlaying) {
       setupEpisodeOverlay(episodes);
     } else {
@@ -654,6 +727,12 @@ function Home({ user }: HomeProps) {
   const setupVideoOrImage = async (imageOrVideo: string) => {
     const isVideoLocal: boolean = /\.(mp4|webm|ogg)$/i.test(imageOrVideo);
     setIsVideo(isVideoLocal);
+
+    if (selectedTheme !== 'MultiModal') {
+      // tear down if not multimodal
+      tearDownPIXI();
+      return;
+    }
 
     // Check if the video resource already exists in the loader's cache
     if (loaderRef.current && !loaderRef.current.resources[imageOrVideo]) {
@@ -784,7 +863,7 @@ function Home({ user }: HomeProps) {
             // Explicitly set the src and load the video
             localVideoElement.src = imageOrVideo;
             localVideoElement.load();
-          
+
             setTimeout(() => {
               // sleep and let the video play for a bit
               playVideo(); // Start playing the video            
@@ -883,14 +962,22 @@ function Home({ user }: HomeProps) {
   useEffect(() => {
     if (faceContainerRef.current && !appRef.current) {
       try {
-        setupApp();
-        if (!isPlaying) {
-          setupText(subtitle);
-          setupStatusBar();
-          setupEpisodeOverlay(episodes);
-          setupVideoOrImage(imageUrl);
+        if (selectedTheme === 'MultiModal') {
+          setupApp();
+          if (!isPlaying) {
+            setupText(subtitle);
+            setupStatusBar();
+            setupEpisodeOverlay(episodes);
+            setupVideoOrImage(imageUrl);
+          } else {
+            console.log(`setupApp: isPlaying is true, not loading default text, status bar, or image/video`);
+          }
         } else {
-          console.log(`setupApp: isPlaying is true, not loading default text, status bar, or image/video`);
+          console.log(`setupApp: selectedTheme is not MultiModal, not loading default text, status bar, or image/video`);
+          // remove PIXI app if it exists
+          if (appRef.current) {
+            setupApp();
+          }
         }
       } catch (error) {
         console.error(`Error loading App defaults: ${error}`);
@@ -912,7 +999,7 @@ function Home({ user }: HomeProps) {
       // Setup the PIXI app
       try {
         // Load the default text
-        if (!isPlaying) {
+        if (!isPlaying && selectedTheme === 'MultiModal') {
           setupText(subtitle);
         }
       } catch (error) {
@@ -926,7 +1013,7 @@ function Home({ user }: HomeProps) {
       // Setup the PIXI app
       try {
         // Load the default text
-        if (!isPlaying) {
+        if (!isPlaying && selectedTheme === 'MultiModal') {
           setupStatusBar();
         }
       } catch (error) {
@@ -943,12 +1030,12 @@ function Home({ user }: HomeProps) {
         let statusDetails =
           `${isSubmitQueueRef.current
             ? 'Submitting' : '.'} ${episodes.length > 0
-            ? `Episodes:${episodes.length}` : '.'} ${isPlaying
-              ? 'Playing' : '.'} ${playQueue.length > 0
-                ? `playQueue:${playQueue.length}` : '.'} ${isProcessingNewsRef.current
-                  ? 'News[on]' : '.'} ${isProcessingTwitchRef.current
-                    ? 'Twitch[on]' : '.'} ${lastStatusMessage.current
-                      ? lastStatusMessage.current : '.'}`;
+              ? `Episodes:${episodes.length}` : '.'} ${isPlaying
+                ? 'Playing' : '.'} ${playQueue.length > 0
+                  ? `playQueue:${playQueue.length}` : '.'} ${isProcessingNewsRef.current
+                    ? 'News[on]' : '.'} ${isProcessingTwitchRef.current
+                      ? 'Twitch[on]' : '.'} ${lastStatusMessage.current
+                        ? lastStatusMessage.current : '.'}`;
         statusBarTextRef.current.text = `     ${message} ${statusDetails}`;
       }
     }, 1000); // Run every 1 second
@@ -3283,10 +3370,10 @@ function Home({ user }: HomeProps) {
                         <img src={defaultGaib} alt="Groovy" />
                       </div>
                       : (
-                      <>
-                        <div ref={faceContainerRef} style={{ position: 'relative', width: '100vh', height: '100%' }}></div> 
-                      </>
-                    )}
+                        <>
+                          <div ref={faceContainerRef} style={{ position: 'relative', width: '100vh', height: '100%' }}></div>
+                        </>
+                      )}
                   </div>
                 ) : (
                   <div className={styles.generatedTerminal}>
