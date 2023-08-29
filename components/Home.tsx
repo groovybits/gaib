@@ -92,7 +92,7 @@ function Home({ user }: HomeProps) {
   const [documentCount, setDocumentCount] = useState<number>(4);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
   const [news, setNews] = useState<Array<any>>([]);
-  const [isFetching, setIsFetching] = useState<boolean>(true);
+  const [isFetching, setIsFetching] = useState<boolean>(false);
   const [currentNewsIndex, setCurrentNewsIndex] = useState<number>(0);
   const isProcessingNewsRef = useRef<boolean>(false);
   const isProcessingTwitchRef = useRef<boolean>(false);
