@@ -12,14 +12,14 @@ Episode History:
 Follow Up Direction: {question}
 Next Episode Title and Plotline:`;
 
-export const CONDENSE_PROMPT_QUESTION = `Rephrase the follow-up question from a given conversation to function as an independent question,
-unless it's a request to change topics or deviates from the subject of history. 
-If there's no chat history, simply reformat the follow-up input into an initial standalone question.
+export const CONDENSE_PROMPT_QUESTION = `Rephrase the follow-up message from a given conversation to function as an independent message,
+unless it's a request to change topics or deviates from the subject of history. Continue the conversation from the previous messages.
+If there's no chat history, simply reformat the follow-up input into an initial standalone message starting the conversation.
 
 Chat History:
 {chat_history}
 Follow Up Input: {question}
-Rephrased standalone question:`;
+Rephrased standalone message:`;
 
 export const CONDENSE_PROMPT_NEWS_STORY = `Based on the previous news articles and the follow-up article, 
 summarize the articles to generate a pertinent title and summary for the upcoming article. 
@@ -227,6 +227,12 @@ export const PERSONALITY_VOICE_MODELS = {
     rate: 0.60,
   },
   animeidol: {
+    gender: 'FEMALE',
+    model: 'en-US-Neural2-F',
+    pitch: 15,
+    rate: 1.2,
+  },
+  anime: {
     gender: 'FEMALE',
     model: 'en-US-Neural2-F',
     pitch: 15,

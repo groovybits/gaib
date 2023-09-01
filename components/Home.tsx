@@ -75,21 +75,21 @@ function Home({ user }: HomeProps) {
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
   const [subtitle, setSubtitle] = useState<string>(`Groovy is Loading...`);
   const [loadingOSD, setLoadingOSD] = useState<string>('Welcome to Groovy the AI Bot.');
-  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
+  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [audioUrl, setAudioUrl] = useState<string>('');
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('groovy');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('anime');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
   const [isPaused, setIsPaused] = useState(false);
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [tokensCount, setTokensCount] = useState<number>(300);
+  const [tokensCount, setTokensCount] = useState<number>(800);
   const [isStory, setIsStory] = useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('MultiModal');
-  const [documentCount, setDocumentCount] = useState<number>(4);
+  const [documentCount, setDocumentCount] = useState<number>(1);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
   const [news, setNews] = useState<Array<any>>([]);
   const [isFetching, setIsFetching] = useState<boolean>(false);
@@ -600,7 +600,7 @@ function Home({ user }: HomeProps) {
     // Generate the episode text
     let episodeText = '';
     episodes.reverse().forEach((episode: Episode, index: number) => {
-      episodeText += `* ${episode.type === 'question' ? "Question" : "Story"} ${episodes.length - index}: ${episode.username} asked "${episode.title}"\n`;
+      episodeText += `* ${episode.type === 'question' ? "Question" : "Story"} ${episodes.length - index}: ${episode.username} said "${episode.title}"\n`;
     });
 
     // Create the PIXI Text object
@@ -2079,7 +2079,7 @@ function Home({ user }: HomeProps) {
             // generate this scenes image
             console.log(`#SCENE: ${sceneCount + 1} - Generating AI Image #${imageCount + 1}: ${currentSceneText.slice(0, 20)}`);
             setLoadingOSD(`Scene: ${sceneCount + 1} - Generating Image #${imageCount + 1} [${currentSceneText.slice(0, 10)}...]`);
-            let promptImage = `a picture for the ${story.isStory ? "episode title" : "question"}: ${story.title} for the current scene: ${currentSceneText}`;
+            let promptImage = `a picture for the ${story.isStory ? "episode title" : "message"}: ${story.title} for the current scene: ${currentSceneText}`;
 
             const imgGenResult = await generateAIimage(promptImage, `${historyPrimer}\n`, '', imageCount);
             if (imgGenResult.image !== '') {
@@ -2123,12 +2123,12 @@ function Home({ user }: HomeProps) {
       if (story.isStory) {
         console.log(`Generating AI Image #${imageCount + 1} for Scene ${sceneCount + 1}: ${currentSceneText.slice(0, 20)}`);
         setLoadingOSD(`Scene: ${sceneCount + 1} - Generating Image #${imageCount + 1} [${currentSceneText.slice(0, 10)}...]`);
-        let promptImage = `a picture for the ${story.isStory ? "episode title" : "question"}: ${story.title} for the current scene: ${currentSceneText}`;
+        let promptImage = `a picture for the ${story.isStory ? "episode title" : "message"}: ${story.title} for the current scene: ${currentSceneText}`;
         if (!story.isStory) {
           promptImage =
             "Portrait shot of the personality: "
             + buildPrompt(story.personality as keyof typeof PERSONALITY_PROMPTS, false).slice(0, 2000)
-            + "\n\n Answering: " + `${story.title}:\n ${currentSceneText}`;
+            + "\n\n Response: " + `${story.title}:\n ${currentSceneText}`;
         }
         const imgGenResult = await generateAIimage(promptImage, `${historyPrimer}\n`, '', imageCount);
         if (imgGenResult.image !== '') {
@@ -2786,7 +2786,7 @@ function Home({ user }: HomeProps) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localEpisode.personality = 'groovy' as keyof typeof PERSONALITY_PROMPTS;
+            localEpisode.personality = 'anime' as keyof typeof PERSONALITY_PROMPTS;
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
