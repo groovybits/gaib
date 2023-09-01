@@ -75,7 +75,7 @@ function Home({ user }: HomeProps) {
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
   const [subtitle, setSubtitle] = useState<string>(`Groovy is Loading...`);
   const [loadingOSD, setLoadingOSD] = useState<string>('Welcome to Groovy the AI Bot.');
-  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png';
+  const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [audioUrl, setAudioUrl] = useState<string>('');
   const [gender, setGender] = useState('FEMALE');
