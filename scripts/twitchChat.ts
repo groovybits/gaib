@@ -13,7 +13,7 @@ const storeUserMessages = true;  //process.env.STORE_USER_MESSAGES ? process.env
 const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'groovy';
 const chatNamespace = "chatmessages";
 const allowPersonalityOverride = false;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
-
+const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
 const index = pinecone.Index(USER_INDEX_NAME);
 const embeddings = new OpenAIEmbeddings();
 
@@ -260,8 +260,10 @@ client.on('message', async (channel: any, tags: {
       console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
     }
 
-    if (personality === '' && message.toLowerCase().startsWith('!image') || message.toLowerCase().startsWith('/image') || message.toLowerCase().startsWith('image')) {
-      personality = 'passthrough';
+    if (allowImageOverride) {
+      if (personality === '' && message.toLowerCase().startsWith('!image') || message.toLowerCase().startsWith('/image') || message.toLowerCase().startsWith('image')) {
+        personality = 'passthrough';
+      }
     }
 
     if (message.length > messageLimit) {
