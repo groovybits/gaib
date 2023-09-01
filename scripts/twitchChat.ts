@@ -9,10 +9,10 @@ import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { pinecone } from '@/utils/pinecone-client';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
-const storeUserMessages = process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
+const storeUserMessages = true;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
 const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'groovy';
 const chatNamespace = "chatmessages";
-const allowPersonalityOverride = process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
+const allowPersonalityOverride = false;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 
 const index = pinecone.Index(USER_INDEX_NAME);
 const embeddings = new OpenAIEmbeddings();
@@ -212,16 +212,18 @@ client.on('message', async (channel: any, tags: {
 
     let personality = '';
 
-    // Assuming PERSONALITY_PROMPTS is defined as a Record with string keys
-    const personalitiesFuzzySet = FuzzySet(Object.keys(PERSONALITY_PROMPTS));
+    if (allowPersonalityOverride) {
+      // Assuming PERSONALITY_PROMPTS is defined as a Record with string keys
+      const personalitiesFuzzySet = FuzzySet(Object.keys(PERSONALITY_PROMPTS));
 
-    // Extract the first word from the message
-    const firstWord = message.split(' ')[0].toLowerCase().trim().replace(',', '').replace(':', '');
+      // Extract the first word from the message
+      const firstWord = message.split(' ')[0].toLowerCase().trim().replace(',', '').replace(':', '');
 
-    // Use fuzzy matching to find the closest match from the available personalities
-    const fuzzyMatch = personalitiesFuzzySet.get(firstWord);
-    if (fuzzyMatch && fuzzyMatch[0][0] > 0.7) { // You can adjust the threshold as needed
-      personality = fuzzyMatch[0][1];
+      // Use fuzzy matching to find the closest match from the available personalities
+      const fuzzyMatch = personalitiesFuzzySet.get(firstWord);
+      if (fuzzyMatch && fuzzyMatch[0][0] > 0.7) { // You can adjust the threshold as needed
+        personality = fuzzyMatch[0][1];
+      }
     }
 
     let namespace = 'groovypdf';
@@ -258,10 +260,8 @@ client.on('message', async (channel: any, tags: {
       console.log(`handleSubmit: Command Prompt removed from question: '${message}' as ${prompt}`);  // Log the updated question
     }
 
-    if (allowPersonalityOverride) {
-      if (personality === '' && message.toLowerCase().startsWith('!image') || message.toLowerCase().startsWith('/image') || message.toLowerCase().startsWith('image')) {
-        personality = 'passthrough';
-      }
+    if (personality === '' && message.toLowerCase().startsWith('!image') || message.toLowerCase().startsWith('/image') || message.toLowerCase().startsWith('image')) {
+      personality = 'passthrough';
     }
 
     if (message.length > messageLimit) {
