@@ -104,18 +104,13 @@ const personalityPrompt: string = "You're the personality requested by the chat 
   "Always communicate with respect and as the personality GOD who is all knowing and all seeing.";
 
 const helpMessage: string = `
-Help: - Ask me how to generate anime or general anime questions.
-
-Use the role as the first word in your message to specify the personality you want to use.
-For example, if you want to use the personality god, start your message with 'god ...'.
+Help: - Ask me anything.
 
 Commands:
   !help - Display this help message.
-  !image <prompt> - Generate an image based on prompt.
-  !personalities - Display available personalities.
 
 Example:
- god what should I wear today?
+ what should I wear today?
 `;
 
 if (!channelName) {
