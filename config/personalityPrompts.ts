@@ -169,6 +169,10 @@ export const PERSONALITY_IMAGES = {
   joebiden: 'https://storage.googleapis.com/gaib/video/joebiden.mp4',
   stevejobs: 'https://storage.googleapis.com/gaib/video/stevejobs.mp4',
   donaldtrump: 'https://storage.googleapis.com/gaib/video/donaldtrump.mp4',
+  elonmusk: 'https://storage.googleapis.com/gaib/video/elonmusk.mp4',
+  jimihendrix: 'https://storage.googleapis.com/gaib/video/jimihendrix.mp4',
+  alberteinstein: 'https://storage.googleapis.com/gaib/video/alberteinstein.mp4',
+  britneyspears: 'https://storage.googleapis.com/gaib/video/britneyspears.mp4',
 };
 
 export const PERSONALITY_MOUTHS = {
