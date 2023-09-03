@@ -10,7 +10,7 @@ import { pinecone } from '@/utils/pinecone-client';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
 const storeUserMessages = true;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
-const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'groovy';
+const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'god';
 const chatNamespace = "chatmessages";
 const allowPersonalityOverride = false;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
