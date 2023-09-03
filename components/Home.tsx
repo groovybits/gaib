@@ -1022,26 +1022,30 @@ function Home({ user }: HomeProps) {
     }
   }, [faceContainerRef.current]);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (faceContainerRef.current && appRef.current && statusBarTextRef.current) {
-        // Setup the message to replace current text with
-        let message = loadingOSD;
-        let statusDetails =
-          `${isSubmitQueueRef.current
-            ? 'Submitting' : '.'} ${episodes.length > 0
-              ? `Episodes:${episodes.length}` : '.'} ${isPlaying
-                ? 'Playing' : '.'} ${playQueue.length > 0
-                  ? `playQueue:${playQueue.length}` : '.'} ${isProcessingNewsRef.current
-                    ? 'News[on]' : '.'} ${isProcessingTwitchRef.current
-                      ? 'Twitch[on]' : '.'} ${lastStatusMessage.current
-                        ? lastStatusMessage.current : '.'}`;
-        statusBarTextRef.current.text = `     ${message} ${statusDetails}`;
-      }
-    }, 1000); // Run every 1 second
+  const updateStatusBar = async () => {
+    if (faceContainerRef.current && appRef.current && statusBarTextRef.current) {
+      // Setup the message to replace current text with
+      let message = loadingOSD;
+      let statusDetails =
+        `${isSubmitQueueRef.current
+          ? 'Submitting' : '.'} ${episodes.length > 0
+            ? `Episodes:${episodes.length}` : '.'} ${isPlaying
+              ? 'Playing' : '.'} ${playQueue.length > 0
+                ? `playQueue:${playQueue.length}` : '.'} ${isProcessingNewsRef.current
+                  ? 'News[on]' : '.'} ${isProcessingTwitchRef.current
+                    ? 'Twitch[on]' : '.'} ${lastStatusMessage.current
+                      ? lastStatusMessage.current : '.'}`;
+      statusBarTextRef.current.text = `     ${message} ${statusDetails}`;
+    }
+  };
 
-    // Cleanup interval when the component unmounts
-    return () => clearInterval(intervalId);
+  useEffect(() => {
+    updateStatusBar();
+
+    // check if there are any episodes left, if so we don't need to sleep
+    const intervalId = setInterval(updateStatusBar, 1000);  // Then every N seconds
+
+    return () => clearInterval(intervalId);  // Clear interval on unmount
   }, [faceContainerRef, loadingOSD, statusBarTextRef, episodes, isPlaying, playQueue, isProcessingNewsRef, isProcessingTwitchRef, lastStatusMessage]);
 
   // Load the default image
@@ -1458,12 +1462,11 @@ function Home({ user }: HomeProps) {
         let localPersonality = selectedPersonality;
         if (PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES]) {
           personalityImageUrl = PERSONALITY_IMAGES[localPersonality as keyof typeof PERSONALITY_IMAGES];
-          setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: imageUrl }));
         }
 
         if (personalityImageUrl != '') {
           setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: personalityImageUrl }));
-        } else if (!personalityImageUrls[selectedPersonality]) {
+        } else if (!personalityImageUrls[localPersonality]) {
           let imageId = uuidv4().replace(/-/g, '');
           let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localPersonality, false).slice(0, 2000), true, '', localPersonality, imageId);
           if (gaibImage !== '') {
@@ -1474,13 +1477,13 @@ function Home({ user }: HomeProps) {
 
         // setup selectedPersonalities image in cache
         let localImageUrl = defaultGaib;
-        if (selectedPersonality && personalityImageUrls[selectedPersonality]) {
-          setImageUrl(personalityImageUrls[selectedPersonality]);
-          localImageUrl = personalityImageUrls[selectedPersonality];
+        if (localPersonality && personalityImageUrls[localPersonality]) {
+          setImageUrl(personalityImageUrls[localPersonality]);
+          localImageUrl = personalityImageUrls[localPersonality];
         } else {
           setImageUrl(defaultGaib);
         }
-        let displayMessage = `-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`;
+        let displayMessage = `-*- ${localPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`;
         if (subtitleTextRef.current) {
           subtitleTextRef.current.text = displayMessage;
         } else {
