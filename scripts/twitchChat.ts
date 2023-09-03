@@ -1,21 +1,23 @@
 import tmi from 'tmi.js';
 import admin from 'firebase-admin';
-import { PERSONALITY_PROMPTS } from '@/config/personalityPrompts';
+import { PERSONALITY_PROMPTS, PERSONALITY_IMAGES } from '@/config/personalityPrompts';
 import { Episode } from '@/types/story';
 import FuzzySet from 'fuzzyset.js';
 import { Document } from "langchain/document";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { pinecone } from '@/utils/pinecone-client';
+import { first } from 'lodash';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
 const storeUserMessages = true;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
 const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'god';
 const chatNamespace = "chatmessages";
-const allowPersonalityOverride = false;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
+const allowPersonalityOverride = true;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
 const index = pinecone.Index(USER_INDEX_NAME);
 const embeddings = new OpenAIEmbeddings();
+const allowStories = false;  //process.env.ALLOW_STORIES ? process.env.ALLOW_STORIES === 'true' ? true : false : false;
 
 // Function to initialize the user index
 async function initializeUserIndex(docs: Document[], namespace: string) {
@@ -190,7 +192,7 @@ client.on('message', async (channel: any, tags: {
     // Personality Prompts list for help with !personalities  
   } else if (message.toLowerCase().startsWith("!personalities") || message.toLowerCase().startsWith("/personalities") || message.toLowerCase().startsWith("!p") || message.toLowerCase().startsWith("/p")) {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
-    client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
+    client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_IMAGES)}}`);
     //
     // Question and Answer mode
   } else {
@@ -201,23 +203,20 @@ client.on('message', async (channel: any, tags: {
 
     let isStory = false;
     // parse the message to see if it is a question or eipsode request, as a fuzzy nlp type match, where it is free form english chat, it may be called a story too
-    /*if (message.toLowerCase().includes('episode')) {
+    if (allowStories && message.toLowerCase().includes('episode')) {
       isStory = true;
-    }*/
+    }
 
     let personality = '';
 
     if (allowPersonalityOverride) {
-      // Assuming PERSONALITY_PROMPTS is defined as a Record with string keys
-      const personalitiesFuzzySet = FuzzySet(Object.keys(PERSONALITY_PROMPTS));
-
       // Extract the first word from the message
       const firstWord = message.split(' ')[0].toLowerCase().trim().replace(',', '').replace(':', '');
 
-      // Use fuzzy matching to find the closest match from the available personalities
-      const fuzzyMatch = personalitiesFuzzySet.get(firstWord);
-      if (fuzzyMatch && fuzzyMatch[0][0] > 0.7) { // You can adjust the threshold as needed
-        personality = fuzzyMatch[0][1];
+      // see if firstWord matches one of the PERSONALITY_IMAGES members
+      if (PERSONALITY_IMAGES.hasOwnProperty(firstWord)) {
+        personality = firstWord;
+        console.log(`handleSubmit: Extracted personality: '${personality}' for ${tags.username}`);  // Log the extracted personality
       }
     }
 
