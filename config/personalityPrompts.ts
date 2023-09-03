@@ -164,6 +164,8 @@ export const PERSONALITY_IMAGES = {
   yoda: 'https://storage.googleapis.com/gaib/video/yoda.mp4',
   anime: 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png',
   god: 'https://storage.googleapis.com/gaib/video/god.mp4',
+  buddha: 'https://storage.googleapis.com/gaib/video/buddha.mp4',
+  jesus: 'https://storage.googleapis.com/gaib/video/jesus.mp4',
 };
 
 export const PERSONALITY_MOUTHS = {
