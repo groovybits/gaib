@@ -163,6 +163,7 @@ export const PERSONALITY_IMAGES = {
   mickeymouse: 'https://storage.googleapis.com/gaib/video/mickeymouse.mp4',
   yoda: 'https://storage.googleapis.com/gaib/video/yoda.mp4',
   anime: 'https://storage.googleapis.com/gaib/images/anime_girl_4k.png',
+  god: 'https://storage.googleapis.com/gaib/video/god.mp4',
 };
 
 export const PERSONALITY_MOUTHS = {
