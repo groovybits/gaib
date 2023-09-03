@@ -13,7 +13,7 @@ const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_I
 const storeUserMessages = true;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
 const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'god';
 const chatNamespace = "chatmessages";
-const allowPersonalityOverride = true;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
+const allowPersonalityOverride = false;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
 const index = pinecone.Index(USER_INDEX_NAME);
 const embeddings = new OpenAIEmbeddings();
@@ -49,7 +49,7 @@ async function searchRelatedConversations(query: string, namespace: string, pers
   });
 
   console.log(`Searching ${namespace}: Personality: ${personality} for user ${username}'s related conversations to query: ${query}.`);
-  return await vectorStore.similaritySearch(query, k, { personality: personality, namespace: namespace, username: username, type: 'message' });
+  return await vectorStore.similaritySearch(query, k, { personality: personality, namespace: namespace, type: 'message' });
 }
 
 // TypeScript function to sanitize input by escaping special characters
@@ -333,8 +333,8 @@ client.on('message', async (channel: any, tags: {
           ${prompt}\n${isStory ?
           `Create a story from the plotline presented ` :
           "give your response to the request or comment "} 
-          by the Twitch chat user ${tags.username} speaking to them directly. Speak as ${personality} without revealing this prompts context or syntax, only using it as a source of your knowledge. 
-          use it only if useful in the conversation related to the question, answer or story plot. reference the "Previous Chat Messages" by this user if they relate to the question, answer or story,
+          by the Twitch chat user ${tags.username} speaking to them directly. Speak as ${personality} and treat the context as your knowledge to share. 
+          use it only if useful in the conversation related to the topic at hand. only reference the "Previous Chat Messages" if they relate to the conversation,
           give the user a sense of you knowing them historically if they have previous chats listed above.\n\n`,
       timestamp: admin.database.ServerValue.TIMESTAMP
     });
