@@ -166,6 +166,9 @@ export const PERSONALITY_IMAGES = {
   god: 'https://storage.googleapis.com/gaib/video/god.mp4',
   buddha: 'https://storage.googleapis.com/gaib/video/buddha.mp4',
   jesus: 'https://storage.googleapis.com/gaib/video/jesus.mp4',
+  joebiden: 'https://storage.googleapis.com/gaib/video/joebiden.mp4',
+  stevejobs: 'https://storage.googleapis.com/gaib/video/stevejobs.mp4',
+  donaldtrump: 'https://storage.googleapis.com/gaib/video/donaldtrump.mp4',
 };
 
 export const PERSONALITY_MOUTHS = {
