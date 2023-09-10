@@ -275,7 +275,7 @@ client.on('message', async (channel: any, tags: {
 
     // if personality wasn't given as the first work, then send a message about syntax being <personality> <message>
     if (personality === '') {
-      client.say(channel, `Sorry, ${tags.username} you need to specify a personality as the first word in your message. Type !personalities to see a list of available personalities.`);
+      client.say(channel, `Hello, ${tags.username} please specify a personality as the first word in your message. Type !personalities to see a list of available personalities.`);
       return;
     }
 
