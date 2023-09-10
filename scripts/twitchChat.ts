@@ -142,6 +142,23 @@ const client = new tmi.Client({
 
 client.connect();
 
+// Yoda's wisdom: A mapping to keep track of the last message timestamp for each user
+const lastMessageTimestamps: { [username: string]: number } = {};
+
+// Yoda's wisdom: Function to check for user inactivity
+const checkUserInactivity = () => {
+  const currentTime = Date.now();
+  Object.keys(lastMessageTimestamps).forEach((username) => {
+    if (currentTime - lastMessageTimestamps[username] > 30000) {  // 30 seconds
+      client.say(channelName, `How are you doing, ${username}? It is wonderful having you here. Feel free to ask me any questions.`);
+      delete lastMessageTimestamps[username];  // Remove the username to avoid multiple messages
+    }
+  });
+};
+
+// Yoda's wisdom: Periodically check for user inactivity
+setInterval(checkUserInactivity, 30000);  // Run every 30 seconds
+
 // Store usernames initially present in the room
 let initialUsers: Set<string> = new Set();
 let newUsers: Set<string> = new Set();  // Yoda's wisdom: A new set for users joining after initialization
@@ -160,11 +177,17 @@ client.on('join', (channel: any, username: any, self: any) => {
   if (hasInitialized && !initialUsers.has(username) && !newUsers.has(username)) {
     client.say(channel, `Welcome to the channel, ${username}! Use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
     newUsers.add(username);  // Yoda's wisdom: Add the user to the newUsers set
+
+    // Yoda's wisdom: Set the last message timestamp for this user upon joining
+    lastMessageTimestamps[username] = Date.now();
   }
 
   // Yoda's wisdom: Add username to the initialUsers set to avoid welcoming again
   if (!hasInitialized) {
     initialUsers.add(username);
+
+    // Yoda's wisdom: Set the last message timestamp for this user upon joining
+    lastMessageTimestamps[username] = Date.now();
   }
 });
 
@@ -182,6 +205,11 @@ client.on('message', async (channel: any, tags: {
   if (processedMessageIds[tags.id]) {
     console.log(`Ignoring duplicate message with ID ${tags.id}`);
     return;
+  }
+
+  // Yoda's wisdom: Update the last message timestamp for this user
+  if (tags.username) {
+    lastMessageTimestamps[tags.username] = Date.now();
   }
 
   // Mark this message as processed
