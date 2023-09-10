@@ -157,7 +157,7 @@ client.on('join', (channel: any, username: any, self: any) => {
     
     // If the bot has initialized, welcome new users
     if (hasInitialized && !initialUsers.has(username)) {
-        client.say(channel, `Welcome to the channel, ${username}!`);
+      client.say(channel, `Welcome to the channel, ${username}! use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
     }
     
     // Add username to the set to avoid welcoming again
