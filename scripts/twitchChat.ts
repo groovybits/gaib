@@ -144,26 +144,29 @@ client.connect();
 
 // Store usernames initially present in the room
 let initialUsers: Set<string> = new Set();
+let newUsers: Set<string> = new Set();  // Yoda's wisdom: A new set for users joining after initialization
 let hasInitialized: boolean = false;
 
-// Delay the initialization to ensure the bot has connected and received the initial 'join' events
+// Yoda's wisdom: Delay the initialization to ensure the bot has connected and received the initial 'join' events
 setTimeout(() => {
-    hasInitialized = true;
-}, 5000); // 5-second delay
+  hasInitialized = true;
+}, 5000);  // 5-second delay
 
-// Welcome only new users when they join the room
+// Yoda's wisdom: Welcome only new users when they join the room
 client.on('join', (channel: any, username: any, self: any) => {
-    if (self) return; // Ignore messages from the bot itself
-    
-    // If the bot has initialized, welcome new users
-    if (hasInitialized && !initialUsers.has(username)) {
-      client.say(channel, `Welcome to the channel, ${username}! use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
-    }
-    
-    // Add username to the set to avoid welcoming again
-    initialUsers.add(username);
-});
+  if (self) return;  // Ignore messages from the bot itself
 
+  // Yoda's wisdom: If the bot has initialized, and the user is new, welcome them
+  if (hasInitialized && !initialUsers.has(username) && !newUsers.has(username)) {
+    client.say(channel, `Welcome to the channel, ${username}! Use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
+    newUsers.add(username);  // Yoda's wisdom: Add the user to the newUsers set
+  }
+
+  // Yoda's wisdom: Add username to the initialUsers set to avoid welcoming again
+  if (!hasInitialized) {
+    initialUsers.add(username);
+  }
+});
 
 lastMessageArray.push({ "role": "system", "content": personalityPrompt });
 
