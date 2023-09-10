@@ -1497,6 +1497,27 @@ function Home({ user }: HomeProps) {
     updatePersonality();
   }, [selectedPersonality, isPlaying, subtitle]); // Dependency array ensures this runs when selectedPersonality or isDisplayingRef.current changes
 
+
+  // On initial load, fill the personalityImageUrls with the personalities for each image listed in the PERSONALITY_IMAGES object
+  useEffect(() => {
+    async function updatePersonalityImages() {
+      // Iterate over all the personalities in PERSONALITY_IMAGES
+      for (const [localPersonality, personalityImageUrl] of Object.entries(PERSONALITY_IMAGES)) {
+        if (personalityImageUrl != '') {
+          setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: personalityImageUrl }));
+        } else if (!personalityImageUrls[localPersonality]) {
+          let imageId = uuidv4().replace(/-/g, '');
+          let gaibImage = await generateImageUrl("Portrait shot of the personality: " + buildPrompt(localPersonality as keyof typeof PERSONALITY_PROMPTS , false).slice(0, 2000), true, '', localPersonality, imageId);
+          if (gaibImage !== '') {
+            setPersonalityImageUrls((state) => ({ ...state, [localPersonality]: gaibImage }));
+          }
+        }
+      }
+    }
+
+    updatePersonalityImages();
+  }, []); // Empty dependency array ensures this runs only on initial load
+
   // This function generates the AI message using GPT
   const generateAImessage = async (imagePrompt: string, personalityPrompt: string, maxTokens: number = 50): Promise<string> => {
     try {

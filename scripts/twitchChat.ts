@@ -48,7 +48,7 @@ async function searchRelatedConversations(query: string, namespace: string, pers
   });
 
   console.log(`Searching ${namespace}: Personality: ${personality} for user ${username}'s related conversations to query: ${query}.`);
-  return await vectorStore.similaritySearch(query, k, { personality: personality, namespace: namespace, type: 'message' });
+  return await vectorStore.similaritySearch(query, k, { personality: personality, namespace: namespace, username: username, type: 'message' });
 }
 
 // TypeScript function to sanitize input by escaping special characters
@@ -358,12 +358,14 @@ client.on('message', async (channel: any, tags: {
           Previous Chat Messages by ${tags.username}:
           ${userContext}.\n
           End of Previous Chat Messages.\n\n
-          ${prompt}\n${isStory ?
+          ${isStory ?
           `Create a story from the plotline presented ` :
           "give your response to the request or comment "} 
           by the Twitch chat user ${tags.username} speaking to them directly. Speak as ${personality} and treat the context as your knowledge to share. 
           use it only if useful in the conversation related to the topic at hand. only reference the "Previous Chat Messages" if they relate to the conversation,
-          give the user a sense of you knowing them historically if they have previous chats listed above.\n\n`,
+          give the user a sense of you knowing them historically if they have previous chats listed above.\n\n${prompt}\n\n
+          Message from ${tags.username}:
+          \n${message}\n`,
       timestamp: admin.database.ServerValue.TIMESTAMP
     });
 
