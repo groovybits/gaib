@@ -144,6 +144,12 @@ client.connect();
 
 lastMessageArray.push({ "role": "system", "content": personalityPrompt });
 
+// Welcome new users when they join the room
+client.on('join', (channel: any, username: any, self: any) => {
+  if (self) return; // Ignore messages from the bot itself
+  client.say(channel, `Welcome to the channel, ${username}! use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
+});
+
 client.on('message', async (channel: any, tags: {
   id: any; username: any;
 }, message: any, self: any) => {
