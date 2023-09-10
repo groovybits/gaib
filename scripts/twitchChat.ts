@@ -142,27 +142,30 @@ const client = new tmi.Client({
 
 client.connect();
 
-lastMessageArray.push({ "role": "system", "content": personalityPrompt });
-
 // Store usernames initially present in the room
 let initialUsers: Set<string> = new Set();
+let hasInitialized: boolean = false;
 
-// Fetch initial users when the bot connects to the channel
-client.on('connected', (address: any, port: any) => {
-  client.api({
-    url: `/channels/${channelName}/users`,
-    method: "GET",
-  }, (err: any, res: any, body: any) => {
-    initialUsers = new Set(body.users);
-  });
-});
+// Delay the initialization to ensure the bot has connected and received the initial 'join' events
+setTimeout(() => {
+    hasInitialized = true;
+}, 5000); // 5-second delay
 
 // Welcome only new users when they join the room
 client.on('join', (channel: any, username: any, self: any) => {
-  if (self || initialUsers.has(username)) return; // Ignore messages from the bot itself and initial users
-  client.say(channel, `Welcome to the channel, ${username}! use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
-  initialUsers.add(username); // Add username to the set to avoid welcoming again
+    if (self) return; // Ignore messages from the bot itself
+    
+    // If the bot has initialized, welcome new users
+    if (hasInitialized && !initialUsers.has(username)) {
+        client.say(channel, `Welcome to the channel, ${username}!`);
+    }
+    
+    // Add username to the set to avoid welcoming again
+    initialUsers.add(username);
 });
+
+
+lastMessageArray.push({ "role": "system", "content": personalityPrompt });
 
 client.on('message', async (channel: any, tags: {
   id: any; username: any;
@@ -309,7 +312,7 @@ client.on('message', async (channel: any, tags: {
     if (storeUserMessages === true && personality !== '') {
       try {
         // search for related conversations
-        const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 3);
+        const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 1);
 
         // read the results and build the userContext
         // results can be like:
