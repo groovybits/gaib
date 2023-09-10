@@ -2,7 +2,6 @@ import tmi from 'tmi.js';
 import admin from 'firebase-admin';
 import { PERSONALITY_PROMPTS, PERSONALITY_IMAGES } from '@/config/personalityPrompts';
 import { Episode } from '@/types/story';
-import FuzzySet from 'fuzzyset.js';
 import { Document } from "langchain/document";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
@@ -13,7 +12,7 @@ const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_I
 const storeUserMessages = true;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
 const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'god';
 const chatNamespace = "chatmessages";
-const allowPersonalityOverride = false;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
+const allowPersonalityOverride = true;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
 const index = pinecone.Index(USER_INDEX_NAME);
 const embeddings = new OpenAIEmbeddings();
@@ -220,6 +219,12 @@ client.on('message', async (channel: any, tags: {
       }
     }
 
+    // if personality wasn't given as the first work, then send a message about syntax being <personality> <message>
+    if (personality === '') {
+      client.say(channel, `Sorry, ${tags.username} you need to specify a personality as the first word in your message. Type !personalities to see a list of available personalities.`);
+      return;
+    }
+
     let namespace = 'groovypdf';
     // check for either wisdom or science namespace and set the namespace variable
     if (message.toLowerCase().includes('[wisdom]') || message.toLowerCase().includes('wisdom')) {
@@ -326,7 +331,7 @@ client.on('message', async (channel: any, tags: {
       refresh: refresh,
       prompt: personality === 'passthrough' ?
         '' :
-        `\nThe date is is currently ${formattedDateNow}.\n 
+        `\nThe date is is currently ${formattedDateNow}, anything above this line is context and not the message from ${tags.username}.\n 
           Previous Chat Messages by ${tags.username}:
           ${userContext}.\n
           End of Previous Chat Messages.\n\n
