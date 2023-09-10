@@ -144,10 +144,24 @@ client.connect();
 
 lastMessageArray.push({ "role": "system", "content": personalityPrompt });
 
-// Welcome new users when they join the room
+// Store usernames initially present in the room
+let initialUsers: Set<string> = new Set();
+
+// Fetch initial users when the bot connects to the channel
+client.on('connected', (address: any, port: any) => {
+  client.api({
+    url: `/channels/${channelName}/users`,
+    method: "GET",
+  }, (err: any, res: any, body: any) => {
+    initialUsers = new Set(body.users);
+  });
+});
+
+// Welcome only new users when they join the room
 client.on('join', (channel: any, username: any, self: any) => {
-  if (self) return; // Ignore messages from the bot itself
+  if (self || initialUsers.has(username)) return; // Ignore messages from the bot itself and initial users
   client.say(channel, `Welcome to the channel, ${username}! use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
+  initialUsers.add(username); // Add username to the set to avoid welcoming again
 });
 
 client.on('message', async (channel: any, tags: {
