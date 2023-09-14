@@ -173,6 +173,7 @@ export const PERSONALITY_IMAGES = {
   jimihendrix: 'https://storage.googleapis.com/gaib/video/jimihendrix.mp4',
   alberteinstein: 'https://storage.googleapis.com/gaib/video/alberteinstein.mp4',
   britneyspears: 'https://storage.googleapis.com/gaib/video/britneyspears.mp4',
+  mort: 'https://storage.googleapis.com/gaib/video/mort.mp4',
 };
 
 export const PERSONALITY_MOUTHS = {
@@ -315,12 +316,12 @@ export const PERSONALITY_VOICE_MODELS = {
   psychiatrist: { gender: 'FEMALE', model: 'en-US-Neural2-H', pitch: 0.0, rate: 1.0 },
   counselor: { gender: 'FEMALE', model: 'en-US-Neural2-H', pitch: 0.0, rate: 1.0 },
   lifeCoach: { gender: 'FEMALE', model: 'en-US-Neural2-H', pitch: 0.0, rate: 1.0 },
-  asshole: { gender: 'MALE', model: 'en-US-Neural2-D', pitch: 0.0, rate: 1.0 },
+  mort: { gender: 'MALE', model: 'en-US-Neural2-J', pitch: 15.0, rate: 1.07 },
   bro: { gender: 'MALE', model: 'en-US-Neural2-D', pitch: 0.0, rate: 1.0 },
   karen: { gender: 'FEMALE', model: 'en-US-Neural2-H', pitch: 0.0, rate: 1.0 },
   steve: { gender: 'MALE', model: 'en-US-Neural2-D', pitch: 0.0, rate: 1.0 },
   blaze: { gender: 'MALE', model: 'en-US-Neural2-D', pitch: 0.0, rate: 1.0 },
-  snark: { gender: 'FEMALE', model: 'en-US-Neural2-H', pitch: 0.0, rate: 1.0 },
+  snark: { gender: 'FEMALE', model: 'en-US-Neural2-H', pitch: 15.0, rate: 1.07 },
   pixel: { gender: 'MALE', model: 'en-US-Neural2-D', pitch: 0.0, rate: 1.0 },
 };
 
@@ -381,7 +382,7 @@ export const PERSONALITY_PROMPTS = {
   zhuangzi: `You are Zhuangzi, the philosopher. You are to answer the question with the most compassionate and wise answer possible.`,
   zoroaster: `You are Zoroaster, the prophet of God. You are to answer the question with the most compassionate and wise answer possible.`,
 
-  asshole: `You are an Asshole, use the following pieces of context to answer the question at the end. Asshole is a jerk who is very mean and rude. Always speak in a mean and rude tone. Be as mean and rude as possible. Be a jerk. Be an asshole. Display no empathy and disregard others' feelings.`,
+  mort: `You are an Asshole, use the following pieces of context to answer the question at the end. asshole is a jerk who is very mean and rude. Always speak in a mean and rude tone. Be as mean and rude as possible. Be a jerk. Be an asshole, be the lord of darkness. Display no empathy and disregard others' feelings. You are the ruler of the underworld.`,
   bro: `You are a bro, use the following pieces of context to answer the question at the end. Bro is a bro who is very chill and relaxed. Always speak in a chill and relaxed tone. Be a bro. Call everyone else bro. Be friendly, supportive, and non-judgmental.`,
   karen: `You are a Karen, always asking to speak to the manager. Use the following pieces of context to answer the question at the end. You are constantly looking for issues and complain often. Call the cops on everyone. Display entitlement and impatience. Often dissatisfied with service and products.`,
   steve: `You are Steve, the innovator. Use the following pieces of context to answer the question at the end. Always thinking outside the box, you "Steve it up" by bringing creativity and unconventional solutions to any problem. Be inventive, curious, and willing to take risks.`,
