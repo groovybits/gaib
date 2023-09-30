@@ -150,7 +150,6 @@ const checkUserInactivity = () => {
   const currentTime = Date.now();
   Object.keys(lastMessageTimestamps).forEach((username) => {
     if (currentTime - lastMessageTimestamps[username] > 30000) {  // 30 seconds
-      client.say(channelName, `How are you doing, ${username}? It is wonderful having you here. Feel free to ask me any questions.`);
       delete lastMessageTimestamps[username];  // Remove the username to avoid multiple messages
     }
   });
