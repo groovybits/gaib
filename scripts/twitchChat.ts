@@ -14,12 +14,17 @@ const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT
 const chatNamespace = "chatmessages";
 const allowPersonalityOverride = true;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
-const index = pinecone.Index(USER_INDEX_NAME);
 const embeddings = new OpenAIEmbeddings();
 const allowStories = false;  //process.env.ALLOW_STORIES ? process.env.ALLOW_STORIES === 'true' ? true : false : false;
+let index: any = null;
 
 // Function to initialize the user index
 async function initializeUserIndex(docs: Document[], namespace: string) {
+  if (!index) {
+    console.log(`Initialize ${namespace}: user index ${index}.`);
+    index = pinecone.Index(USER_INDEX_NAME);
+  }
+
   console.log(`Initialize ${namespace}: user index ${index} with ${docs.length} documents.`);
   await PineconeStore.fromDocuments(docs, embeddings, {
     pineconeIndex: index,
@@ -41,6 +46,10 @@ async function storeUserMessage(username: string, message: string, namespace: st
 
 // Function to search related conversations
 async function searchRelatedConversations(query: string, namespace: string, personality: string, username: string, k: number = 3): Promise<any[]> {
+  if (!index) {
+    console.log(`Initialize ${namespace}: user index ${index}.`);
+    index = pinecone.Index(USER_INDEX_NAME);
+  }
   const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
     pineconeIndex: index,
     textKey: 'text',

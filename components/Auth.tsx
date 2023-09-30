@@ -190,7 +190,7 @@ function Auth({ }: Props): ReactElement {
           <meta property="og:description" content="Groovy Stories Created by You." />
           <meta property="og:image" content={gaibImage} />
           <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}/feed`} />
-          <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script>
+          {!userIsPremium ? <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSenseCode}`} crossOrigin="anonymous"></script> : ''}
         </Head>
         <Home user={user} /> {/* Pass user object to Home component */}
         <div className={`${styles.footerContainer} ${styles.center}`}>
