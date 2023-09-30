@@ -2662,7 +2662,7 @@ function Home({ user }: HomeProps) {
         if (useContextRetrieval) {
           await fetchData();
         } else {
-          let content = await generateAImessage(localEpisode.title, story.gptPrompt, tokensCount);
+          let content = await generateAImessage(localEpisode.title, localEpisode.prompt ? localEpisode.prompt : '' + customPrompt ? customPrompt : story.gptPrompt, tokensCount);
           if (content) {
             tokens = tokens + countTokens(content);
             setLoadingOSD(`${tokens} GPT tokens generated...`);
