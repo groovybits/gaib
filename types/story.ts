@@ -9,6 +9,8 @@ export interface Sentence {
     language: string;
     model: any;
     audioFile: string;
+    voiceRate: number;
+    voicePitch: number;
 }
 
 export interface Scene {

@@ -79,7 +79,7 @@ function Home({ user }: HomeProps) {
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [audioUrl, setAudioUrl] = useState<string>('');
-  const [gender, setGender] = useState('FEMALE');
+  const [gender, setGender] = useState('MALE');
   const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('buddha');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
@@ -90,7 +90,7 @@ function Home({ user }: HomeProps) {
   const [tokensCount, setTokensCount] = useState<number>(800);
   const [isStory, setIsStory] = useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('MultiModal');
-  const [documentCount, setDocumentCount] = useState<number>(1);
+  const [documentCount, setDocumentCount] = useState<number>(0);
   const [episodeCount, setEpisodeCount] = useState<number>(1);
   const [news, setNews] = useState<Array<any>>([]);
   const [isFetching, setIsFetching] = useState<boolean>(false);
@@ -119,7 +119,7 @@ function Home({ user }: HomeProps) {
   const [conversationHistory, setConvesationHistory] = useState<any[]>([]);
   const [lastStory, setLastStory] = useState<string>('');
   const [maxQueueSize, setMaxQueueSize] = useState<number>(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE ? Number(process.env.NEXT_PUBLIC_MAX_QUEUE_SIZE) : 3);
-  const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-4');
+  const [modelName, setModelName] = useState<string>(process.env.MODEL_NAME || 'gpt-3.5-turbo-16k');
   const [fastModelName, setFastModelName] = useState<string>(process.env.QUESTION_MODEL_NAME || 'gpt-3.5-turbo-16k');
   const [currentNumber, setCurrentNumber] = useState<number>(1);
   const [personalityImageUrls, setPersonalityImageUrls] = useState<Record<string, string>>({});
@@ -244,7 +244,7 @@ function Home({ user }: HomeProps) {
   };
 
   // Playback audio and subtitle + image or video
-  const playAudioAndSubtitle = async (audioFile: string, subtitle: string, localImageUrl: string) => {
+  const playAudioAndSubtitle = async (audioFile: string, speaker: string, voiceRate: number, voicePitch: number, gender: string, language: string, model: string, subtitle: string, localImageUrl: string) => {
     return new Promise<void>(async (resolve) => {
       // Update the text without removing and adding to the stage
       if (subtitleTextRef.current) {
@@ -270,12 +270,33 @@ function Home({ user }: HomeProps) {
         }
       }
 
-      await playAudio(audioFile)
-        .then(() => resolve())
-        .catch((error) => {
-          console.error('Error playing audio:', error);
-          resolve();
-        });
+      if (audioFile != '') {
+        await playAudio(audioFile)
+          .then(() => resolve())
+          .catch((error) => {
+            console.error(`Error playing audio file: ${audioFile}`, error);
+            resolve();
+          });
+      } else {
+        // Play audio direct from text
+        let sentence = addProsody(speaker, subtitle, voiceRate, voicePitch);
+        if (videoElement && isVideo === true) {
+          console.log('Attempting to play video...');
+          // Check if the video is ready to play
+          playVideo();
+        } else {
+          console.log(`Video is not available, playing only audio isVideoRef: ${isVideo ? "true" : "false"} videoElementRef: ${videoElement ? "set" : "unset"}...`)
+        }
+        await speakText(sentence, voiceRate, voicePitch, gender, language, model)
+          .then(() => resolve())
+          .catch((error: any) => {
+            console.error(`Error playing audio speech2text: ${speaker}:${subtitle}:${voiceRate}:${voicePitch}`, error);
+            resolve();
+          });
+        if (isVideo) { // Check if the video is playing
+          pauseVideo();
+        }
+      }
     });
   };
 
@@ -283,7 +304,7 @@ function Home({ user }: HomeProps) {
   const playScene = (scene: Scene) => {
     return scene.sentences.reduce(async (promise, sentence) => {
       await promise;
-      return await playAudioAndSubtitle(sentence.audioFile, sentence.text, sentence.imageUrl || '');
+      return await playAudioAndSubtitle(sentence.audioFile, sentence.speaker, sentence.voiceRate, sentence.voicePitch, sentence.gender, sentence.language, sentence.model, sentence.text, sentence.imageUrl || '');
     }, Promise.resolve());
   };
 
@@ -651,6 +672,9 @@ function Home({ user }: HomeProps) {
   };
 
   const tearDownPIXI = () => {
+    if (isPlaying) {
+      return;
+    }
     // Remove all children from the stage
     appRef.current?.stage.removeChildren();
 
@@ -663,7 +687,7 @@ function Home({ user }: HomeProps) {
     }
 
     // Destroy video element
-    if (videoElement) {
+    if (videoElement && !isPlaying) {
       videoElement.pause();
       videoElement.src = '';
       videoElement.load();
@@ -792,7 +816,7 @@ function Home({ user }: HomeProps) {
 
     // Initialize or re-initialize the video element
     const initVideoElement = () => {
-      if (videoElement) {
+      if (videoElement && !isPlaying) {
         videoElement.pause();
         videoElement.src = ''; // Clear the existing source
         videoElement.load(); // Reset the video element
@@ -801,7 +825,7 @@ function Home({ user }: HomeProps) {
 
     // Explicit event listener cleanup
     const removeEventListeners = () => {
-      if (videoElement) {
+      if (videoElement && !isPlaying) {
         videoElement.removeEventListener('loadstart', loadstartHandler);
         videoElement.removeEventListener('progress', progressHandler);
         videoElement.removeEventListener('ended', endedHandler);
@@ -865,11 +889,15 @@ function Home({ user }: HomeProps) {
 
             setTimeout(() => {
               // sleep and let the video play for a bit
-              playVideo(); // Start playing the video            
+              if (!isPlaying) {
+                playVideo(); // Start playing the video   
+              }  
             }, 1000);
             setTimeout(() => {
               // sleep and let the video play for a bit
-              pauseVideo();
+              if (!isPlaying) {
+                pauseVideo();
+              }
             }, 1000);
 
             // Add the event listeners
@@ -2325,10 +2353,11 @@ function Home({ user }: HomeProps) {
       if (debug) {
         console.log('Speaking as - ', detectedGender, '/', model, '/', audioLanguage, ' - Original Text: ', sentence, "\n Translation Text: ", cleanText);
       }
+      let currentAudioLanguage = audioLanguage;
+      let currentModel = model;
+      let prosodyText = '';
       try {
         if (cleanText != '') {
-          setLoadingOSD(`TextToSpeech #${sentenceId} of #${sentencesToSpeak.length} - ${detectedGender}/${model}/${audioLanguage}`);
-
           // Try to run speakText to create the audio file
           let attempts = 0;
           audioFile = '';
@@ -2348,47 +2377,54 @@ function Home({ user }: HomeProps) {
               }, 100);
             }
             try {
-              let currentAudioLanguage = audioLanguage;
-              let currentModel = model;
               const { language: detectedLanguage, model: detectedModel } = selectVoiceModel(cleanText, detectedGender);
               if (detectedModel !== '' && audioLanguage != detectedLanguage && !story.isStory) {
                 currentModel = detectedModel;
                 currentAudioLanguage = detectedLanguage;
               }
 
-              audioFile = `audio/${story.id}/${sentenceId}.mp3`;
-              const prosodyText = addProsody(story.personality, cleanText, voiceRate, voicePitch);
-              await speakText(prosodyText, voiceRate, voicePitch, detectedGender, currentAudioLanguage, currentModel, audioFile);
+              prosodyText = addProsody(story.personality, cleanText, voiceRate, voicePitch);
 
-              // Check if the audio file exists
-              const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
-              if (!response.ok) {
-                console.log(`File not found at ${audioFile}`);
-                throw new Error(`File not found at ${audioFile}`);
+              if (story.isStory) {
+                audioFile = `audio/${story.id}/${sentenceId}.mp3`;
+                setLoadingOSD(`TextToSpeech #${sentenceId} of #${sentencesToSpeak.length} - ${detectedGender}/${currentModel}/${currentAudioLanguage}`);
+                await speakText(prosodyText, voiceRate, voicePitch, detectedGender, currentAudioLanguage, currentModel, audioFile);
+
+                // Check if the audio file exists
+                const response = await fetch(`https://storage.googleapis.com/${bucketName}/${audioFile}`, { method: 'HEAD' });
+                if (!response.ok) {
+                  console.log(`File not found at ${audioFile}`);
+                  throw new Error(`File not found at ${audioFile}`);
+                }
+              } else {
+                // We speak the text only when not a story
+                break;
               }
             } catch (e) {
-              console.log(`Error speaking text on ${attempts} attempt or file not found: ${e}`);
+              console.log(`Error creating mp3 from text on ${attempts} attempt or file not found: ${e}`);
               audioFile = '';  // Unset the audioFile variable
             }
           }
         }
       } catch (e) {
-        console.log('Error speaking text: ', e);
+        console.log('Error creating mp3 from text: ', e);
       }
 
       // Update the last speaker
       lastSpeaker = currentSpeaker;
 
       // If there is a current scene, add the sentence to it
-      if (scene && (cleanText !== '' || translationEntry !== '')) {
+      if (scene && (cleanText !== '')) {
         scene.sentences.push({
           id: sentenceId++,
-          text: translationEntry != '' ? translationEntry : sentence,
+          text: cleanText,
           imageUrl: lastImage,  // or another image related to the sentence
           speaker: currentSpeaker,  // or another speaker related to the sentence
           gender: detectedGender,  // or another gender related to the sentence
-          language: audioLanguage,  // or another language related to the sentence
-          model: model,  // or another model related to the sentence
+          language: currentAudioLanguage,  // or another language related to the sentence
+          model: currentModel,  // or another model related to the sentence
+          voiceRate: voiceRate,  // or another voiceRate related to the sentence
+          voicePitch: voicePitch,  // or another voicePitch related to the sentence
           audioFile: audioFile != '' ? `https://storage.googleapis.com/${bucketName}/${audioFile}` : '',  // or another audio file related to the sentence
         });
       }
