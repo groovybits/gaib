@@ -5,7 +5,7 @@ import { Episode } from '@/types/story';
 import { Document } from "langchain/document";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
-import { pinecone } from '@/utils/pinecone-client';
+import { PineconeClient } from '@pinecone-database/pinecone';
 import { first } from 'lodash';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
@@ -17,6 +17,35 @@ const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.
 const embeddings = new OpenAIEmbeddings();
 const allowStories = false;  //process.env.ALLOW_STORIES ? process.env.ALLOW_STORIES === 'true' ? true : false : false;
 let index: any = null;
+let pinecone: any = null;
+
+if (storeUserMessages) {
+  if (!process.env.PINECONE_ENVIRONMENT || !process.env.PINECONE_API_KEY) {
+    throw new Error('Pinecone environment or api key vars missing');
+  }
+
+  async function initPinecone() {
+    try {
+      const pinecone = new PineconeClient();
+
+      await pinecone.init({
+        environment: process.env.PINECONE_ENVIRONMENT!,
+        apiKey: process.env.PINECONE_API_KEY!,
+      });
+
+      return pinecone;
+    } catch (error) {
+      if (error instanceof Error && error.message) {
+        console.log('Pinecone init error message: [', error.message, ']');
+      } else {
+        console.log('Pinecone init error: [', error, ']');
+      }
+      throw new Error('Failed to initialize Pinecone Client');
+    }
+  }
+
+  pinecone = await initPinecone();
+}
 
 // Function to initialize the user index
 async function initializeUserIndex(docs: Document[], namespace: string) {
