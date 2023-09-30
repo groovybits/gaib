@@ -74,7 +74,7 @@ function Home({ user }: HomeProps) {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const textAreaCondenseRef = useRef<HTMLTextAreaElement>(null);
   const textAreaPersonalityRef = useRef<HTMLTextAreaElement>(null);
-  const [subtitle, setSubtitle] = useState<string>(`Groovy is Loading...`);
+  const [subtitle, setSubtitle] = useState<string>(`Welcome to Groovy the AI Bot.`);
   const [loadingOSD, setLoadingOSD] = useState<string>('Welcome to Groovy the AI Bot.');
   const defaultGaib = process.env.NEXT_PUBLIC_GAIB_DEFAULT_IMAGE || '';
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
