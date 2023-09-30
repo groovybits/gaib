@@ -9,8 +9,8 @@ import { pinecone } from '@/utils/pinecone-client';
 import { first } from 'lodash';
 
 const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_INDEX_NAME : '';
-const storeUserMessages = true;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
-const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'god';
+const storeUserMessages = false;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
+const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'buddha';
 const chatNamespace = "chatmessages";
 const allowPersonalityOverride = true;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
@@ -340,7 +340,7 @@ client.on('message', async (channel: any, tags: {
     }
 
     let userContext = '';
-    if (storeUserMessages === true && personality !== '') {
+    if (storeUserMessages && personality !== '') {
       try {
         // search for related conversations
         const results = await searchRelatedConversations(message, chatNamespace, personality, tags.username, 1);

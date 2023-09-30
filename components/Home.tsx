@@ -36,6 +36,7 @@ import { SpeakerConfig } from '@/types/speakerConfig';
 import * as PIXI from 'pixi.js';
 import { TextStyle, Text, Sprite } from 'pixi.js';
 import { app } from 'firebase-admin';
+import build from 'next/dist/build';
 
 const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
 const debug = process.env.NEXT_PUBLIC_DEBUG ? process.env.NEXT_PUBLIC_DEBUG === 'true' : false;
@@ -79,7 +80,7 @@ function Home({ user }: HomeProps) {
   const [imageUrl, setImageUrl] = useState<string>(defaultGaib);
   const [audioUrl, setAudioUrl] = useState<string>('');
   const [gender, setGender] = useState('FEMALE');
-  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('anime');
+  const [selectedPersonality, setSelectedPersonality] = useState<keyof typeof PERSONALITY_PROMPTS>('buddha');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('groovypdf');
   const [audioLanguage, setAudioLanguage] = useState<string>("en-US");
   const [subtitleLanguage, setSubtitleLanguage] = useState<string>("en-US");
@@ -144,6 +145,7 @@ function Home({ user }: HomeProps) {
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [currentUrl, setCurrentUrl] = useState('');
+  const [useContextRetrieval, setUseContextRetrieval] = useState<boolean>(false);
 
   const loader: PIXI.Loader = PIXI.Loader.shared;
   loaderRef.current = loader;
@@ -358,21 +360,18 @@ function Home({ user }: HomeProps) {
         console.log(`playFromQueue: Finished playing story ${story ? story.title : "(story is empty)"}.`);
 
         // update the subtitle text to the default message
-        if (selectedTheme === 'MultiModal') {
+        if (selectedTheme === 'MultiModal' && !isPlaying) {
+          setIsPlaying(true);
           if (subtitleTextRef.current) {
             setLoadingOSD('Welcome to Groovy the AI Bot.');
 
-            // setup selectedPersonalities image in cache
-            if (selectedPersonality && personalityImageUrls[selectedPersonality]) {
-              setImageUrl(personalityImageUrls[selectedPersonality]);
-            } else {
-              setImageUrl(defaultGaib);
-            }
             let displayMessage = `-*- ${selectedPersonality.toUpperCase()} -*- \nWelcome, I can tell you a story or answer your questions.`;
-            subtitleTextRef.current.text = displayMessage;
+            if (!isPlaying && displayMessage !== '') {
+              setImageUrl(defaultGaib);
+              subtitleTextRef.current.text = displayMessage;
+            }
           }
-        } else {
-          tearDownPIXI();
+          setIsPlaying(false);
         }
       }
     };
@@ -2566,7 +2565,6 @@ function Home({ user }: HomeProps) {
         setLoadingOSD(`Recieved ${localEpisode.type}: [${localEpisode.title.slice(0, 30).replace(/\n/g, ' ')}]`);
         setMessageState((state) => ({ ...state, pending: '' }));
 
-        let dotsStatus = ".";
         // Send the question to the server
         const fetchData = async () => {
           return new Promise<void>((resolve, reject) => {
@@ -2660,7 +2658,33 @@ function Home({ user }: HomeProps) {
           });
         };
 
-        await fetchData();
+        // check if we are set to use context retrieval or just the LLM model
+        if (useContextRetrieval) {
+          await fetchData();
+        } else {
+          let content = await generateAImessage(localEpisode.title, story.gptPrompt, tokensCount);
+          if (content) {
+            tokens = tokens + countTokens(content);
+            setLoadingOSD(`${tokens} GPT tokens generated...`);
+          } else {
+            console.log(`handleSubmitQueue: No data returned from the server.`);
+            setLoadingOSD(`${countTokens(content)} GPT tokens generated...`);
+          }
+          pendingMessage = content;
+          const newMessage: Message = {
+            type: 'apiMessage',
+            message: pendingMessage,
+            sourceDocs: [],
+          };
+          newMessages = [...newMessages, newMessage];
+          setMessageState((state) => ({
+            history: [],
+            messages: newMessages,
+            sourceDocs: [],
+            pending: undefined,
+            pendingSourceDocs: undefined,
+          }));
+        }
       } catch (error) {
         console.error('An error occurred in the handleSubmitQueue function:', error); // Check for any errors
         if (localEpisode) {
@@ -2710,7 +2734,7 @@ function Home({ user }: HomeProps) {
 
   useEffect(() => {
     const intervalId = setInterval(async () => {  // Set up the interval
-      if (episodes.length > 0 && !isSubmitQueueRef.current) {
+      if (episodes.length > 0 && !isSubmitQueueRef.current && playQueue.length < 1) {
         isSubmitQueueRef.current = true;
         if (debug) {
           console.log(`submitQueueDisplay: ${episodes.length} episodes queued, submitting one...`);
@@ -2810,7 +2834,7 @@ function Home({ user }: HomeProps) {
           let extractedPersonality = personalityMatch[1].toLowerCase().trim() as keyof typeof PERSONALITY_PROMPTS;
           if (!PERSONALITY_PROMPTS.hasOwnProperty(extractedPersonality)) {
             console.error(`buildPrompt: Personality "${extractedPersonality}" does not exist in PERSONALITY_PROMPTS object.`);
-            localEpisode.personality = 'anime' as keyof typeof PERSONALITY_PROMPTS;
+            localEpisode.personality = 'buddha' as keyof typeof PERSONALITY_PROMPTS;
             if (twitchChatEnabled && channelId !== '') {
               postResponse(channelId, `Sorry, personality "${extractedPersonality}" does not exist in my database.`, user?.uid);
             }
