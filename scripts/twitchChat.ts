@@ -314,7 +314,7 @@ client.on('message', async (channel: any, tags: {
     if (personality === '' && !answerInChat) {
       client.say(channel, `Hello, ${tags.username} please specify a personality as the first word in your message. Type !personalities to see a list of available personalities.`);
       return;
-    } else /* Use GPT to talk back in chat*/ if (answerInChat) {
+    } else /* Use GPT to talk back in chat*/ if (personality === '' && answerInChat) {
       lastMessageArray.forEach((messageObject: any) => {
         if (messageObject.role && messageObject.content) {
           promptArray.push({ "role": messageObject.role, "content": messageObject.content });
