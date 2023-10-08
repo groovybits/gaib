@@ -124,10 +124,10 @@ const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOK
 const messageLimit: number = process.env.TWITCH_MESSAGE_LIMIT ? parseInt(process.env.TWITCH_MESSAGE_LIMIT) : 500;
 const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
 const llm = 'gpt-3.5-turbo-16k';  //'gpt-4';
-const maxTokens = 100;
-const temperature = 0.3;
+const maxTokens = 300;
+const temperature = 0.8;
 
-const answerInChat = process.env.TWITCH_ANSWER_IN_CHAT ? process.env.TWITCH_ANSWER_IN_CHAT === 'true' : false;
+const answerInChat = true;  //process.env.TWITCH_ANSWER_IN_CHAT ? process.env.TWITCH_ANSWER_IN_CHAT === 'true' : false;
 
 const openApiKey: string = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : '';
 if (!openApiKey) {
@@ -137,10 +137,10 @@ if (!openApiKey) {
 
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
-const personalityPrompt: string = "You're the personality requested by the chat message with '<personality> ...' that can answer questions or create episodes / stories. " +
-  "Type !personalities to view available personalities, !image <image description > ` to generate an image, " +
-  "and`!help` to get detailed instructions. When asked to generate a story or episode, include the word episode and the personality asked for if any as the first word." +
-  "Always communicate with respect and as the personality GOD who is all knowing and all seeing.";
+const personalityPrompt: string = "You're the personality requested by the chat message that is available to help figure out how to use the chatroom." +
+  "Tell them how to type !personalities to view available personalities, <personality> <question> ` to ask a question, " +
+  "and`!help` to get detailed instructions. You are the person they want you to be within the list of personalities available." +
+  "Always communicate with respect and as the personality GOD who is all knowing and all seeing. Help guide chat users on how to use the chat bot.";
 
 const helpMessage: string = `
 Help: - Ask me anything.
@@ -311,8 +311,62 @@ client.on('message', async (channel: any, tags: {
     }
 
     // if personality wasn't given as the first work, then send a message about syntax being <personality> <message>
-    if (personality === '') {
+    if (personality === '' && !answerInChat) {
       client.say(channel, `Hello, ${tags.username} please specify a personality as the first word in your message. Type !personalities to see a list of available personalities.`);
+      return;
+    } else /* Use GPT to talk back in chat*/ if (answerInChat) {
+      lastMessageArray.forEach((messageObject: any) => {
+        if (messageObject.role && messageObject.content) {
+          promptArray.push({ "role": messageObject.role, "content": messageObject.content });
+        }
+        counter++;
+      });
+      // add the current message to the promptArray with the final personality prompt
+      promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n\n Question: ${message}\n\nAnswer:` });
+      // save the last message in the array for the next prompt
+      lastMessageArray.push({ "role": "user", "content": `${message}` });
+
+      console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
+
+      fetch(`https://api.openai.com/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openApiKey}`,
+        },
+        body: JSON.stringify({
+          model: llm,
+          max_tokens: maxTokens,
+          temperature: temperature,
+          top_p: 1,
+          n: 1,
+          stream: false,
+          messages: promptArray,
+        }),
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+            const aiMessage = data.choices[0].message;
+            console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
+
+            console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
+
+            gptAnswer = aiMessage.content;
+            client.say(channel, aiMessage.content);
+
+            lastMessageArray.push({ aiMessage });
+          } else {
+            console.error('No choices returned from OpenAI!\n');
+            console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
+          }
+        })
+        .catch(error => console.error('An error occurred:', error));
       return;
     }
 
@@ -436,62 +490,6 @@ client.on('message', async (channel: any, tags: {
           \n${message}\n`,
       timestamp: admin.database.ServerValue.TIMESTAMP
     });
-
-    // Use GPT to talk back in chat
-    if (answerInChat) {
-      lastMessageArray.forEach((messageObject: any) => {
-        if (messageObject.role && messageObject.content) {
-          promptArray.push({ "role": messageObject.role, "content": messageObject.content });
-        }
-        counter++;
-      });
-      // add the current message to the promptArray with the final personality prompt
-      promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n\n Question: ${message}\n\nAnswer:` });
-      // save the last message in the array for the next prompt
-      lastMessageArray.push({ "role": "user", "content": `${message}` });
-
-      console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
-
-      fetch(`https://api.openai.com/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openApiKey}`,
-        },
-        body: JSON.stringify({
-          model: llm,
-          max_tokens: maxTokens,
-          temperature: temperature,
-          top_p: 1,
-          n: 1,
-          stream: false,
-          messages: promptArray,
-        }),
-      })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const aiMessage = data.choices[0].message;
-            console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
-
-            console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
-
-            gptAnswer = aiMessage.content;
-            client.say(channel, aiMessage.content);
-
-            lastMessageArray.push({ aiMessage });
-          } else {
-            console.error('No choices returned from OpenAI!\n');
-            console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
-          }
-        })
-        .catch(error => console.error('An error occurred:', error));
-    }
   }
 });
 
