@@ -12,7 +12,7 @@ const USER_INDEX_NAME = process.env.PINECONE_INDEX_NAME ? process.env.PINECONE_I
 const storeUserMessages = false;  //process.env.STORE_USER_MESSAGES ? process.env.STORE_USER_MESSAGES === 'true' ? true : false : false;
 const defaultPersonality = process.env.DEFAULT_PERSONALITY ? process.env.DEFAULT_PERSONALITY : 'buddha';
 const chatNamespace = "chatmessages";
-const allowPersonalityOverride = true;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
+const allowPersonalityOverride = false;  //process.env.ALLOW_PERSONALITY_OVERRIDE ? process.env.ALLOW_PERSONALITY_OVERRIDE === 'true' ? true : false : false;
 const allowImageOverride = false;  //process.env.ALLOW_IMAGE_OVERRIDE ? process.env.ALLOW_IMAGE_OVERRIDE === 'true' ? true : false : false;
 const embeddings = new OpenAIEmbeddings();
 const allowStories = false;  //process.env.ALLOW_STORIES ? process.env.ALLOW_STORIES === 'true' ? true : false : false;
@@ -137,10 +137,7 @@ if (!openApiKey) {
 
 let lastMessageArray: any[] = [];
 const processedMessageIds: { [id: string]: boolean } = {};
-const personalityPrompt: string = "You're the personality requested by the chat message that is available to help figure out how to use the chatroom." +
-  "Tell them how to type !personalities to view available personalities, <personality> <question> ` to ask a question, " +
-  "and`!help` to get detailed instructions. You are the person they want you to be within the list of personalities available." +
-  "Always communicate with respect and as the personality GOD who is all knowing and all seeing. Help guide chat users on how to use the chat bot.";
+const personalityPrompt: string = "You are the Buddha in a Twitch chatroom answering questions or guiding on how to use the chatroom syntax. The syntax is '!message <personality> <message>' and personalities are available by typing !personalities. Also !help is availalbe, and !image can be used to focus on image generation. Speak with the user and recommend using this syntax.";
 
 const helpMessage: string = `
 Help: - Ask me anything.
@@ -212,7 +209,7 @@ client.on('join', (channel: any, username: any, self: any) => {
 
   // Yoda's wisdom: If the bot has initialized, and the user is new, welcome them
   if (hasInitialized && !initialUsers.has(username) && !newUsers.has(username)) {
-    client.say(channel, `Welcome to the channel, ${username}! Use <personality> <message> to ask a question, and !personalities to see the available personalities.`);
+    client.say(channel, `Welcome to the channel, ${username}! Use !message <personality> <message> to ask a question, and !personalities to see the available personalities.`);
     newUsers.add(username);  // Yoda's wisdom: Add the user to the newUsers set
 
     // Yoda's wisdom: Set the last message timestamp for this user upon joining
@@ -277,14 +274,17 @@ client.on('message', async (channel: any, tags: {
 
   // check message to see if it is a command
   if (message.toLowerCase().replace('answer:', '').trim().startsWith('!help' || message.toLowerCase().replace('answer:', '').trim().startsWith('/help'))) {
-    client.say(channel, helpMessage);
+    //client.say(channel, helpMessage);
     //
     // Personality Prompts list for help with !personalities  
   } else if (message.toLowerCase().startsWith("!personalities") || message.toLowerCase().startsWith("/personalities") || message.toLowerCase().startsWith("!p") || message.toLowerCase().startsWith("/p")) {
     // iterate through the config/personalityPrompts structure of export const PERSONALITY_PROMPTS = and list the keys {'key', ''}
-    client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_IMAGES)}}`);
+    //client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_IMAGES)}}`);
     //
     // Question and Answer mode
+    // if begins wwith a ! character
+  } else if (message[0] === '!') {
+    // Do nothing
   } else {
     let promptArray: any[] = [];
     // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
@@ -322,13 +322,14 @@ client.on('message', async (channel: any, tags: {
         counter++;
       });
       // add the current message to the promptArray with the final personality prompt
-      promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n\n Question: ${message}\n\nAnswer:` });
+      promptArray.push({ "role": "user", "content": `${message}` });
+      promptArray.push({ "assistant": "" });
       // save the last message in the array for the next prompt
       lastMessageArray.push({ "role": "user", "content": `${message}` });
 
       console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
 
-      fetch(`https://api.openai.com/v1/chat/completions`, {
+      fetch(`http://earth:8081/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -360,7 +361,7 @@ client.on('message', async (channel: any, tags: {
             gptAnswer = aiMessage.content;
             client.say(channel, aiMessage.content);
 
-            lastMessageArray.push({ aiMessage });
+            lastMessageArray.push( aiMessage );
           } else {
             console.error('No choices returned from OpenAI!\n');
             console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
