@@ -24,8 +24,8 @@ const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8081';
 const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 2;
-const maxTokens = 300;
-const temperature = 0.8;
+const maxTokens = 80;
+const temperature = 0.3;
 const openApiKey: string = "FAKE_API_KEY";
 const maxHistoryBytes = 4096;
 
@@ -137,14 +137,14 @@ client.on('message', async (channel: any, tags: {
   processedMessageIds[tags.id] = true;
 
   // remove the oldest message from the array
-  if (lastMessageArray.length > chatHistorySize) {
+  /*if (lastMessageArray.length > chatHistorySize) {
     // don't remove the oldest message if it is a system message, then remove the one after it
     if (lastMessageArray[0].role === 'system') {
       lastMessageArray.splice(1, 1);
     } else {
       lastMessageArray.shift();
     }
-  }
+  }*/
 
   // remove any messages after the maxHistoryBytes are met
   let historyBytes = 0;
@@ -194,7 +194,7 @@ client.on('message', async (channel: any, tags: {
     });
     // add the current message to the promptArray with the final personality prompt
     promptArray.push({ "role": "user", "content": `${tags.username} asked ${message}` });
-    promptArray.push({ "assistant": "" });
+    promptArray.push({ "role": "assistant", "content": "" });
     // save the last message in the array for the next prompt
     lastMessageArray.push({ "role": "user", "content": `${tags.username} asked ${message}` });
 
