@@ -4,7 +4,7 @@ import tmi from 'tmi.js';
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
+const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
@@ -19,7 +19,7 @@ const processedMessageIds: { [id: string]: boolean } = {};
 
 const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities.";
 
-let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. Base your background off of a tibetan buddhist who is a vajrayana practiioner of the tantras.`;
+let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.`;
 
 if (dominantBot > 0) {
   personalityPrompt = `${personalityPrompt} ${howto}`;
@@ -214,7 +214,7 @@ client.on('message', async (channel: any, tags: {
       }
     });
     // add the current message to the promptArray with the final personality prompt
-    promptArray.push({ "role": "user", "content": `${tags.username} said ${message}.` });
+    promptArray.push({ "role": "user", "content": `Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
     promptArray.push({ "role": "assistant", "content": `` });
 
     // save the last message in the array for the next prompt
