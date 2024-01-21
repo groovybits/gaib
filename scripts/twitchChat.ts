@@ -4,7 +4,7 @@ import tmi from 'tmi.js';
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
+const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
