@@ -4,7 +4,7 @@ import tmi from 'tmi.js';
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
@@ -145,6 +145,11 @@ client.on('message', async (channel: any, tags: {
 
   // Mark this message as processed
   processedMessageIds[tags.id] = true;
+
+  // Remove any last_messageArray messages greater than the maxHistoryCount value, starting from newest count back and only keep up to this many
+  if (lastMessageArray.length > maxHistoryCount) {
+    lastMessageArray = lastMessageArray.slice(lastMessageArray.length - maxHistoryCount);
+  }
 
   // confirm the maxHistoryBytes is not exceeded, only remove messages after the oldest one and measure how many bytes are left till we are below this value
   let historyBytes = Buffer.byteLength(JSON.stringify(lastMessageArray));
