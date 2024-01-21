@@ -11,7 +11,7 @@ const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINAN
 
 // LLM Settings
 const temperature = 1.0;
-const maxTokens = 80;
+const maxTokens = 150;
 const maxHistoryBytes = 4096;
 const openApiKey: string = "FAKE_API_KEY";
 
