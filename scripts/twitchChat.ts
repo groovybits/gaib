@@ -1,42 +1,25 @@
 import tmi from 'tmi.js';
 
-const allowStories = true;  //process.env.ALLOW_STORIES ? process.env.ALLOW_STORIES === 'true' ? true : false : false;
-
-// TypeScript function to sanitize input by escaping special characters
-const sanitizeInput = (input: string): string => {
-  const escapeMap: { [key: string]: string } = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;',
-    '/': '&#x2F;',
-    '`': '&#x60;',
-    '=': '&#x3D;',
-    '${': '&#36;&#123;',
-  };
-
-  return input.replace(/[&<>"'`=/\${}]/g, (char) => escapeMap[char]);
-};
-
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 90;
-const maxHistoryBytes = 4096;
-const maxTokens = 80;
-const temperature = 1.0;
-const openApiKey: string = "FAKE_API_KEY";
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
-const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 0;
+const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
+
+// LLM Settings
+const temperature = 1.0;
+const maxTokens = 80;
+const maxHistoryBytes = 4096;
+const openApiKey: string = "FAKE_API_KEY";
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
 const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities.";
 
-let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members.`;
+let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. Base your background off of a tibetan buddhist who is a vajrayana practiioner of the tantras.`;
 
 if (dominantBot > 0) {
   personalityPrompt = `${personalityPrompt} ${howto}`;
