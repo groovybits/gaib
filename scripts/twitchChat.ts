@@ -23,23 +23,27 @@ const sanitizeInput = (input: string): string => {
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 30;
+const chatHistorySize: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 90;
+const maxHistoryBytes = 4096;
 const maxTokens = 80;
 const temperature = 1.0;
 const openApiKey: string = "FAKE_API_KEY";
-const maxHistoryBytes = 4096;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 0;
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
-const howto: string = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities.";
+const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities.";
 
-const personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on conversations that are short with ${twitchModName} and the Chat room members. These are the instructions to tell users for help using the chat, ${twitchModName} already knows these: ${howto}`;
+let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members.`;
+
+if (dominantBot > 0) {
+  personalityPrompt = `${personalityPrompt} ${howto}`;
+}
 let lastMessageArray: any[] = [];
 
-console.log(`Using prompt: ${personalityPrompt}`)
+console.log(`Using prompt: ${personalityPrompt} `)
 
 if (!channelName) {
   console.log('Usage: node twitchChat.js <channelName>');
@@ -76,7 +80,7 @@ const client = new tmi.Client({
   },
   identity: {
     username: twitchUserName,
-    password: `oauth:${oAuthToken}`
+    password: `oauth:${oAuthToken} `
   },
   channels: [channelName]
 });
@@ -118,7 +122,7 @@ client.on('join', (channel: any, username: any, self: any) => {
     let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
     if (diffMinutes > 3) {
       if (dominantBot > 0) {
-        client.say(channel, `  Welcome to the channel, ${username}! Use !message <personality> <message> to ask a question, and !personalities to see the available personalities.`);
+        client.say(channel, `  Welcome to the channel, ${username} !Use!message < personality > <message>to ask a question, and!personalities to see the available personalities.`);
       }
     }
     newUsers.add(username);  // Add the user to the newUsers set
@@ -142,12 +146,12 @@ client.on('message', async (channel: any, tags: {
 }, message: any, self: any) => {
   // Ignore messages from the bot itself
   if (self) return;
-  console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName}`)
+  console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName} `)
   if (tags.username.toLowerCase() === twitchUserName.toLowerCase()) return;
 
   // Ignore messages that have already been processed
   if (processedMessageIds[tags.id]) {
-    console.log(`Ignoring duplicate message with ID ${tags.id}`);
+    console.log(`Ignoring duplicate message with ID ${tags.id} `);
     return;
   }
 
@@ -180,10 +184,10 @@ client.on('message', async (channel: any, tags: {
     }
     userSettings[tags.username].lastMessageTimestamp = Date.now();
   }
-  console.log(`Received message: ${message}\nfrom ${tags.username} in channel ${channel}\nwith tags: ${JSON.stringify(tags)}\n`)
+  console.log(`Received message: ${message} \nfrom ${tags.username} in channel ${channel} \nwith tags: ${JSON.stringify(tags)} \n`)
 
   // array of key words to respond to
-  let is_mentioned = true;
+  let is_mentioned = false;
   const keywords = ['help', 'question', 'how', 'why', 'need', 'want', 'who', 'where', 'when', 'get'];
   if (keywords.some((keyword) => message.toLowerCase().includes(keyword))) {
     is_mentioned = true;
@@ -208,7 +212,7 @@ client.on('message', async (channel: any, tags: {
   // check message to see if it is a command
   // compare name lowercase to message lowercase
   if (message.startsWith('!') || !is_mentioned) {
-    console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}\n`)
+    console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`)
     // Do nothing
   } else {
     let promptArray: any[] = [];
@@ -226,9 +230,9 @@ client.on('message', async (channel: any, tags: {
     promptArray.push({ "role": "assistant", "content": `` });
 
     // save the last message in the array for the next prompt
-    lastMessageArray.push({ "role": "user", "content": `${tags.username} said ${message}` });
+    lastMessageArray.push({ "role": "user", "content": `${tags.username} said ${message} ` });
 
-    console.log(`OpenAI promptArray:\n${JSON.stringify(promptArray, null, 2)}\n`);
+    console.log(`OpenAI promptArray: \n${JSON.stringify(promptArray, null, 2)} \n`);
 
     fetch(`http://${llmHost}/v1/chat/completions`, {
       method: 'POST',
