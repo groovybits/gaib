@@ -239,7 +239,7 @@ client.on('message', async (channel: any, tags: {
         n: 1,
         stream: false,
         messages: promptArray,
-        stop: ["\n", "."],
+        stop: ["\n"],
       }),
     })
       .then(response => {
