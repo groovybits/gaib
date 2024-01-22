@@ -1,4 +1,6 @@
 import tmi from 'tmi.js';
+import nlp from 'compromise';
+
 
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
@@ -10,14 +12,14 @@ const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME 
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
 
 // LLM Settings
-const temperature = 1.0;
-const maxTokens = 150;
-const maxHistoryBytes = 4096;
+const temperature = 0.8;
+const maxTokens = 50;
+const maxHistoryBytes = 1024;
 const openApiKey: string = "FAKE_API_KEY";
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
-const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities.";
+const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities. Once in awhile use the !personalities command to get the current personaities, then type !message Personality_Here Message_Here where you replace the Personality and Message. The chat users and you can talk to the different personalities this way.";
 
 let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.`;
 
@@ -47,8 +49,8 @@ function delay(ms: number) {
 
 // Function to generate a random delay between 5 and 120 seconds
 function getRandomDelay() {
-  // Generate a random number between 30 and 90
-  const randomDelay = Math.floor(Math.random() * (90 - 30 + 1)) + 5;
+  // Generate a random number between N and N seconds
+  const randomDelay = Math.floor(Math.random() * (30 - 1 + 1)) + 5;
 
   // Convert the delay to milliseconds
   return randomDelay * 1000;
@@ -237,6 +239,7 @@ client.on('message', async (channel: any, tags: {
         n: 1,
         stream: false,
         messages: promptArray,
+        stop: ['<\s>', '\n', "System:", "User:", "Assistant:"],
       }),
     })
       .then(response => {
@@ -256,8 +259,33 @@ client.on('message', async (channel: any, tags: {
           if (gptAnswer.startsWith('!')) {
             gptAnswer = gptAnswer.substring(1);
           }
-          client.say(channel, `  ${aiMessage.content}`);
 
+          // Fixed sentence splitting and chunking logic
+          const sentences: string[] = nlp(gptAnswer).sentences().out('array');
+          let chunks: string[] = [];
+          let currentChunk: string = '';
+
+          sentences.forEach((sentence: string) => {
+            currentChunk += sentence + ' ';
+            if ((currentChunk.match(/\./g) || []).length >= 3 || sentence.endsWith('\n')) {
+              chunks.push(currentChunk.trim());
+              currentChunk = '';
+            }
+          });
+
+          if (currentChunk) {
+            chunks.push(currentChunk.trim());
+          }
+
+          let i: number = 0;
+          const interval: NodeJS.Timeout = setInterval(() => {
+            if (i < chunks.length) {
+              client.say(channel, chunks[i]);
+              i++;
+            } else {
+              clearInterval(interval);
+            }
+          }, 3000); // 3-second delay
           lastMessageArray.push({ "role": "assistant", "content": `${aiMessage.content}` });
         } else {
           console.error('No choices returned from OpenAI!\n');
