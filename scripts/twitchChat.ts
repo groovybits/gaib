@@ -6,15 +6,15 @@ import nlp from 'compromise';
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 3;
+const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
 
 // LLM Settings
-const temperature = 0.8;
-const maxTokens = 50;
-const maxHistoryBytes = 1024;
+const temperature = 1.0;
+const maxTokens = 300;
+const maxHistoryBytes = 2000;
 const openApiKey: string = "FAKE_API_KEY";
 
 const processedMessageIds: { [id: string]: boolean } = {};
@@ -239,7 +239,7 @@ client.on('message', async (channel: any, tags: {
         n: 1,
         stream: false,
         messages: promptArray,
-        stop: ['<\s>', '\n', "System:", "User:", "Assistant:"],
+        stop: ["\n", "."],
       }),
     })
       .then(response => {
@@ -267,7 +267,7 @@ client.on('message', async (channel: any, tags: {
 
           sentences.forEach((sentence: string) => {
             currentChunk += sentence + ' ';
-            if ((currentChunk.match(/\./g) || []).length >= 3 || sentence.endsWith('\n')) {
+            if ((currentChunk.match(/\./g) || []).length >= 3 && sentence.endsWith('\n')) {
               chunks.push(currentChunk.trim());
               currentChunk = '';
             }
@@ -285,8 +285,8 @@ client.on('message', async (channel: any, tags: {
             } else {
               clearInterval(interval);
             }
-          }, 3000); // 3-second delay
-          lastMessageArray.push({ "role": "assistant", "content": `${aiMessage.content}` });
+          }, 2000); // N000-msecond delay
+          lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
         } else {
           console.error('No choices returned from OpenAI!\n');
           console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
