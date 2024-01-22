@@ -12,8 +12,8 @@ const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME 
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
 
 // LLM Settings
-const temperature = 1.0;
-const maxTokens = 300;
+const temperature = 0.8;
+const maxTokens = 200;
 const maxHistoryBytes = 2000;
 const openApiKey: string = "FAKE_API_KEY";
 
@@ -50,7 +50,7 @@ function delay(ms: number) {
 // Function to generate a random delay between 5 and 120 seconds
 function getRandomDelay() {
   // Generate a random number between N and N seconds
-  const randomDelay = Math.floor(Math.random() * (30 - 1 + 1)) + 5;
+  const randomDelay = Math.floor(Math.random() * (90 - 30 + 1)) + 5;
 
   // Convert the delay to milliseconds
   return randomDelay * 1000;
@@ -267,7 +267,7 @@ client.on('message', async (channel: any, tags: {
 
           sentences.forEach((sentence: string) => {
             currentChunk += sentence + ' ';
-            if ((currentChunk.match(/\./g) || []).length >= 3 && sentence.endsWith('\n')) {
+            if ((currentChunk.match(/\./g) || []).length >= 4 && sentence.endsWith('\n')) {
               chunks.push(currentChunk.trim());
               currentChunk = '';
             }
@@ -285,7 +285,7 @@ client.on('message', async (channel: any, tags: {
             } else {
               clearInterval(interval);
             }
-          }, 2000); // N000-msecond delay
+          }, 10000); // N000-msecond delay
           lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
         } else {
           console.error('No choices returned from OpenAI!\n');
