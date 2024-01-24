@@ -13,7 +13,7 @@ const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINAN
 
 // LLM Settings
 const temperature = 0.8;
-const maxTokens = 200;
+const maxTokens = 80;
 const maxHistoryBytes = 2000;
 const openApiKey: string = "FAKE_API_KEY";
 
@@ -267,8 +267,14 @@ client.on('message', async (channel: any, tags: {
 
           sentences.forEach((sentence: string) => {
             currentChunk += sentence + ' ';
-            if ((currentChunk.match(/\./g) || []).length >= 4 && sentence.endsWith('\n')) {
-              chunks.push(currentChunk.trim());
+            if ((currentChunk.match(/\./g) || []).length >= 8 && sentence.endsWith('\n')) {
+              let message_body = currentChunk.trim();
+              let message = `!message ${message_body}`;
+              // truncate to 500 characters
+              if (message.length > 500) {
+                message = message.substring(0, 500);
+              }
+              chunks.push(message);
               currentChunk = '';
             }
           });
