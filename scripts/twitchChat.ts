@@ -1,6 +1,9 @@
 import tmi from 'tmi.js';
 import nlp from 'compromise';
+/// load .env
+import dotenv from 'dotenv';
 
+dotenv.config();
 
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
