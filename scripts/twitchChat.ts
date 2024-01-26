@@ -10,6 +10,7 @@ const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
+const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.";
 
 // LLM Settings
 const temperature = 0.8;
@@ -21,53 +22,55 @@ const processedMessageIds: { [id: string]: boolean } = {};
 
 const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities. Once in awhile use the !personalities command to get the current personaities, then type !message Personality_Here Message_Here where you replace the Personality and Message. The chat users and you can talk to the different personalities this way.";
 
-let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.`;
+
+
+let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. ${role}`;
 
 if (dominantBot > 0) {
-  personalityPrompt = `${personalityPrompt} ${howto}`;
+    personalityPrompt = `${personalityPrompt} ${howto}`;
 }
 let lastMessageArray: any[] = [];
 
 console.log(`Using prompt: ${personalityPrompt} `)
 
 if (!channelName) {
-  console.log('Usage: node twitchChat.js <channelName>');
-  process.exit(1);
+    console.log('Usage: node twitchChat.js <channelName>');
+    process.exit(1);
 }
 
 if (!oAuthToken) {
-  console.log('TWITCH_OAUTH_TOKEN environment variable not set');
-  process.exit(1);
+    console.log('TWITCH_OAUTH_TOKEN environment variable not set');
+    process.exit(1);
 }
 
 console.log(`channel ${channelName} starting up with user ${twitchUserName}...`);
 
 // Delay function
 function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Function to generate a random delay between 5 and 120 seconds
 function getRandomDelay() {
-  // Generate a random number between N and N seconds
-  const randomDelay = Math.floor(Math.random() * (90 - 30 + 1)) + 5;
+    // Generate a random number between N and N seconds
+    const randomDelay = Math.floor(Math.random() * (90 - 30 + 1)) + 5;
 
-  // Convert the delay to milliseconds
-  return randomDelay * 1000;
+    // Convert the delay to milliseconds
+    return randomDelay * 1000;
 }
 
 // Create a TMI client
 const client = new tmi.Client({
-  options: { debug: true },
-  connection: {
-    secure: true,
-    reconnect: true
-  },
-  identity: {
-    username: twitchUserName,
-    password: `oauth:${oAuthToken} `
-  },
-  channels: [channelName]
+    options: { debug: true },
+    connection: {
+        secure: true,
+        reconnect: true
+    },
+    identity: {
+        username: twitchUserName,
+        password: `oauth:${oAuthToken} `
+    },
+    channels: [channelName]
 });
 
 client.connect();
@@ -77,12 +80,12 @@ const lastMessageTimestamps: { [username: string]: number } = {};
 
 // Function to check for user inactivity
 const checkUserInactivity = () => {
-  const currentTime = Date.now();
-  Object.keys(lastMessageTimestamps).forEach((username) => {
-    if (currentTime - lastMessageTimestamps[username] > 30000) {  // 30 seconds
-      delete lastMessageTimestamps[username];  // Remove the username to avoid multiple messages
-    }
-  });
+    const currentTime = Date.now();
+    Object.keys(lastMessageTimestamps).forEach((username) => {
+        if (currentTime - lastMessageTimestamps[username] > 30000) {  // 30 seconds
+            delete lastMessageTimestamps[username];  // Remove the username to avoid multiple messages
+        }
+    });
 };
 
 // Periodically check for user inactivity
@@ -97,212 +100,212 @@ let startDate = new Date();
 
 // Join the channel
 client.on('join', (channel: any, username: any, self: any) => {
-  if (self) return;  // Ignore messages from the bot itself
+    if (self) return;  // Ignore messages from the bot itself
 
-  // If the bot has initialized, and the user is new, welcome them
-  if (hasInitialized && !initialUsers.has(username) && !newUsers.has(username)) {
-    // check if startDate and current date are  more than 3 minutes apart
-    let currentDate = new Date();
-    let timeDiff = Math.abs(currentDate.getTime() - startDate.getTime());
-    let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
-    if (diffMinutes > 3) {
-      if (dominantBot > 0) {
-        client.say(channel, `  Welcome to the channel, ${username} !Use!message < personality > <message>to ask a question, and!personalities to see the available personalities.`);
-      }
+    // If the bot has initialized, and the user is new, welcome them
+    if (hasInitialized && !initialUsers.has(username) && !newUsers.has(username)) {
+        // check if startDate and current date are  more than 3 minutes apart
+        let currentDate = new Date();
+        let timeDiff = Math.abs(currentDate.getTime() - startDate.getTime());
+        let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
+        if (diffMinutes > 3) {
+            if (dominantBot > 0) {
+                client.say(channel, `  Welcome to the channel, ${username} !Use!message < personality > <message>to ask a question, and!personalities to see the available personalities.`);
+            }
+        }
+        newUsers.add(username);  // Add the user to the newUsers set
+
+        // Set the last message timestamp for this user upon joining
+        lastMessageTimestamps[username] = Date.now();
     }
-    newUsers.add(username);  // Add the user to the newUsers set
 
-    // Set the last message timestamp for this user upon joining
-    lastMessageTimestamps[username] = Date.now();
-  }
+    // s Add username to the initialUsers set to avoid welcoming again
+    if (!hasInitialized) {
+        initialUsers.add(username);
 
-  // s Add username to the initialUsers set to avoid welcoming again
-  if (!hasInitialized) {
-    initialUsers.add(username);
-
-    // Set the last message timestamp for this user upon joining
-    lastMessageTimestamps[username] = Date.now();
-  }
+        // Set the last message timestamp for this user upon joining
+        lastMessageTimestamps[username] = Date.now();
+    }
 });
 
 // message handler
 client.on('message', async (channel: any, tags: {
-  id: any; username: any;
+    id: any; username: any;
 }, message: any, self: any) => {
-  // Ignore messages from the bot itself
-  if (self) return;
-  console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName} `)
-  if (tags.username.toLowerCase() === twitchUserName.toLowerCase()) return;
+    // Ignore messages from the bot itself
+    if (self) return;
+    console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName} `)
+    if (tags.username.toLowerCase() === twitchUserName.toLowerCase()) return;
 
-  // Ignore messages that have already been processed
-  if (processedMessageIds[tags.id]) {
-    console.log(`Ignoring duplicate message with ID ${tags.id} `);
-    return;
-  }
-
-  // Update the last message timestamp for this user
-  if (tags.username) {
-    lastMessageTimestamps[tags.username] = Date.now();
-  }
-
-  // Mark this message as processed
-  processedMessageIds[tags.id] = true;
-
-  // Remove any last_messageArray messages greater than the maxHistoryCount value, starting from newest count back and only keep up to this many
-  if (lastMessageArray.length > maxHistoryCount) {
-    lastMessageArray = lastMessageArray.slice(lastMessageArray.length - maxHistoryCount);
-  }
-
-  // confirm the maxHistoryBytes is not exceeded, only remove messages after the oldest one and measure how many bytes are left till we are below this value
-  let historyBytes = Buffer.byteLength(JSON.stringify(lastMessageArray));
-  if (historyBytes > maxHistoryBytes) {
-    let i = 0;
-    while (historyBytes > maxHistoryBytes) {
-      historyBytes = Buffer.byteLength(JSON.stringify(lastMessageArray.slice(i)));
-      i++;
+    // Ignore messages that have already been processed
+    if (processedMessageIds[tags.id]) {
+        console.log(`Ignoring duplicate message with ID ${tags.id} `);
+        return;
     }
-    lastMessageArray = lastMessageArray.slice(i);
-  }
 
-  // structure tohold each users settings and personality prompts
-  const userSettings: any = {};
-
-  // add user if doesn't exist, else update last message timestamp in userSettings
-  if (tags.username) {
-    if (!userSettings[tags.username]) {
-      userSettings[tags.username] = {};
+    // Update the last message timestamp for this user
+    if (tags.username) {
+        lastMessageTimestamps[tags.username] = Date.now();
     }
-    userSettings[tags.username].lastMessageTimestamp = Date.now();
-  }
-  console.log(`Received message: ${message} \nfrom ${tags.username} in channel ${channel} \nwith tags: ${JSON.stringify(tags)} \n`)
 
-  // array of key words to respond to
-  let is_mentioned = false;
-  const keywords = ['help', 'question', 'how', 'why', 'need', 'want', 'who', 'where', 'when', 'get'];
-  if (keywords.some((keyword) => message.toLowerCase().includes(keyword))) {
-    is_mentioned = true;
-  }
+    // Mark this message as processed
+    processedMessageIds[tags.id] = true;
 
-  // Dominant bot
-  if (dominantBot > 0) {
-    if (!message.toLowerCase().includes(twitchModName.toLowerCase())) {
-      is_mentioned = true;
+    // Remove any last_messageArray messages greater than the maxHistoryCount value, starting from newest count back and only keep up to this many
+    if (lastMessageArray.length > maxHistoryCount) {
+        lastMessageArray = lastMessageArray.slice(lastMessageArray.length - maxHistoryCount);
     }
-  }
 
-  // check if we are a mod
-  if (tags.username.toLowerCase() !== twitchModName.toLowerCase()) {
-  }
-
-  // check if we were mentioned in the message
-  if (message.toLowerCase().includes(twitchUserName.toLowerCase())) {
-    is_mentioned = true;
-  }
-
-  // check message to see if it is a command
-  // compare name lowercase to message lowercase
-  if (message.startsWith('!') || !is_mentioned) {
-    console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`)
-    // Do nothing
-  } else {
-    let promptArray: any[] = [];
-    promptArray.push({ "role": "system", "content": personalityPrompt });
-    // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
-    let gptAnswer = '';
-
-    lastMessageArray.forEach((messageObject: any) => {
-      if (messageObject.role && messageObject.content) {
-        promptArray.push({ "role": messageObject.role, "content": messageObject.content });
-      }
-    });
-    // add the current message to the promptArray with the final personality prompt
-    promptArray.push({ "role": "user", "content": `Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
-    promptArray.push({ "role": "assistant", "content": `` });
-
-    // save the last message in the array for the next prompt
-    lastMessageArray.push({ "role": "user", "content": `${tags.username} said ${message} ` });
-
-    console.log(`OpenAI promptArray: \n${JSON.stringify(promptArray, null, 2)} \n`);
-
-    fetch(`http://${llmHost}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        max_tokens: maxTokens,
-        n_predict: maxTokens,
-        temperature: temperature,
-        top_p: 1,
-        n: 1,
-        stream: false,
-        messages: promptArray,
-        stop: ["\n"],
-      }),
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
+    // confirm the maxHistoryBytes is not exceeded, only remove messages after the oldest one and measure how many bytes are left till we are below this value
+    let historyBytes = Buffer.byteLength(JSON.stringify(lastMessageArray));
+    if (historyBytes > maxHistoryBytes) {
+        let i = 0;
+        while (historyBytes > maxHistoryBytes) {
+            historyBytes = Buffer.byteLength(JSON.stringify(lastMessageArray.slice(i)));
+            i++;
         }
-        return response.json();
-      })
-      .then(data => {
-        if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-          const aiMessage = data.choices[0].message;
-          console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
-          console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
+        lastMessageArray = lastMessageArray.slice(i);
+    }
 
-          gptAnswer = aiMessage.content;
-          // remove ! from start of message if it exists
-          if (gptAnswer.startsWith('!')) {
-            gptAnswer = gptAnswer.substring(1);
-          }
+    // structure tohold each users settings and personality prompts
+    const userSettings: any = {};
 
-          // Fixed sentence splitting and chunking logic
-          const sentences: string[] = nlp(gptAnswer).sentences().out('array');
-          let chunks: string[] = [];
-          let currentChunk: string = '';
-
-          sentences.forEach((sentence: string) => {
-            currentChunk += sentence + ' ';
-            if ((currentChunk.match(/\./g) || []).length >= 8 && sentence.endsWith('\n')) {
-              let message_body = currentChunk.trim();
-              let message = `!message ${message_body}`;
-              // truncate to 500 characters
-              if (message.length > 500) {
-                message = message.substring(0, 500);
-              }
-              chunks.push(message);
-              currentChunk = '';
-            }
-          });
-
-          if (currentChunk) {
-            chunks.push(currentChunk.trim());
-          }
-
-          let i: number = 0;
-          const interval: NodeJS.Timeout = setInterval(() => {
-            if (i < chunks.length) {
-              client.say(channel, chunks[i]);
-              i++;
-            } else {
-              clearInterval(interval);
-            }
-          }, 10000); // N000-msecond delay
-          lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
-        } else {
-          console.error('No choices returned from OpenAI!\n');
-          console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
+    // add user if doesn't exist, else update last message timestamp in userSettings
+    if (tags.username) {
+        if (!userSettings[tags.username]) {
+            userSettings[tags.username] = {};
         }
-      })
-      .catch(error => console.error('An error occurred:', error));
+        userSettings[tags.username].lastMessageTimestamp = Date.now();
+    }
+    console.log(`Received message: ${message} \nfrom ${tags.username} in channel ${channel} \nwith tags: ${JSON.stringify(tags)} \n`)
 
-    // Introduce a random delay before the bot responds
-    await delay(getRandomDelay());
+    // array of key words to respond to
+    let is_mentioned = false;
+    const keywords = ['help', 'question', 'how', 'why', 'need', 'want', 'who', 'where', 'when', 'get'];
+    if (keywords.some((keyword) => message.toLowerCase().includes(keyword))) {
+        is_mentioned = true;
+    }
 
-    return;
-  }
+    // Dominant bot
+    if (dominantBot > 0) {
+        if (!message.toLowerCase().includes(twitchModName.toLowerCase())) {
+            is_mentioned = true;
+        }
+    }
+
+    // check if we are a mod
+    if (tags.username.toLowerCase() !== twitchModName.toLowerCase()) {
+    }
+
+    // check if we were mentioned in the message
+    if (message.toLowerCase().includes(twitchUserName.toLowerCase())) {
+        is_mentioned = true;
+    }
+
+    // check message to see if it is a command
+    // compare name lowercase to message lowercase
+    if (message.startsWith('!') || !is_mentioned) {
+        console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`)
+        // Do nothing
+    } else {
+        let promptArray: any[] = [];
+        promptArray.push({ "role": "system", "content": personalityPrompt });
+        // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
+        let gptAnswer = '';
+
+        lastMessageArray.forEach((messageObject: any) => {
+            if (messageObject.role && messageObject.content) {
+                promptArray.push({ "role": messageObject.role, "content": messageObject.content });
+            }
+        });
+        // add the current message to the promptArray with the final personality prompt
+        promptArray.push({ "role": "user", "content": `Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
+        promptArray.push({ "role": "assistant", "content": `` });
+
+        // save the last message in the array for the next prompt
+        lastMessageArray.push({ "role": "user", "content": `${tags.username} said ${message} ` });
+
+        console.log(`OpenAI promptArray: \n${JSON.stringify(promptArray, null, 2)} \n`);
+
+        fetch(`http://${llmHost}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openApiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'gpt-4',
+                max_tokens: maxTokens,
+                n_predict: maxTokens,
+                temperature: temperature,
+                top_p: 1,
+                n: 1,
+                stream: false,
+                messages: promptArray,
+                stop: ["\n"],
+            }),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+                    const aiMessage = data.choices[0].message;
+                    console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
+                    console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
+
+                    gptAnswer = aiMessage.content;
+                    // remove ! from start of message if it exists
+                    if (gptAnswer.startsWith('!')) {
+                        gptAnswer = gptAnswer.substring(1);
+                    }
+
+                    // Fixed sentence splitting and chunking logic
+                    const sentences: string[] = nlp(gptAnswer).sentences().out('array');
+                    let chunks: string[] = [];
+                    let currentChunk: string = '';
+
+                    sentences.forEach((sentence: string) => {
+                        currentChunk += sentence + ' ';
+                        if ((currentChunk.match(/\./g) || []).length >= 8 && sentence.endsWith('\n')) {
+                            let message_body = currentChunk.trim();
+                            let message = `!message ${message_body}`;
+                            // truncate to 500 characters
+                            if (message.length > 500) {
+                                message = message.substring(0, 500);
+                            }
+                            chunks.push(message);
+                            currentChunk = '';
+                        }
+                    });
+
+                    if (currentChunk) {
+                        chunks.push(currentChunk.trim());
+                    }
+
+                    let i: number = 0;
+                    const interval: NodeJS.Timeout = setInterval(() => {
+                        if (i < chunks.length) {
+                            client.say(channel, chunks[i]);
+                            i++;
+                        } else {
+                            clearInterval(interval);
+                        }
+                    }, 10000); // N000-msecond delay
+                    lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
+                } else {
+                    console.error('No choices returned from OpenAI!\n');
+                    console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
+                }
+            })
+            .catch(error => console.error('An error occurred:', error));
+
+        // Introduce a random delay before the bot responds
+        await delay(getRandomDelay());
+
+        return;
+    }
 });
