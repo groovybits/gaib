@@ -12,7 +12,7 @@ const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
 const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
-const dominantBot = process.env.TWITCH_DOMINANT_BOT ? process.env.TWITCH_DOMINANT_BOT : 1;
+const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.";
 
 // LLM Settings
@@ -222,7 +222,7 @@ client.on('message', async (channel: any, tags: {
             }
         });
         // add the current message to the promptArray with the final personality prompt
-        promptArray.push({ "role": "user", "content": `Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
+        promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
         promptArray.push({ "role": "assistant", "content": `` });
 
         // save the last message in the array for the next prompt
