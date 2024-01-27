@@ -12,12 +12,13 @@ const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
 const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
+const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'Buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.";
 
 // LLM Settings
 const temperature = 0.8;
-const maxTokens = 80;
+const maxTokens = 500;
 const maxHistoryBytes = 2000;
 const openApiKey: string = "FAKE_API_KEY";
 
@@ -32,7 +33,7 @@ function enqueueMessage(message: string) {
     messageQueue.push(message);
 }
 
-let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. ${role}`;
+let personalityPrompt: string = `You are ${personalityName} in the ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. ${role}`;
 
 if (dominantBot > 0) {
     personalityPrompt = `${personalityPrompt} ${howto}`;
@@ -130,7 +131,7 @@ client.on('join', (channel: any, username: any, self: any) => {
         let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
         if (diffMinutes > 3) {
             if (dominantBot > 0) {
-                client.say(channel, `  Welcome to the channel, ${username} !Use!message < personality > <message>to ask a question, and!personalities to see the available personalities.`);
+                client.say(channel, `!  Welcome to the channel, ${username} !Use!message < personality > <message>to ask a question, and!personalities to see the available personalities.`);
             }
         }
         newUsers.add(username);  // Add the user to the newUsers set
@@ -239,97 +240,103 @@ client.on('message', async (channel: any, tags: {
             }
         });
         // add the current message to the promptArray with the final personality prompt
-        promptArray.push({ "role": "user", "content": `Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
+        promptArray.push({ "role": "user", "content": `As ${personalityName} answer the question from ${tags.username} who said ${message}.` });
         promptArray.push({ "role": "assistant", "content": `` });
 
         // save the last message in the array for the next prompt
-        lastMessageArray.push({ "role": "user", "content": `${tags.username} said ${message} ` });
+        lastMessageArray.push({ "role": "user", "content": `${tags.username}: ${message}` });
 
-        console.log(`OpenAI promptArray: \n${JSON.stringify(promptArray, null, 2)} \n`);
+        // check if the message is for us by seeing if it contains our name twitchUserName
+        // if it does then we need to respond to it
+        if (message.toLowerCase().includes(twitchUserName.toLowerCase()) || is_mentioned) {
 
-        fetch(`http://${llmHost}/v1/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${openApiKey}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-4',
-                max_tokens: maxTokens,
-                n_predict: maxTokens,
-                temperature: temperature,
-                top_p: 1,
-                n: 1,
-                stream: false,
-                messages: promptArray,
-                stop: ["\n"],
-            }),
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
-                }
-                return response.json();
+            console.log(`OpenAI promptArray: \n${JSON.stringify(promptArray, null, 2)} \n`);
+
+            fetch(`http://${llmHost}/v1/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${openApiKey}`,
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4',
+                    max_tokens: maxTokens,
+                    n_predict: maxTokens,
+                    temperature: temperature,
+                    top_p: 1,
+                    n: 1,
+                    stream: false,
+                    messages: promptArray,
+                    stop: ["\n"],
+                }),
             })
-            .then(data => {
-                if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-                    const aiMessage = data.choices[0].message;
-                    console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
-                    console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
-
-                    gptAnswer = aiMessage.content;
-                    // remove ! from start of message if it exists
-                    if (gptAnswer.startsWith('!')) {
-                        gptAnswer = gptAnswer.substring(1);
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+                        const aiMessage = data.choices[0].message;
+                        console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
+                        console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
 
-                    // Fixed sentence splitting and chunking logic
-                    const sentences: string[] = nlp(gptAnswer).sentences().out('array');
-                    let chunks: string[] = [];
-                    let currentChunk: string = '';
+                        gptAnswer = aiMessage.content;
+                        // remove ! from start of message if it exists
+                        if (gptAnswer.startsWith('!')) {
+                            gptAnswer = gptAnswer.substring(1);
+                        }
 
-                    sentences.forEach((sentence: string) => {
-                        currentChunk += sentence + ' ';
-                        if ((currentChunk.match(/\./g) || []).length >= 8 && sentence.endsWith('\n')) {
-                            let message_body = currentChunk.trim();
-                            let message = `!message ${message_body}`;
-                            // truncate to 500 characters
-                            if (message.length > 500) {
-                                message = message.substring(0, 500);
+                        // Fixed sentence splitting and chunking logic
+                        const sentences: string[] = nlp(gptAnswer).sentences().out('array');
+                        let chunks: string[] = [];
+                        let currentChunk: string = '';
+
+                        sentences.forEach((sentence: string) => {
+                            currentChunk += sentence + ' ';
+                            if ((currentChunk.match(/\./g) || []).length >= 8 && sentence.endsWith('\n')) {
+                                let message_body = currentChunk.trim();
+                                let message = `!message ${message_body}`;
+                                // truncate to 500 characters
+                                /*if (message.length > 500) {
+                                    message = message.substring(0, 500);
+                                }*/
+                                chunks.push(message);
+                                currentChunk = '';
                             }
-                            chunks.push(message);
-                            currentChunk = '';
-                        }
-                    });
+                        });
 
-                    if (currentChunk) {
-                        chunks.push(currentChunk.trim());
+                        if (currentChunk) {
+                            chunks.push(`${currentChunk.trim()}`);
+                        }
+
+                        /*chunks.forEach((chunk) => {
+                            enqueueMessage(chunk);
+                        });*/
+
+                        let i: number = 0;
+                        const interval: NodeJS.Timeout = setInterval(() => {
+                            if (i < chunks.length) {
+                                client.say(channel, `${chunks[i]}`);
+                                i++;
+                            } else {
+                                clearInterval(interval);
+                            }
+                        }, 10000); // N000-msecond delay between messages
+
+                        lastMessageArray.push({ "role": "assistant", "content": `${personalityName}: ${gptAnswer}` });
+                        //lastMessageArray.push({ "role": "assistant", "content": ""});
+                    } else {
+                        console.error('No choices returned from OpenAI!\n');
+                        console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
                     }
+                })
+                .catch(error => console.error('An error occurred:', error));
 
-                    /*chunks.forEach((chunk) => {
-                        enqueueMessage(chunk);
-                    });*/
-
-                    let i: number = 0;
-                    const interval: NodeJS.Timeout = setInterval(() => {
-                        if (i < chunks.length) {
-                            client.say(channel, chunks[i]);
-                            i++;
-                        } else {
-                            clearInterval(interval);
-                        }
-                    }, 10000); // N000-msecond delay between messages
-
-                    lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
-                } else {
-                    console.error('No choices returned from OpenAI!\n');
-                    console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
-                }
-            })
-            .catch(error => console.error('An error occurred:', error));
-
-        // Introduce a random delay before the bot responds
-        await delay(getRandomDelay());
+            // Introduce a random delay before the bot responds
+            await delay(getRandomDelay());
+        }
 
         return;
     }
