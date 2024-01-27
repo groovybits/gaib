@@ -25,7 +25,12 @@ const processedMessageIds: { [id: string]: boolean } = {};
 
 const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities. Once in awhile use the !personalities command to get the current personaities, then type !message Personality_Here Message_Here where you replace the Personality and Message. The chat users and you can talk to the different personalities this way.";
 
+let messageQueue: string[] = [];
 
+// Function to add messages to the queue
+function enqueueMessage(message: string) {
+    messageQueue.push(message);
+}
 
 let personalityPrompt: string = `You are ${twitchUserName} in your ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. ${role}`;
 
@@ -93,6 +98,18 @@ const checkUserInactivity = () => {
 
 // Periodically check for user inactivity
 setInterval(checkUserInactivity, 30000);  // Run every 30 seconds
+
+let lastMessageTime: number = 0;
+const messageInterval = 10000; // 10 seconds between messages
+
+setInterval(() => {
+    const currentTime = Date.now();
+    if (messageQueue.length > 0 && currentTime - lastMessageTime >= messageInterval) {
+        const messageToSend = messageQueue.shift();
+        client.say(channelName, messageToSend);
+        lastMessageTime = currentTime;
+    }
+}, 1000); // Check every second if a message can be sent
 
 // Store usernames initially present in the room
 let initialUsers: Set<string> = new Set();
@@ -222,7 +239,7 @@ client.on('message', async (channel: any, tags: {
             }
         });
         // add the current message to the promptArray with the final personality prompt
-        promptArray.push({ "role": "user", "content": `Personality: ${personalityPrompt}\n Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
+        promptArray.push({ "role": "user", "content": `Using the history for context as ${twitchUserName} answer the question from ${tags.username} who said ${message}.` });
         promptArray.push({ "role": "assistant", "content": `` });
 
         // save the last message in the array for the next prompt
@@ -289,6 +306,10 @@ client.on('message', async (channel: any, tags: {
                         chunks.push(currentChunk.trim());
                     }
 
+                    /*chunks.forEach((chunk) => {
+                        enqueueMessage(chunk);
+                    });*/
+
                     let i: number = 0;
                     const interval: NodeJS.Timeout = setInterval(() => {
                         if (i < chunks.length) {
@@ -297,7 +318,8 @@ client.on('message', async (channel: any, tags: {
                         } else {
                             clearInterval(interval);
                         }
-                    }, 10000); // N000-msecond delay
+                    }, 10000); // N000-msecond delay between messages
+
                     lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
                 } else {
                     console.error('No choices returned from OpenAI!\n');
