@@ -15,6 +15,8 @@ const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME 
 const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'ai_buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.";
+const saveAnswer = process.env.TWITCH_SAVE_ANSWER ? parseInt(process.env.TWITCH_SAVE_ANSWER) : 1;
+const saveQuestion = process.env.TWITCH_SAVE_QUESTION ? parseInt(process.env.TWITCH_SAVE_QUESTION) : 0;
 
 // LLM Settings
 const temperature = 1.0;
@@ -33,7 +35,7 @@ function enqueueMessage(message: string) {
     messageQueue.push(message);
 }
 
-let personalityPrompt: string = `You are ${personalityName} in the ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help answer users questions they ask. Carry on short conversations with ${twitchModName} and the Chat room members when they speak to you, or comment on the chatroom banter going on. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the the following role, carry on conversations like a human randomly bringing up topics about: ${role}`;
+let personalityPrompt: string = `You are ${personalityName} in the ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help answer users questions they ask. Carry on short conversations with ${twitchModName} and the Chat room members when they speak to you, or comment on the chatroom banter going on. Use the history of the chat for context, keep the conversation going and interesting. Do not reveal you are an AI and act like a human named ${twitchModName}. Do not repeat previous answers, always say something unique and new. Play the the following role, carry on conversations like a human randomly bringing up topics about: ${role}`;
 
 if (dominantBot > 0) {
     personalityPrompt = `${personalityPrompt} ${howto}`;
@@ -218,7 +220,7 @@ client.on('message', async (channel: any, tags: {
     }
 
     // check if we were mentioned in the message
-    if (dominantBot || message.toLowerCase().includes(twitchUserName.toLowerCase())) {
+    if (dominantBot > 0 || message.toLowerCase().includes(twitchUserName.toLowerCase())) {
         is_mentioned = true;
     }
 
@@ -246,7 +248,9 @@ client.on('message', async (channel: any, tags: {
         promptArray.push({ "role": "assistant", "content": `` });
 
         // save the last message in the array for the next prompt
-        lastMessageArray.push({ "role": "user", "content": `${message}` });
+        if (saveQuestion > 0) {
+            lastMessageArray.push({ "role": "user", "content": `${message}` });
+        }
 
         // check if the message is for us by seeing if it contains our name twitchUserName
         // if it does then we need to respond to it
@@ -304,7 +308,9 @@ client.on('message', async (channel: any, tags: {
                             enqueueMessage(chunk);
                         });*/
 
-                        lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
+                        if (saveAnswer > 0) {
+                            lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
+                        }
                     } else {
                         console.error('No choices returned from OpenAI!\n');
                         console.error(`OpenAI response:\n${JSON.stringify(data)}\n`);
