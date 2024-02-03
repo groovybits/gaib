@@ -9,17 +9,17 @@ dotenv.config();
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 6;
-const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
-const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
-const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'Buddha';
+const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 32;
+const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'ai_buddha';
+const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'uralove';
+const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'ai_buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.";
 
 // LLM Settings
 const temperature = 1.0;
 const maxTokens = 100;
-const maxHistoryBytes = 1200;
+const maxHistoryBytes = 4096;
 const openApiKey: string = "FAKE_API_KEY";
 
 const processedMessageIds: { [id: string]: boolean } = {};
@@ -153,27 +153,34 @@ client.on('join', (channel: any, username: any, self: any) => {
 client.on('message', async (channel: any, tags: {
     id: any; username: any;
 }, message: any, self: any) => {
-    // Ignore messages from the bot itself
-    if (self) return;
-    console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName} `)
-    if (tags.username.toLowerCase() === twitchUserName.toLowerCase()) return;
-
+    let is_mentioned = false;
     // Ignore messages that have already been processed
     if (processedMessageIds[tags.id]) {
         console.log(`Ignoring duplicate message with ID ${tags.id} `);
         return;
     }
+    // Mark this message as processed
+    processedMessageIds[tags.id] = true;
 
     // Update the last message timestamp for this user
     if (tags.username) {
         lastMessageTimestamps[tags.username] = Date.now();
     }
 
-    // Mark this message as processed
-    processedMessageIds[tags.id] = true;
+    // Ignore messages from the bot itself
+    if (self) {
+        return;
+    };
+    // Ignore our username
+    if (tags.username.toLowerCase() === twitchUserName.toLowerCase()) {
+        return;
+    };
+
+    console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName} `)
 
     // Remove any last_messageArray messages greater than the maxHistoryCount value, starting from newest count back and only keep up to this many
     if (lastMessageArray.length > maxHistoryCount) {
+        // rebuild message array starting from newest message back to keep the newest maxHistoryCount messages
         lastMessageArray = lastMessageArray.slice(lastMessageArray.length - maxHistoryCount);
     }
 
@@ -198,24 +205,16 @@ client.on('message', async (channel: any, tags: {
         }
         userSettings[tags.username].lastMessageTimestamp = Date.now();
     }
-    console.log(`Received message: ${message} \nfrom ${tags.username} in channel ${channel} \nwith tags: ${JSON.stringify(tags)} \n`)
-
-    // array of key words to respond to
-    let is_mentioned = false;
-    const keywords = ['help', 'question', 'how', 'why', 'need', 'want', 'who', 'where', 'when', 'get'];
-    if (keywords.some((keyword) => message.toLowerCase().includes(keyword))) {
-        is_mentioned = true;
-    }
+    console.log(`Received message: ${message} \nfrom ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`)
 
     // Dominant bot
     if (dominantBot > 0) {
-        if (!message.toLowerCase().includes(twitchModName.toLowerCase())) {
-            is_mentioned = true;
-        }
+        is_mentioned = true;
     }
 
     // check if we are a mod
     if (tags.username.toLowerCase() !== twitchModName.toLowerCase()) {
+        // Put something here if you are not a mod
     }
 
     // check if we were mentioned in the message
@@ -227,7 +226,10 @@ client.on('message', async (channel: any, tags: {
     // compare name lowercase to message lowercase
     if (message.startsWith('!') || !is_mentioned) {
         console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`)
-        // Do nothing
+        // Story message in history to keep track of the last messages
+        lastMessageArray.push({ "role": "user", "content": `` });
+        lastMessageArray.push({ "role": "assistant", "content": `${message}` });
+        // Skip sending the message to the LLM
     } else {
         let promptArray: any[] = [];
         promptArray.push({ "role": "system", "content": personalityPrompt });
@@ -240,7 +242,7 @@ client.on('message', async (channel: any, tags: {
             }
         });
         // add the current message to the promptArray with the final personality prompt
-        promptArray.push({ "role": "user", "content": `${message}.` });
+        promptArray.push({ "role": "user", "content": `${message}` });
         promptArray.push({ "role": "assistant", "content": `` });
 
         // save the last message in the array for the next prompt
@@ -302,7 +304,7 @@ client.on('message', async (channel: any, tags: {
                             enqueueMessage(chunk);
                         });*/
 
-                        lastMessageArray.push({ "role": "assistant", "content": `${finalMessage}` });
+                        lastMessageArray.push({ "role": "assistant", "content": `${gptAnswer}` });
                     } else {
                         console.error('No choices returned from OpenAI!\n');
                         console.error(`OpenAI response:\n${JSON.stringify(data)}\n`);
