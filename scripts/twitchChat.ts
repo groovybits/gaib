@@ -9,7 +9,7 @@ dotenv.config();
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
 const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8080';
-const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 12;
+const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 6;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'moderator';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'buddha';
 const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'Buddha';
@@ -17,14 +17,14 @@ const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITC
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Base your background off of an expert in technology, especially video engineering for broadcast and streaming services plus a tibetan buddhist who is a vajrayana practiioner of the tantras.";
 
 // LLM Settings
-const temperature = 0.8;
-const maxTokens = 500;
-const maxHistoryBytes = 2000;
+const temperature = 1.0;
+const maxTokens = 100;
+const maxHistoryBytes = 1200;
 const openApiKey: string = "FAKE_API_KEY";
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
-const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and !personalities to see the available personalities. Once in awhile use the !personalities command to get the current personaities, then type !message Personality_Here Message_Here where you replace the Personality and Message. The chat users and you can talk to the different personalities this way.";
+const howto = "Type !help to see the commands. Use !message <personality> <message> to ask a question, and use !personalities to see the available chatters. Once in awhile randomly use the !personalities command to get the current chat users available, then type !message Personality_Here Message_Here to talk to them, replace the Personality and Message variables with the actual name and message.";
 
 let messageQueue: string[] = [];
 
@@ -33,7 +33,7 @@ function enqueueMessage(message: string) {
     messageQueue.push(message);
 }
 
-let personalityPrompt: string = `You are ${personalityName} in the ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help users with their questions. Carry on short conversations with ${twitchModName} and the Chat room members. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the role, carry on conversations like a human randomly bringing up topics. ${role}`;
+let personalityPrompt: string = `You are ${personalityName} in the ${channelName} Chatroom where you and ${twitchModName} moderate the chatroom and help answer users questions they ask. Carry on short conversations with ${twitchModName} and the Chat room members when they speak to you, or comment on the chatroom banter going on. Do not reveal you are an AI and act like a human named ${twitchModName}. Play the the following role, carry on conversations like a human randomly bringing up topics about: ${role}`;
 
 if (dominantBot > 0) {
     personalityPrompt = `${personalityPrompt} ${howto}`;
@@ -131,7 +131,7 @@ client.on('join', (channel: any, username: any, self: any) => {
         let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
         if (diffMinutes > 3) {
             if (dominantBot > 0) {
-                client.say(channel, `!  Welcome to the channel, ${username} !Use!message < personality > <message>to ask a question, and!personalities to see the available personalities.`);
+                client.say(channel, `! Welcome to the channel, ${username}. Use '!message <personality> <message>' to ask a question, and '!personalities' to see the available personalities to chat with.`);
             }
         }
         newUsers.add(username);  // Add the user to the newUsers set
@@ -219,7 +219,7 @@ client.on('message', async (channel: any, tags: {
     }
 
     // check if we were mentioned in the message
-    if (message.toLowerCase().includes(twitchUserName.toLowerCase())) {
+    if (dominantBot || message.toLowerCase().includes(twitchUserName.toLowerCase())) {
         is_mentioned = true;
     }
 
@@ -240,11 +240,11 @@ client.on('message', async (channel: any, tags: {
             }
         });
         // add the current message to the promptArray with the final personality prompt
-        promptArray.push({ "role": "user", "content": `As ${personalityName} answer the question from ${tags.username} who said ${message}.` });
+        promptArray.push({ "role": "user", "content": `${message}.` });
         promptArray.push({ "role": "assistant", "content": `` });
 
         // save the last message in the array for the next prompt
-        lastMessageArray.push({ "role": "user", "content": `${tags.username}: ${message}` });
+        lastMessageArray.push({ "role": "user", "content": `${message}` });
 
         // check if the message is for us by seeing if it contains our name twitchUserName
         // if it does then we need to respond to it
@@ -283,53 +283,29 @@ client.on('message', async (channel: any, tags: {
                         console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
 
                         gptAnswer = aiMessage.content;
-                        // remove ! from start of message if it exists
-                        if (gptAnswer.startsWith('!')) {
-                            gptAnswer = gptAnswer.substring(1);
-                        }
-
+                        
                         // Fixed sentence splitting and chunking logic
                         const sentences: string[] = nlp(gptAnswer).sentences().out('array');
-                        let chunks: string[] = [];
-                        let currentChunk: string = '';
+                        let finalMessage = "";
 
+                        // truncate to 500 characters with only full sentences, stopping at a period
                         sentences.forEach((sentence: string) => {
-                            currentChunk += sentence + ' ';
-                            if ((currentChunk.match(/\./g) || []).length >= 8 && sentence.endsWith('\n')) {
-                                let message_body = currentChunk.trim();
-                                let message = `!message ${message_body}`;
-                                // truncate to 500 characters
-                                /*if (message.length > 500) {
-                                    message = message.substring(0, 500);
-                                }*/
-                                chunks.push(message);
-                                currentChunk = '';
+                            // build finalMessage up to 500 characters or less.
+                            if (finalMessage.length < 500) {
+                                finalMessage += sentence + ' ';
                             }
                         });
 
-                        if (currentChunk) {
-                            chunks.push(`${currentChunk.trim()}`);
-                        }
+                        client.say(channel, `${gptAnswer}`);
 
                         /*chunks.forEach((chunk) => {
                             enqueueMessage(chunk);
                         });*/
 
-                        let i: number = 0;
-                        const interval: NodeJS.Timeout = setInterval(() => {
-                            if (i < chunks.length) {
-                                client.say(channel, `${chunks[i]}`);
-                                i++;
-                            } else {
-                                clearInterval(interval);
-                            }
-                        }, 10000); // N000-msecond delay between messages
-
-                        lastMessageArray.push({ "role": "assistant", "content": `${personalityName}: ${gptAnswer}` });
-                        //lastMessageArray.push({ "role": "assistant", "content": ""});
+                        lastMessageArray.push({ "role": "assistant", "content": `${finalMessage}` });
                     } else {
                         console.error('No choices returned from OpenAI!\n');
-                        console.log(`OpenAI response:\n${JSON.stringify(data)}\n`);
+                        console.error(`OpenAI response:\n${JSON.stringify(data)}\n`);
                     }
                 })
                 .catch(error => console.error('An error occurred:', error));
