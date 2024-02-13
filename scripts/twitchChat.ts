@@ -8,7 +8,7 @@ dotenv.config();
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
 const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : 'earth:8081';
+const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : '127.0.0.1:8080';
 const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 8;
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'ai_buddha';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'uralove';
@@ -19,10 +19,11 @@ const saveAnswer = process.env.TWITCH_SAVE_ANSWER ? parseInt(process.env.TWITCH_
 const saveQuestion = process.env.TWITCH_SAVE_QUESTION ? parseInt(process.env.TWITCH_SAVE_QUESTION) : 0;
 const maxChatLength = process.env.TWITCH_MAX_CHAT_LENGTH ? parseInt(process.env.TWITCH_MAX_CHAT_LENGTH) : 500;
 const combineAllUsersHistory = process.env.TWITCH_COMBINE_ALL_USERS_HISTORY ? parseInt(process.env.TWITCH_COMBINE_ALL_USERS_HISTORY) : 0;
-const maxHistoryBytes = process.env.TWITCH_MAX_HISTORY_BYTES ? parseInt(process.env.TWITCH_MAX_HISTORY_BYTES) : 2000;
+const maxHistoryBytes = process.env.TWITCH_MAX_HISTORY_BYTES ? parseInt(process.env.TWITCH_MAX_HISTORY_BYTES) : 8000;
 const openApiKey = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : 'FAKE_OPENAI_API_KEY';
 const maxTokens = process.env.LLM_MAX_TOKENS ? parseInt(process.env.LLM_MAX_TOKENS) : 120;
 const temperature = process.env.LLM_TEMPERATURE ? parseFloat(process.env.LLM_TEMPERATURE) : 1.0;
+const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 1;
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
@@ -167,7 +168,7 @@ client.on('join', (channel: any, username: any, self: any) => {
     let timeDiff = Math.abs(currentDate.getTime() - startDate.getTime());
     let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
     if (diffMinutes > 3) {
-        if (dominantBot > 1) {
+        if (greetUsers == 1) {
             client.say(channel, `! Welcome to the channel, ${username}. Use '!message <personality> <message>' to ask a question, and '!personalities' to see the available personalities to chat with.`);
         }
     }
