@@ -309,7 +309,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
                 if (!aiSendMessage) {
                     prefix = '';
                 }
-                client.say(channel, `!${prefix} ${finalMessage}`);
+                client.say(channel, `!${prefix} Hi ${username}. ${finalMessage}`);
 
                 console.log(`New User Join: ${username} in channel ${channel} with message: !${prefix} ${finalMessage}`);
             } catch (error) {
@@ -456,8 +456,8 @@ client.on('message', async (channel: any, tags: {
                 // Sort by timestamp if needed
                 userHistory.sort((a, b) => a.timestamp - b.timestamp);
                 userHistory.forEach(historyItem => {
-                    if (historyItem.event === 'message' && historyItem.message) {
-                        if (saveQuestion > 0) {
+                    if (historyItem.event === 'message') {
+                        if (saveQuestion > 0 && historyItem.message) {
                             promptArray.push({ "role": "user", "content": historyItem.message });
                         }
                         if (saveAnswer > 0 && historyItem.response) {
@@ -504,7 +504,7 @@ client.on('message', async (channel: any, tags: {
                 await delay(getRandomDelay());
             }
 
-            client.say(channel, `${finalMessage}`);
+            client.say(channel, `Hi ${tags.username}. ${finalMessage}`);
 
             lastMessageArray.push({ "role": "assistant", "content": `${finalMessage}` });
 
