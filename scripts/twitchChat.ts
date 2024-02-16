@@ -25,8 +25,8 @@ const maxHistoryBytes = process.env.TWITCH_MAX_HISTORY_BYTES ? parseInt(process.
 const openApiKey = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : 'FAKE_OPENAI_API_KEY';
 const maxTokens = process.env.LLM_MAX_TOKENS ? parseInt(process.env.LLM_MAX_TOKENS) : 120;
 const temperature = process.env.LLM_TEMPERATURE ? parseFloat(process.env.LLM_TEMPERATURE) : 1.0;
-const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 0;
-const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWITCH_PERSIST_USERS) : 0;
+const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 1;
+const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWITCH_PERSIST_USERS) : 1;
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
@@ -71,8 +71,8 @@ function delay(ms: number) {
 
 // Function to generate a random delay between N and N seconds
 function getRandomDelay() {
-    const minDelay = 10; // Minimum delay in seconds
-    const maxDelay = 45; // Maximum delay in seconds
+    const minDelay = 1; // Minimum delay in seconds
+    const maxDelay = 10; // Maximum delay in seconds
     const randomDelay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
     return randomDelay * 1000; // Convert to milliseconds
 }
@@ -207,7 +207,7 @@ async function initializeDb() {
 
 async function storeUserSettings(username: string, settings: any) {
     const db = await openDb();
-    const data = JSON.stringify(settings);
+    const data = JSON.stringify(settings); // Ensure settings include chat history
     await db.run(`
         INSERT INTO user_settings (username, data) VALUES (?, ?)
         ON CONFLICT(username) DO UPDATE SET data = ?
@@ -216,8 +216,14 @@ async function storeUserSettings(username: string, settings: any) {
 
 async function getUserSettings(username: string): Promise<any[]> {
     const db = await openDb();
-    const row = await db.get(`SELECT data FROM user_settings WHERE username = ?`, [username]);
-    return row ? JSON.parse(row.data) : [];
+    try {
+        const row = await db.get(`SELECT data FROM user_settings WHERE username = ?`, [username]);
+        const settings = row ? JSON.parse(row.data) : [];
+        return Array.isArray(settings) ? settings : []; // Ensure it's always an array
+    } catch (error) {
+        console.error('Error fetching user settings:', error);
+        return [];
+    }
 }
 
 if (persistUsers > 0) {
@@ -248,10 +254,18 @@ client.connect();
 client.on('join', async (channel: any, username: any, self: any) => {
     if (self) return;  // Ignore messages from the bot itself
 
-    // New user first time chat join, greet them and record the event
+    let newUser = false;
     if (!userSettings[username]) {
+        newUser = true;
         userSettings[username] = [];
+    }
 
+    if (persistUsers > 0) {
+        userSettings[username] = await getUserSettings(username) || [];
+    }
+
+    // New user first time chat join, greet them and record the event
+    if (newUser) {
         if (greetUsers == 1) {
             let greet_prompt = `Welcome ${username} to the chatroom, I am ${personalityName} and I am here to help you with any questions you have. `;
             let promptArray: any[] = [];
@@ -275,6 +289,11 @@ client.on('join', async (channel: any, username: any, self: any) => {
 
     // Add a join event to the user's settings
     userSettings[username].push({ timestamp: Date.now(), event: 'join', message: '', response: '' });
+
+    // save userSettings
+    if (persistUsers > 0) {
+        await storeUserSettings(username, userSettings).catch(console.error);
+    }
 });
 
 // message handler
@@ -306,12 +325,17 @@ client.on('message', async (channel: any, tags: {
         return;
     };
 
-    // Update the userSettings object with a new message
+    let newUser = false;
     if (!userSettings[tags.username]) {
+        newUser = true;
         userSettings[tags.username] = [];
     }
 
-    // seach the history of messages and if it is a duplicate message from the last user message we recieved or a duplicate output message from the AI then ignore it
+    if (persistUsers > 0) {
+        userSettings[tags.username] = await getUserSettings(tags.username) || [];
+    }
+
+    // search the history of messages and if it is a duplicate message from the last user message we recieved or a duplicate output message from the AI then ignore it
     if (lastMessageArray.length > 0) {
         // check if the last user message matches the current message
         if (lastMessageArray[lastMessageArray.length - 1].role === 'user' && lastMessageArray[lastMessageArray.length - 1].content === message) {
@@ -321,7 +345,7 @@ client.on('message', async (channel: any, tags: {
     }
 
     // Log the message to the console
-    console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName} `)
+    console.log(`Username: ${tags.username} Message: ${message}`);
 
     // Remove any last_messageArray messages greater than the maxHistoryCount value, starting from newest count back and only keep up to this many
     if (lastMessageArray.length > maxHistoryCount) {
@@ -419,10 +443,13 @@ client.on('message', async (channel: any, tags: {
             if (lastMessageArray.length > 0) {
                 // check if the last user message matches the current message
                 if (lastMessageArray[lastMessageArray.length - 1].role === 'assistant' && lastMessageArray[lastMessageArray.length - 1].content === finalMessage) {
-                    console.log(`Ignoring duplicate message from LLM to ${tags.username} \n`);
+                    console.log(`Ignoring duplicate message from ${tags.username} \n`);
                     return;
                 }
             }
+
+            // Introduce a random delay before the bot responds
+            await delay(getRandomDelay());
 
             client.say(channel, `${finalMessage}`);
 
@@ -431,8 +458,10 @@ client.on('message', async (channel: any, tags: {
             // Update the userSettings object with a new message
             userSettings[tags.username].push({ timestamp: Date.now(), event: 'message', message: message, response: finalMessage });
 
-            // Introduce a random delay before the bot responds
-            //await delay(getRandomDelay());
+            // save userSettings
+            if (persistUsers > 0) {
+                await storeUserSettings(tags.username, userSettings[tags.username]).catch(console.error);
+            }
         }
 
         return;
