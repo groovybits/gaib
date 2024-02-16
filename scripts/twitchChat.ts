@@ -478,6 +478,8 @@ client.on('message', async (channel: any, tags: {
             if (persistUsers > 0) {
                 await storeUserSettings(tags.username, userSettings[tags.username]).catch(console.error);
             }
+
+            console.log(`Sent message: ${finalMessage} \nfrom ${twitchUserName} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`);
         }
 
         return;
