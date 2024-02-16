@@ -31,6 +31,7 @@ const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_
 const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWITCH_PERSIST_USERS) : 1;
 const delayResponse = process.env.TWITCH_DELAY_RESPONSE ? parseInt(process.env.TWITCH_DELAY_RESPONSE) : 0;
 const aiPersonality = process.env.TWITCH_AI_PERSONALITY ? process.env.TWITCH_AI_PERSONALITY : 'Buddha2';
+const aiSendMessage = process.env.TWITCH_AI_SEND_MESSAGE ? parseInt(process.env.TWITCH_AI_SEND_MESSAGE) : 0;
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
@@ -219,10 +220,12 @@ async function storeUserSettings(username: string, settings: any) {
 }
 
 async function getUserSettings(username: string): Promise<any[]> {
-    const db = await openDb();
     try {
+        const db = await openDb();
+
         const row = await db.get(`SELECT data FROM user_settings WHERE username = ?`, [username]);
         const settings = row ? JSON.parse(row.data) : [];
+        console.log(`Fetched user settings for ${username}:`, settings)
         return Array.isArray(settings) ? settings : []; // Ensure it's always an array
     } catch (error) {
         console.error('Error fetching user settings:', error);
@@ -268,9 +271,10 @@ client.on('join', async (channel: any, username: any, self: any) => {
     // Check if the user is new
     if (!userSettings[username]) {
         userSettings[username] = [];
-        if (userSettings[username].length === 0) {
-            newUser = true;
-        }
+    }
+
+    if (userSettings[username].length === 0) {
+        newUser = true;
     }
 
     // New user first time chat join, greet them and record the event
@@ -284,16 +288,40 @@ client.on('join', async (channel: any, username: any, self: any) => {
             promptArray.push({ "role": "user", "content": `${greet_prompt}` });
             promptArray.push({ "role": "assistant", "content": `` });
 
-            let greet_message = await generateOpenAIResponse(promptArray);
+            try {
+                let greet_message = await generateOpenAIResponse(promptArray);
 
-            // Truncate the message to fit within the Twitch chat character limit
-            const finalMessage = truncateTwitchMessageToFullSentences(greet_message);
+                // Truncate the message to fit within the Twitch chat character limit
+                const finalMessage = truncateTwitchMessageToFullSentences(greet_message);
 
-            client.say(channel, `!message ${aiPersonality} ${finalMessage}`);
+                let prefix = `!message ${aiPersonality}`;
+                if (!aiSendMessage) {
+                    prefix = '';
+                }
+                client.say(channel, `!${prefix} ${finalMessage}`);
+
+                console.log(`New User Join: ${username} in channel ${channel} with message: !${prefix} ${finalMessage} \n`);
+            } catch (error) {
+                console.error(`LLM Answer: An error occurred for user join ${username} in channel ${channel}: `, error);
+            }
         }
 
         // Add a welcome event to the user's settings
         userSettings[username].push({ timestamp: Date.now(), event: 'welcome', message: '', response: '' });
+    } else {
+        console.log(`User Join: ${username} in channel ${channel} \n`);
+        // Get the user's number of messages and when they last joined and the first welcome message date
+        let messageCount = userSettings[username].filter(event => event.event === 'message').length;
+
+        let joinEvents = userSettings[username].filter(event => event.event === 'join');
+        let welcomeEvents = userSettings[username].filter(event => event.event === 'welcome');
+
+        // Sort and ensure there is at least one event before accessing timestamp
+        let lastJoined = joinEvents.sort((a, b) => b.timestamp - a.timestamp)[0];
+        let firstWelcome = welcomeEvents.sort((a, b) => a.timestamp - b.timestamp)[0];
+
+        // Use optional chaining (?.) to safely access properties
+        console.log(`User: ${username} has sent ${messageCount} messages, last joined: ${lastJoined?.timestamp} and first welcome: ${firstWelcome?.timestamp} \n`);
     }
 
     // Add a join event to the user's settings
@@ -301,7 +329,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
 
     // save userSettings
     if (persistUsers > 0) {
-        await storeUserSettings(username, userSettings).catch(console.error);
+        await storeUserSettings(username, userSettings[username]).catch(console.error);
     }
 });
 
@@ -334,8 +362,6 @@ client.on('message', async (channel: any, tags: {
         return;
     };
 
-    let newUser = false;
-
     // Load user settings from the database
     if (persistUsers > 0) {
         userSettings[tags.username] = await getUserSettings(tags.username) || [];
@@ -345,7 +371,7 @@ client.on('message', async (channel: any, tags: {
     if (!userSettings[tags.username]) {
         userSettings[tags.username] = [];
         if (userSettings[tags.username].length === 0) {
-            newUser = true;
+            console.log(`New user: ${tags.username} first time chat...`);
         }
     }
 
@@ -447,7 +473,7 @@ client.on('message', async (channel: any, tags: {
             try {
                 gptAnswer = await generateOpenAIResponse(promptArray);
             } catch (error) {
-                console.error('LLM Answer: An error occurred:', error);
+                console.error(`LLM Answer: An error occurred answering question for ${tags.username} with message ${message}:`, error);
             }
             
             // Truncate the message to fit within the Twitch chat character limit
