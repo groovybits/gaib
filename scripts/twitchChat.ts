@@ -7,18 +7,20 @@ import { open } from 'sqlite';
 
 dotenv.config();
 
-// Get the channel name from the command line arguments
-const channelName = process.argv[2];
-const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
-const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : '127.0.0.1:8080';
-const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 8;
+// Settings most likely to be configured specifically for your use case
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'ai_buddha';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'uralove';
 const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'ai_buddha';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Help chat users with the chatroom by explaining how to use it. Discuss what the users are talking about and help them with their questions. ";
+
+// Get the channel name from the command line arguments
+const channelName = process.argv[2];
+const oAuthToken = process.env.TWITCH_OAUTH_TOKEN ? process.env.TWITCH_OAUTH_TOKEN : '';
+const llmHost = process.env.LLM_HOST ? process.env.LLM_HOST : '127.0.0.1:8080';
+const maxHistoryCount: number = process.env.TWITCH_CHAT_HISTORY_SIZE ? parseInt(process.env.TWITCH_CHAT_HISTORY_SIZE) : 32;
 const saveAnswer = process.env.TWITCH_SAVE_ANSWER ? parseInt(process.env.TWITCH_SAVE_ANSWER) : 1;
-const saveQuestion = process.env.TWITCH_SAVE_QUESTION ? parseInt(process.env.TWITCH_SAVE_QUESTION) : 0;
+const saveQuestion = process.env.TWITCH_SAVE_QUESTION ? parseInt(process.env.TWITCH_SAVE_QUESTION) : 1;
 const maxChatLength = process.env.TWITCH_MAX_CHAT_LENGTH ? parseInt(process.env.TWITCH_MAX_CHAT_LENGTH) : 500;
 const combineAllUsersHistory = process.env.TWITCH_COMBINE_ALL_USERS_HISTORY ? parseInt(process.env.TWITCH_COMBINE_ALL_USERS_HISTORY) : 0;
 const maxHistoryBytes = process.env.TWITCH_MAX_HISTORY_BYTES ? parseInt(process.env.TWITCH_MAX_HISTORY_BYTES) : 8000;
