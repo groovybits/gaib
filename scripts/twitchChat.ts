@@ -4,6 +4,8 @@ import nlp from 'compromise';
 import dotenv from 'dotenv';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
+import * as zmq from 'zeromq';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
@@ -148,6 +150,59 @@ async function processAndClearMessages(username: string, newMessage: string) {
     delete tempUserMessages[username];
 
     return combinedMessage;
+}
+
+// Define the interface for the message structure
+interface AiMessage {
+    segment_number: string;
+    mediaid: string;
+    mediatype: string;
+    username: string;
+    source: string;
+    message: string;
+    episode: string;
+    aipersonality: string;
+    ainame: string;
+    history?: string;
+    maxtokens: number;
+    voice_model: string;
+    gender: string;
+    genre_music?: string;
+    genre?: string;
+    priority: number;
+}
+
+// Function to send a chat message to AI personality
+async function sendChatMessageToAi(username: string, message: string, aipersonality: string, ainame: string): Promise<void> {
+    const socket = new zmq.Push();
+
+    const clientRequest: AiMessage = {
+        segment_number: "0",
+        mediaid: uuidv4(),
+        mediatype: "TwitchChat",
+        username: username,
+        source: "Twitch",
+        message: message,
+        episode: "false",
+        aipersonality: aipersonality,
+        ainame: ainame,
+        maxtokens: 100,
+        voice_model: "openai:onyx:1.0",
+        gender: "male",
+        genre_music: "meditation music zen like a asian spa relaxing music",
+        genre: "buddha meditating in the tibetan mountains with a blue sky and white fluffy clouds and prayer flags",
+        priority: 75
+    };
+
+    try {
+        await socket.connect("tcp://127.0.0.1:8000");
+        await socket.send(JSON.stringify(clientRequest));
+        console.log("Message sent to AI personality via ZMQ.");
+    } catch (error) {
+        console.error("Failed to send message via ZMQ:", error);
+    } finally {
+        await socket.close();
+    }
 }
 
 // Generate an LLM response given the current state of the chatroom
@@ -435,7 +490,12 @@ client.on('message', async (channel: any, tags: {
     // check message to see if it is a command
     // compare name lowercase to message lowercase
     if (message.startsWith('!') || !is_mentioned) {
-        console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
+        if (message.startsWith('!question: ')) {
+            // send the message to the AI personality
+            sendChatMessageToAi(tags.username, message, personalityPrompt, aiPersonality).catch(console.error);
+        } else {
+            console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
+        }
         // Skip sending the message to the LLM
     } else {
         let promptArray: any[] = [];
