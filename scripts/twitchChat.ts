@@ -239,7 +239,7 @@ if (persistUsers > 0) {
 
 // Create a TMI client
 const client = new tmi.Client({
-    options: { debug: true },
+    options: { debug: false },
     connection: {
         secure: true,
         reconnect: true
@@ -252,7 +252,7 @@ const client = new tmi.Client({
 });
 
 console.log(`Connecting to Twitch channel ${channelName}...`);
-client.connect();
+client.connect().catch(console.error);
 
 // Join the channel
 client.on('join', async (channel: any, username: any, self: any) => {
