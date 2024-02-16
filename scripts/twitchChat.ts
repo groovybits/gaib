@@ -151,8 +151,8 @@ async function processAndClearMessages(username: string, newMessage: string) {
     return combinedMessage;
 }
 
-// Generate an OpenAI response given the current state of the chatroom
-async function generateOpenAIResponse(promptArray: any[]): Promise<string> {
+// Generate an LLM response given the current state of the chatroom
+async function generateLLMResponse(promptArray: any[]): Promise<string> {
     return new Promise((resolve, reject) => {
         fetch(`http://${llmHost}/v1/chat/completions`, {
             method: 'POST',
@@ -175,7 +175,7 @@ async function generateOpenAIResponse(promptArray: any[]): Promise<string> {
         })
             .then(response => {
                 if (!response.ok) {
-                    reject(new Error(`Failed to generate OpenAI response: ${response.statusText} (${response.status})`));
+                    reject(new Error(`Failed to generate LLM response: ${response.statusText} (${response.status})`));
                 }
                 return response.json();
             })
@@ -184,7 +184,7 @@ async function generateOpenAIResponse(promptArray: any[]): Promise<string> {
                     const aiMessage = data.choices[0].message.content;
                     resolve(aiMessage);
                 } else {
-                    reject(new Error('No choices returned from OpenAI'));
+                    reject(new Error('No choices returned from LLM'));
                 }
             })
             .catch(error => {
@@ -261,12 +261,12 @@ client.connect().catch(console.error);
 client.on('join', async (channel: any, username: any, self: any) => {
     if (self) return;  // Ignore messages from the bot itself
 
-    // check if startDate and current date are  more than 3 minutes apart
+    // check if startDate and current date are  more than 1 minutes apart
     let currentDate = new Date();
     let timeDiff = Math.abs(currentDate.getTime() - startDate.getTime());
     let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
-    if (diffMinutes < 3) {
-        console.log(`User Join: Ignoring join message from ${username} in channel ${channel} since only ${diffMinutes} minute(s) since startup.\n`);
+    if (diffMinutes < 2) {
+        console.log(`User Join: Ignoring join message from ${username} in channel ${channel} since only ${diffMinutes} minute(s) since startup.`);
         return;
     }
 
@@ -289,7 +289,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
     // New user first time chat join, greet them and record the event
     if (newUser) {
         if (greetUsers == 1) {
-            let greet_prompt = `Welcome ${username} to the chatroom, I am ${personalityName} and I am here to help you with any questions you have. `;
+            let greet_prompt = `As ${personalityName} Welcome ${username} to the chatroom using their name in your response, offer them help and guidance on how to use the chatroom. ask them how they are doing and what they are interested in. `;
             let promptArray: any[] = [];
             promptArray.push({ "role": "system", "content": personalityPrompt });
             // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
@@ -298,7 +298,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
             promptArray.push({ "role": "assistant", "content": `` });
 
             try {
-                let greet_message = await generateOpenAIResponse(promptArray);
+                let greet_message = await generateLLMResponse(promptArray);
 
                 // Truncate the message to fit within the Twitch chat character limit
                 const finalMessage = truncateTwitchMessageToFullSentences(greet_message);
@@ -309,7 +309,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
                 }
                 client.say(channel, `!${prefix} ${finalMessage}`);
 
-                console.log(`New User Join: ${username} in channel ${channel} with message: !${prefix} ${finalMessage} \n`);
+                console.log(`New User Join: ${username} in channel ${channel} with message: !${prefix} ${finalMessage}`);
             } catch (error) {
                 console.error(`LLM Answer: An error occurred for user join ${username} in channel ${channel}: `, error);
             }
@@ -318,7 +318,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
         // Add a welcome event to the user's settings
         userSettings[username].push({ timestamp: Date.now(), event: 'welcome', message: '', response: '' });
     } else {
-        console.log(`User Join: ${username} in channel ${channel} \n`);
+        console.log(`User Join: ${username} in channel ${channel}`);
         // Get the user's number of messages and when they last joined and the first welcome message date
         let messageCount = userSettings[username].filter(event => event.event === 'message').length;
 
@@ -330,7 +330,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
         let firstWelcome = welcomeEvents.sort((a, b) => a.timestamp - b.timestamp)[0];
 
         // Use optional chaining (?.) to safely access properties
-        console.log(`User: ${username} has sent ${messageCount} messages, last joined: ${lastJoined?.timestamp} and first welcome: ${firstWelcome?.timestamp} \n`);
+        console.log(`User: ${username} has sent ${messageCount} messages, last joined: ${lastJoined?.timestamp} and first welcome: ${firstWelcome?.timestamp}`);
     }
 
     // Add a join event to the user's settings
@@ -388,7 +388,7 @@ client.on('message', async (channel: any, tags: {
     if (lastMessageArray.length > 0) {
         // check if the last user message matches the current message
         if (lastMessageArray[lastMessageArray.length - 1].role === 'user' && lastMessageArray[lastMessageArray.length - 1].content === message) {
-            console.log(`Ignoring duplicate message from ${tags.username} \n`);
+            console.log(`Ignoring duplicate message from ${tags.username}`);
             return;
         }
     }
@@ -413,7 +413,7 @@ client.on('message', async (channel: any, tags: {
         lastMessageArray = lastMessageArray.slice(i);
     }
 
-    console.log(`Received message: ${message} \nfrom ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`)
+    console.log(`Received message: ${message} \nfrom ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
 
     // Dominant bot
     if (dominantBot > 0) {
@@ -433,11 +433,11 @@ client.on('message', async (channel: any, tags: {
     // check message to see if it is a command
     // compare name lowercase to message lowercase
     if (message.startsWith('!') || !is_mentioned) {
-        console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`)
+        console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
         // Skip sending the message to the LLM
     } else {
         let promptArray: any[] = [];
-        promptArray.push({ "role": "system", "content": personalityPrompt });
+        promptArray.push({ "role": "system", "content": `You are chatting with ${tags.username} as ${personalityName}, always start with addressing them by their name. ${personalityPrompt}` });
         // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
         let gptAnswer = '';
 
@@ -477,10 +477,10 @@ client.on('message', async (channel: any, tags: {
         // if it does then we need to respond to it
         if (message.toLowerCase().includes(twitchUserName.toLowerCase()) || is_mentioned) {
 
-            console.log(`OpenAI promptArray: \n${JSON.stringify(promptArray, null, 2)} \n`);
+            console.log(`Message History: \n---\n${JSON.stringify(promptArray, null, 2)}\n---`);
             
             try {
-                gptAnswer = await generateOpenAIResponse(promptArray);
+                gptAnswer = await generateLLMResponse(promptArray);
             } catch (error) {
                 console.error(`LLM Answer: An error occurred answering question for ${tags.username} with message ${message}:`, error);
             }
@@ -492,7 +492,7 @@ client.on('message', async (channel: any, tags: {
             if (lastMessageArray.length > 0) {
                 // check if the last user message matches the current message
                 if (lastMessageArray[lastMessageArray.length - 1].role === 'assistant' && lastMessageArray[lastMessageArray.length - 1].content === finalMessage) {
-                    console.log(`Ignoring duplicate message from ${tags.username} \n`);
+                    console.log(`Ignoring duplicate message from ${tags.username}`);
                     return;
                 }
             }
@@ -514,7 +514,7 @@ client.on('message', async (channel: any, tags: {
                 await storeUserSettings(tags.username, userSettings[tags.username]).catch(console.error);
             }
 
-            console.log(`Sent message: ${finalMessage} \nfrom ${twitchUserName} in channel ${channel} with tags: ${JSON.stringify(tags)} \n`);
+            console.log(`Sent message: ${finalMessage} \nfrom ${twitchUserName} in channel ${channel} with tags: ${JSON.stringify(tags)}`);
         }
 
         return;
