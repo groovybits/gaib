@@ -214,6 +214,9 @@ devDependencies:
   '@types/ws':
     specifier: ^8.5.5
     version: 8.5.5
+  '@types/zeromq':
+    specifier: ^5.2.5
+    version: 5.2.5
   '@typescript-eslint/parser':
     specifier: ^5.54.0
     version: 5.54.0(eslint@8.43.0)(typescript@4.9.5)
@@ -2250,6 +2253,12 @@ packages:
 
   /@types/ws@8.5.5:
     resolution: {integrity: sha512-lwhs8hktwxSjf9UaZ9tG5M03PGogvFaH8gUgLNbN9HKIg0dvv6q+gkSuJ8HN4/VbyxkuLzCjlN7GquQ0gUJfIg==}
+    dependencies:
+      '@types/node': 18.14.6
+    dev: true
+
+  /@types/zeromq@5.2.5:
+    resolution: {integrity: sha512-P66hCBoDlMAEu6yTFK03s/JZVQvau+I3ZF3GaA5RMqy9kmNMrigGhcgD+YG9MBvMBuT4FfdgEkEFaunVaN5TFQ==}
     dependencies:
       '@types/node': 18.14.6
     dev: true
