@@ -261,6 +261,15 @@ client.connect().catch(console.error);
 client.on('join', async (channel: any, username: any, self: any) => {
     if (self) return;  // Ignore messages from the bot itself
 
+    // check if startDate and current date are  more than 3 minutes apart
+    let currentDate = new Date();
+    let timeDiff = Math.abs(currentDate.getTime() - startDate.getTime());
+    let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
+    if (diffMinutes < 3) {
+        console.log(`User Join: Ignoring join message from ${username} in channel ${channel} since only ${diffMinutes} minute(s) since startup.\n`);
+        return;
+    }
+
     let newUser = false;
 
     // Load user settings from the database
