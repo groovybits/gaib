@@ -2,6 +2,8 @@ import tmi from 'tmi.js';
 import nlp from 'compromise';
 /// load .env
 import dotenv from 'dotenv';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 
 dotenv.config();
 
@@ -23,7 +25,8 @@ const maxHistoryBytes = process.env.TWITCH_MAX_HISTORY_BYTES ? parseInt(process.
 const openApiKey = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : 'FAKE_OPENAI_API_KEY';
 const maxTokens = process.env.LLM_MAX_TOKENS ? parseInt(process.env.LLM_MAX_TOKENS) : 120;
 const temperature = process.env.LLM_TEMPERATURE ? parseFloat(process.env.LLM_TEMPERATURE) : 1.0;
-const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 1;
+const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 0;
+const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWITCH_PERSIST_USERS) : 0;
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
@@ -143,6 +146,87 @@ async function processAndClearMessages(username: string, newMessage: string) {
     return combinedMessage;
 }
 
+// Generate an OpenAI response given the current state of the chatroom
+async function generateOpenAIResponse(promptArray: any[]): Promise<string> {
+    return new Promise((resolve, reject) => {
+        fetch(`http://${llmHost}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openApiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'gpt-4',
+                max_tokens: maxTokens,
+                n_predict: maxTokens,
+                temperature: temperature,
+                repeat_penalty: 1.0,
+                top_p: 1,
+                n: 1,
+                stream: false,
+                messages: promptArray,
+                stop: ["\n"],
+            }),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    reject(new Error(`Failed to generate OpenAI response: ${response.statusText} (${response.status})`));
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+                    const aiMessage = data.choices[0].message.content;
+                    resolve(aiMessage);
+                } else {
+                    reject(new Error('No choices returned from OpenAI'));
+                }
+            })
+            .catch(error => {
+                reject(error);
+            });
+    });
+}
+
+async function openDb() {
+    return open({
+        filename: './chatbot.db',
+        driver: sqlite3.Database
+    });
+}
+
+async function initializeDb() {
+    const db = await openDb();
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS user_settings (
+            username TEXT PRIMARY KEY,
+            data TEXT NOT NULL
+        )
+    `);
+}
+
+async function storeUserSettings(username: string, settings: any) {
+    const db = await openDb();
+    const data = JSON.stringify(settings);
+    await db.run(`
+        INSERT INTO user_settings (username, data) VALUES (?, ?)
+        ON CONFLICT(username) DO UPDATE SET data = ?
+    `, [username, data, data]);
+}
+
+async function getUserSettings(username: string): Promise<any[]> {
+    const db = await openDb();
+    const row = await db.get(`SELECT data FROM user_settings WHERE username = ?`, [username]);
+    return row ? JSON.parse(row.data) : [];
+}
+
+if (persistUsers > 0) {
+    console.log(`Persisting user settings to database...`);
+    sqlite3.verbose();
+    initializeDb().catch(console.error);
+    console.log(`Database initialized...`);
+}
+
 // Create a TMI client
 const client = new tmi.Client({
     options: { debug: true },
@@ -157,26 +241,39 @@ const client = new tmi.Client({
     channels: [channelName]
 });
 
+console.log(`Connecting to Twitch channel ${channelName}...`);
 client.connect();
 
 // Join the channel
-client.on('join', (channel: any, username: any, self: any) => {
+client.on('join', async (channel: any, username: any, self: any) => {
     if (self) return;  // Ignore messages from the bot itself
 
-    // check if startDate and current date are  more than 3 minutes apart
-    let currentDate = new Date();
-    let timeDiff = Math.abs(currentDate.getTime() - startDate.getTime());
-    let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
-    if (diffMinutes > 3) {
-        if (greetUsers == 1) {
-            client.say(channel, `! Welcome to the channel, ${username}. Use '!message <personality> <message>' to ask a question, and '!personalities' to see the available personalities to chat with.`);
-        }
-    }
-
-    // Update the userSettings object with a new message
+    // New user first time chat join, greet them and record the event
     if (!userSettings[username]) {
         userSettings[username] = [];
+
+        if (greetUsers == 1) {
+            let greet_prompt = `Welcome ${username} to the chatroom, I am ${personalityName} and I am here to help you with any questions you have. `;
+            let promptArray: any[] = [];
+            promptArray.push({ "role": "system", "content": personalityPrompt });
+            // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
+            let gptAnswer = '';
+            promptArray.push({ "role": "user", "content": `${greet_prompt}` });
+            promptArray.push({ "role": "assistant", "content": `` });
+
+            let greet_message = await generateOpenAIResponse(promptArray);
+
+            // Truncate the message to fit within the Twitch chat character limit
+            const finalMessage = truncateTwitchMessageToFullSentences(greet_message);
+
+            client.say(channel, `${finalMessage}`);
+        }
+
+        // Add a welcome event to the user's settings
+        userSettings[username].push({ timestamp: Date.now(), event: 'welcome', message: '', response: '' });
     }
+
+    // Add a join event to the user's settings
     userSettings[username].push({ timestamp: Date.now(), event: 'join', message: '', response: '' });
 });
 
@@ -222,17 +319,6 @@ client.on('message', async (channel: any, tags: {
             return;
         }
     }
-
-    // sleep 10 seconds, then check again and see if messages have changed, use a loop to check till messages no longer change after 10 seconds
-    /*while (true) {
-        let newMessage = await checkAndMergeMessages(tags.username, message);
-        if (newMessage !== message) {
-            await delay(10000);
-            return; // stop and return without processing the message, we have waited 10 seconds and the message has not changed
-        }
-        message = newMessage;
-        break;
-    }*/
 
     // Log the message to the console
     console.log(`Username: ${tags.username} Message: ${message} with twitchUserName is ${twitchUserName} `)
@@ -319,67 +405,34 @@ client.on('message', async (channel: any, tags: {
         if (message.toLowerCase().includes(twitchUserName.toLowerCase()) || is_mentioned) {
 
             console.log(`OpenAI promptArray: \n${JSON.stringify(promptArray, null, 2)} \n`);
+            
+            try {
+                gptAnswer = await generateOpenAIResponse(promptArray);
+            } catch (error) {
+                console.error('LLM Answer: An error occurred:', error);
+            }
+            
+            // Truncate the message to fit within the Twitch chat character limit
+            const finalMessage = truncateTwitchMessageToFullSentences(gptAnswer);
 
-            fetch(`http://${llmHost}/v1/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${openApiKey}`,
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4',
-                    max_tokens: maxTokens,
-                    n_predict: maxTokens,
-                    temperature: temperature,
-                    repeat_penalty: 1.0,
-                    top_p: 1,
-                    n: 1,
-                    stream: false,
-                    messages: promptArray,
-                    stop: ["\n"],
-                }),
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to generate OpenAI response:\n${response.statusText} (${response.status}) - ${response.body}\n`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-                        const aiMessage = data.choices[0].message;
-                        console.log(`OpenAI response:\n${JSON.stringify(aiMessage, null, 2)}\n`);
-                        console.log(`OpenAI usage:\n${JSON.stringify(data.usage, null, 2)}\nfinish_reason: ${data.choices[0].finish_reason}\n`);
+            // seach the history of messages and if it is a duplicate message from the last user message we recieved or a duplicate output message from the AI then ignore it
+            if (lastMessageArray.length > 0) {
+                // check if the last user message matches the current message
+                if (lastMessageArray[lastMessageArray.length - 1].role === 'assistant' && lastMessageArray[lastMessageArray.length - 1].content === finalMessage) {
+                    console.log(`Ignoring duplicate message from LLM to ${tags.username} \n`);
+                    return;
+                }
+            }
 
-                        gptAnswer = aiMessage.content;
+            client.say(channel, `${finalMessage}`);
 
-                        // Truncate the message to fit within the Twitch chat character limit
-                        const finalMessage = truncateTwitchMessageToFullSentences(gptAnswer);
+            lastMessageArray.push({ "role": "assistant", "content": `${finalMessage}` });
 
-                        // seach the history of messages and if it is a duplicate message from the last user message we recieved or a duplicate output message from the AI then ignore it
-                        if (lastMessageArray.length > 0) {
-                            // check if the last user message matches the current message
-                            if (lastMessageArray[lastMessageArray.length - 1].role === 'assistant' && lastMessageArray[lastMessageArray.length - 1].content === finalMessage) {
-                                console.log(`Ignoring duplicate message from LLM to ${tags.username} \n`);
-                                return;
-                            }
-                        }
-
-                        client.say(channel, `${finalMessage}`);
-
-                        lastMessageArray.push({ "role": "assistant", "content": `${finalMessage}` });
-
-                        // Update the userSettings object with a new message
-                        userSettings[tags.username].push({ timestamp: Date.now(), event: 'message', message: message, response: finalMessage });
-                    } else {
-                        console.error('No choices returned from OpenAI!\n');
-                        console.error(`OpenAI response:\n${JSON.stringify(data)}\n`);
-                    }
-                })
-                .catch(error => console.error('An error occurred:', error));
+            // Update the userSettings object with a new message
+            userSettings[tags.username].push({ timestamp: Date.now(), event: 'message', message: message, response: finalMessage });
 
             // Introduce a random delay before the bot responds
-            await delay(getRandomDelay());
+            //await delay(getRandomDelay());
         }
 
         return;
