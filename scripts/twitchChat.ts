@@ -177,6 +177,11 @@ interface AiMessage {
 async function sendChatMessageToAi(username: string, message: string, aipersonality: string, ainame: string, gender: string, max_tokens: number): Promise<void> {
     const socket = new zmq.Push();
 
+    let voice_model = "openai:onyx:1.0";
+    if (gender === 'female') {
+        voice_model = "openai:nova:1.0";
+    }
+
     const clientRequest: AiMessage = {
         segment_number: "0",
         mediaid: uuidv4(),
@@ -286,6 +291,16 @@ async function getUserSettings(username: string): Promise<any[]> {
         console.error('Error fetching user settings:', error);
         return [];
     }
+}
+
+// Assuming an interface that describes the shape of PERSONALITY_PROMPTS
+interface PersonalityPrompts {
+    [key: string]: string;
+}
+
+// A simpler type guard function
+function isPersonalityKey(key: any): key is keyof PersonalityPrompts {
+    return typeof key === 'string' && key in PERSONALITY_PROMPTS;
 }
 
 if (persistUsers > 0) {
@@ -492,8 +507,8 @@ client.on('message', async (channel: any, tags: {
     // compare name lowercase to message lowercase
     if (message.startsWith('!') || !is_mentioned) {
         if ((message.startsWith('!question ')
-            /*|| message.startsWith('!message ')
-            || message.startsWith('!image')*/) && message.split(' ').length > 2) {
+            || message.startsWith('!message ')
+            || message.startsWith('!image')) && message.split(' ').length > 2) {
             // Question command to send a message to the AI personality
             let max_tokens = maxTokens;
             let cmdname = message.split(' ')[0].toLowerCase().trim().replace('!', '');
@@ -508,17 +523,14 @@ client.on('message', async (channel: any, tags: {
                 aipersonality = `You are an artist and can draw an image of the following: ${message_local}`;
                 max_tokens = 50;
             } else if (PERSONALITY_PROMPTS.hasOwnProperty(firstWord)) {
-                // convert PERSONALITY_PROMPTS to a string
-                /*let p_string = JSON.stringify(PERSONALITY_PROMPTS);
-                aipersonality = p_string[firstWord];*/
+                // set personality prompt to the right personality
+                aipersonality = PERSONALITY_PROMPTS[firstWord];
                 ainame_local = firstWord;
                 
                 // get gender from PERSONALITY_VOICE_MODELS
-                /*if (PERSONALITY_VOICE_MODELS.hasOwnProperty(firstWord)) {
-                    // set gender to gender from PERSONALITY_VOICE_MODELS
-                    let pvm_string = JSON.stringify(PERSONALITY_VOICE_MODELS);
-                    gender = JSON.parse(pvm_string[firstWord]).gender;
-                }*/
+                if (PERSONALITY_VOICE_MODELS.hasOwnProperty(firstWord)) {
+                    gender = PERSONALITY_VOICE_MODELS[firstWord].gender;
+                }
 
                 console.log(`Setting personality prompt to: ${ainame_local} - ${aipersonality}`);
             } else {
@@ -530,7 +542,7 @@ client.on('message', async (channel: any, tags: {
             // send the message to the AI personality
             sendChatMessageToAi(tags.username, message, ainame_local, aipersonality, gender, max_tokens).catch(console.error);
             client.say(`${channel}`, `Hi ${tags.username}. I have sent your message to ${ainame_local} for a response.`);
-        } else if (false && message.startsWith('!personalities')) {
+        } else if (message.startsWith('!personalities')) {
             // Personality Prompts command
             client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
         } else {

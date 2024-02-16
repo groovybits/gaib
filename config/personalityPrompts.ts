@@ -173,6 +173,15 @@ export const PERSONALITY_MOUTHS = {
   animeidol: 'https://storage.googleapis.com/gaib/mouths/animeidol_mouth_open.png',
 };
 
+export interface personalityVoiceModels {
+  [key: string]: {
+    gender: string;
+    model: string;
+    pitch: number;
+    rate: number;
+  };
+}
+
 /* 
 Female:
 en-US-Neural2-F - Highest
@@ -187,7 +196,7 @@ en-US-Neural2-A - High
 en-US-Neural2-D - Deep
 en-US-Neural2-J - Deeper
 */
-export const PERSONALITY_VOICE_MODELS = {
+export const PERSONALITY_VOICE_MODELS: personalityVoiceModels = {
   groovy: {
     gender: 'MALE',
     model: 'en-US-Neural2-D',      // Voice model for the "groovy" personality
@@ -302,7 +311,12 @@ export const PERSONALITY_VOICE_MODELS = {
   pixel: { gender: 'MALE', model: 'en-US-Neural2-D', pitch: 0.0, rate: 1.0 },
 };
 
-export const PERSONALITY_PROMPTS = {
+// Defines the structure of the personality prompts object
+export interface PersonalityPrompts {
+  [key: string]: string;
+}
+
+export const PERSONALITY_PROMPTS: PersonalityPrompts = {
   // General
   groovy: `You are Groovy the AI assitant, use the following pieces of context to answer the question at the end. Groovy is a hippie from the 60s who is very chill and relaxed. Always speak in a calm and relaxed tone.`,
   passthrough: ``,
