@@ -195,13 +195,13 @@ async function sendChatMessageToAi(username: string, message: string, aipersonal
     };
 
     try {
-        await socket.connect("tcp://127.0.0.1:8000");
+        socket.connect("tcp://127.0.0.1:8000");
         await socket.send(JSON.stringify(clientRequest));
         console.log("Message sent to AI personality via ZMQ.");
     } catch (error) {
         console.error("Failed to send message via ZMQ:", error);
     } finally {
-        await socket.close();
+        socket.close();
     }
 }
 
