@@ -510,7 +510,7 @@ client.on('message', async (channel: any, tags: {
             || message.startsWith('!message ')
             || message.startsWith('!image')) && message.split(' ').length > 2) {
             // Question command to send a message to the AI personality
-            let max_tokens = maxTokens;
+            let max_tokens = maxTokens * 2;
             let cmdname = message.split(' ')[0].toLowerCase().trim().replace('!', '');
             const firstWord = message.split(' ')[1].toLowerCase().trim().replace(',', '').replace(':', '');
             let aipersonality: any = personalityPrompt;
