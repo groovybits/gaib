@@ -37,7 +37,6 @@ const processedMessageIds: { [id: string]: boolean } = {};
 
 // structure to keep track of each user separately with a last message time stamp, the message itself and the response from the AI
 const userSettings: { [username: string]: { timestamp: number, event: string, message: string, response: string }[] } = {};
-let startDate = new Date();
 
 const tempUserMessages: { [username: string]: { lastTimestamp: number, messages: string[] } } = {};
 
@@ -254,6 +253,7 @@ const client = new tmi.Client({
     channels: [channelName]
 });
 
+let startDate = new Date();
 console.log(`Connecting to Twitch channel ${channelName}...`);
 client.connect().catch(console.error);
 
@@ -261,12 +261,14 @@ client.connect().catch(console.error);
 client.on('join', async (channel: any, username: any, self: any) => {
     if (self) return;  // Ignore messages from the bot itself
 
-    // check if startDate and current date are  more than 1 minutes apart
     let currentDate = new Date();
-    let timeDiff = Math.abs(currentDate.getTime() - startDate.getTime());
-    let diffMinutes = Math.ceil(timeDiff / (1000 * 60));
-    if (diffMinutes < 2) {
-        console.log(`User Join: Ignoring join message from ${username} in channel ${channel} since only ${diffMinutes} minute(s) since startup.`);
+    let timeDiff = currentDate.getTime() - startDate.getTime(); // timeDiff is now in milliseconds
+    let diffMinutes = timeDiff / (1000 * 60); // Convert milliseconds to minutes
+
+    // If you want to check for a specific milliseconds threshold instead of minutes
+    // For example, checking if less than 180,000 milliseconds (3 minutes) have passed
+    if (timeDiff < 180000) {
+        console.log(`User Join: Ignoring join message from ${username} in channel ${channel} since only ${diffMinutes.toFixed(2)} minute(s) since startup.`);
         return;
     }
 
