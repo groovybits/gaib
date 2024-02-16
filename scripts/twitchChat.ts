@@ -6,6 +6,7 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import * as zmq from 'zeromq';
 import { v4 as uuidv4 } from 'uuid';
+import { PERSONALITY_PROMPTS, PERSONALITY_VOICE_MODELS } from '@/config/personalityPrompts';
 
 dotenv.config();
 
@@ -32,7 +33,7 @@ const temperature = process.env.LLM_TEMPERATURE ? parseFloat(process.env.LLM_TEM
 const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 1;
 const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWITCH_PERSIST_USERS) : 1;
 const delayResponse = process.env.TWITCH_DELAY_RESPONSE ? parseInt(process.env.TWITCH_DELAY_RESPONSE) : 0;
-const aiPersonality = process.env.TWITCH_AI_PERSONALITY ? process.env.TWITCH_AI_PERSONALITY : 'Buddha2';
+const ainame = process.env.TWITCH_AI_PERSONALITY ? process.env.TWITCH_AI_PERSONALITY : 'buddha';
 const aiSendMessage = process.env.TWITCH_AI_SEND_MESSAGE ? parseInt(process.env.TWITCH_AI_SEND_MESSAGE) : 0;
 
 const processedMessageIds: { [id: string]: boolean } = {};
@@ -173,7 +174,7 @@ interface AiMessage {
 }
 
 // Function to send a chat message to AI personality
-async function sendChatMessageToAi(username: string, message: string, aipersonality: string, ainame: string): Promise<void> {
+async function sendChatMessageToAi(username: string, message: string, aipersonality: string, ainame: string, gender: string, max_tokens: number): Promise<void> {
     const socket = new zmq.Push();
 
     const clientRequest: AiMessage = {
@@ -186,11 +187,11 @@ async function sendChatMessageToAi(username: string, message: string, aipersonal
         episode: "false",
         aipersonality: aipersonality,
         ainame: ainame,
-        maxtokens: 100,
+        maxtokens: max_tokens,
         voice_model: "openai:onyx:1.0",
-        gender: "male",
-        genre_music: "meditation music zen like a asian spa relaxing music",
-        genre: "buddha meditating in the tibetan mountains with a blue sky and white fluffy clouds and prayer flags",
+        gender: gender,
+        genre_music: aipersonality.slice(0, 30),
+        genre: aipersonality.slice(0, 30),
         priority: 75
     };
 
@@ -360,7 +361,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
                 // Truncate the message to fit within the Twitch chat character limit
                 const finalMessage = truncateTwitchMessageToFullSentences(greet_message);
 
-                let prefix = `!message ${aiPersonality}`;
+                let prefix = `!message ${ainame}`;
                 if (!aiSendMessage) {
                     prefix = '';
                 }
@@ -490,13 +491,52 @@ client.on('message', async (channel: any, tags: {
     // check message to see if it is a command
     // compare name lowercase to message lowercase
     if (message.startsWith('!') || !is_mentioned) {
-        if (message.startsWith('!question: ')) {
+        if ((message.startsWith('!question ')
+            /*|| message.startsWith('!message ')
+            || message.startsWith('!image')*/) && message.split(' ').length > 2) {
+            // Question command to send a message to the AI personality
+            let max_tokens = maxTokens;
+            let cmdname = message.split(' ')[0].toLowerCase().trim().replace('!', '');
+            const firstWord = message.split(' ')[1].toLowerCase().trim().replace(',', '').replace(':', '');
+            let aipersonality: any = personalityPrompt;
+            let ainame_local = ainame;
+            let gender = 'male';
+           
+            let message_local = message.split(' ').slice(1).join(' ');
+            if (cmdname === 'image') {
+                message_local = `Draw an image of the following: ${message_local}`;
+                aipersonality = `You are an artist and can draw an image of the following: ${message_local}`;
+                max_tokens = 50;
+            } else if (PERSONALITY_PROMPTS.hasOwnProperty(firstWord)) {
+                // convert PERSONALITY_PROMPTS to a string
+                /*let p_string = JSON.stringify(PERSONALITY_PROMPTS);
+                aipersonality = p_string[firstWord];*/
+                ainame_local = firstWord;
+                
+                // get gender from PERSONALITY_VOICE_MODELS
+                /*if (PERSONALITY_VOICE_MODELS.hasOwnProperty(firstWord)) {
+                    // set gender to gender from PERSONALITY_VOICE_MODELS
+                    let pvm_string = JSON.stringify(PERSONALITY_VOICE_MODELS);
+                    gender = JSON.parse(pvm_string[firstWord]).gender;
+                }*/
+
+                console.log(`Setting personality prompt to: ${ainame_local} - ${aipersonality}`);
+            } else {
+                console.error(`Personality ${firstWord} not found in PERSONALITY_PROMPTS`);
+            }
+
+            console.log(`Sending message to AI personality: ${message_local} for ${tags.username} in channel ${channel}.`);
+
             // send the message to the AI personality
-            sendChatMessageToAi(tags.username, message, personalityPrompt, aiPersonality).catch(console.error);
+            sendChatMessageToAi(tags.username, message, ainame_local, aipersonality, gender, max_tokens).catch(console.error);
+            client.say(`${channel}`, `Hi ${tags.username}. I have sent your message to ${ainame_local} for a response.`);
+        } else if (false && message.startsWith('!personalities')) {
+            // Personality Prompts command
+            client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
         } else {
+            // Skip sending the message to the LLM
             console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
         }
-        // Skip sending the message to the LLM
     } else {
         let promptArray: any[] = [];
         promptArray.push({ "role": "system", "content": `You are chatting with ${tags.username} as ${personalityName}, always start with addressing them by their name. ${personalityPrompt}` });
