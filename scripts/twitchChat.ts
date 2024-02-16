@@ -29,6 +29,8 @@ const maxTokens = process.env.LLM_MAX_TOKENS ? parseInt(process.env.LLM_MAX_TOKE
 const temperature = process.env.LLM_TEMPERATURE ? parseFloat(process.env.LLM_TEMPERATURE) : 1.0;
 const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 1;
 const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWITCH_PERSIST_USERS) : 1;
+const delayResponse = process.env.TWITCH_DELAY_RESPONSE ? parseInt(process.env.TWITCH_DELAY_RESPONSE) : 0;
+const aiPersonality = process.env.TWITCH_AI_PERSONALITY ? process.env.TWITCH_AI_PERSONALITY : 'Buddha2';
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
@@ -257,13 +259,18 @@ client.on('join', async (channel: any, username: any, self: any) => {
     if (self) return;  // Ignore messages from the bot itself
 
     let newUser = false;
-    if (!userSettings[username]) {
-        newUser = true;
-        userSettings[username] = [];
-    }
 
+    // Load user settings from the database
     if (persistUsers > 0) {
         userSettings[username] = await getUserSettings(username) || [];
+    }
+
+    // Check if the user is new
+    if (!userSettings[username]) {
+        userSettings[username] = [];
+        if (userSettings[username].length === 0) {
+            newUser = true;
+        }
     }
 
     // New user first time chat join, greet them and record the event
@@ -282,7 +289,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
             // Truncate the message to fit within the Twitch chat character limit
             const finalMessage = truncateTwitchMessageToFullSentences(greet_message);
 
-            client.say(channel, `${finalMessage}`);
+            client.say(channel, `!message ${aiPersonality} ${finalMessage}`);
         }
 
         // Add a welcome event to the user's settings
@@ -328,13 +335,18 @@ client.on('message', async (channel: any, tags: {
     };
 
     let newUser = false;
-    if (!userSettings[tags.username]) {
-        newUser = true;
-        userSettings[tags.username] = [];
-    }
 
+    // Load user settings from the database
     if (persistUsers > 0) {
         userSettings[tags.username] = await getUserSettings(tags.username) || [];
+    }
+
+    // Check if the user is new
+    if (!userSettings[tags.username]) {
+        userSettings[tags.username] = [];
+        if (userSettings[tags.username].length === 0) {
+            newUser = true;
+        }
     }
 
     // search the history of messages and if it is a duplicate message from the last user message we recieved or a duplicate output message from the AI then ignore it
@@ -451,7 +463,9 @@ client.on('message', async (channel: any, tags: {
             }
 
             // Introduce a random delay before the bot responds
-            await delay(getRandomDelay());
+            if (delayResponse > 0) {
+                await delay(getRandomDelay());
+            }
 
             client.say(channel, `${finalMessage}`);
 
