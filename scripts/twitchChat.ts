@@ -187,13 +187,16 @@ interface AiMessage {
 }
 
 // Function to send a chat message to AI personality
-async function sendChatMessageToAi(username: string, message: string, aipersonality: string, ainame: string, gender: string, max_tokens: number): Promise<void> {
+async function sendChatMessageToAi(username: string, message: string, aipersonality: string, ainame: string, gender: string, max_tokens: number, priority: number, voice_model: string): Promise<void> {
   const socket = new zmq.Push();
 
-  let voice_model = "openai:onyx:1.0";
-  if (gender === 'female') {
-    voice_model = "openai:nova:1.0";
+  let voice_model_local = "openai:onyx:1.0";
+  if (voice_model !== "") {
+    voice_model_local = voice_model;
+  } else if (gender === 'female') {
+    voice_model_local = "openai:nova:1.0";
   }
+
 
   const clientRequest: AiMessage = {
     segment_number: "0",
@@ -206,11 +209,11 @@ async function sendChatMessageToAi(username: string, message: string, aipersonal
     aipersonality: aipersonality,
     ainame: ainame,
     maxtokens: max_tokens,
-    voice_model: voice_model,
+    voice_model: voice_model_local,
     gender: gender,
     genre_music: aipersonality.slice(0, 30),
     genre: aipersonality.slice(0, 30),
-    priority: 75
+    priority: priority
   };
 
   try {
@@ -528,12 +531,19 @@ client.on('message', async (channel: any, tags: {
       let aipersonality: any = personalityPrompt;
       let ainame_local = ainame;
       let gender = 'male';
-
       let message_local = message.split(' ').slice(1).join(' ');
+
+      let priority = 75;
+      let voice_model = "";
+
       if (cmdname === 'image') {
-        message_local = `Draw an image of the following: ${message_local}`;
-        aipersonality = `You are an artist and can draw an image of the following: ${message_local}`;
-        max_tokens = 50;
+        ainame_local = "passthrough";
+        message_local = `${message_local}`;
+        aipersonality = `${message_local}`;
+        gender = 'female';
+        max_tokens = 100;
+        priority = 100;
+        voice_model = "mimic3:en_US/vctk_low#p263:1.5";
       } else if (PERSONALITY_PROMPTS.hasOwnProperty(firstWord)) {
         // set personality prompt to the right personality
         aipersonality = PERSONALITY_PROMPTS[firstWord];
@@ -552,7 +562,7 @@ client.on('message', async (channel: any, tags: {
       console.log(`Sending message to AI personality: ${message_local} for ${tags.username} in channel ${channel}.`);
 
       // send the message to the AI personality
-      sendChatMessageToAi(tags.username, message, ainame_local, aipersonality, gender, max_tokens).catch(console.error);
+      sendChatMessageToAi(tags.username, message_local, ainame_local, aipersonality, gender, max_tokens, priority, voice_model).catch(console.error);
       client.say(`${channel}`, `Hi ${tags.username}. I have sent your message to ${ainame_local} for a response.`);
     } else if (message.startsWith('!personalities')) {
       // Personality Prompts command
