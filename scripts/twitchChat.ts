@@ -193,7 +193,7 @@ async function sendChatMessageToAi(username: string, message: string, aipersonal
         aipersonality: aipersonality,
         ainame: ainame,
         maxtokens: max_tokens,
-        voice_model: "openai:onyx:1.0",
+        voice_model: voice_model,
         gender: gender,
         genre_music: aipersonality.slice(0, 30),
         genre: aipersonality.slice(0, 30),
