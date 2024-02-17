@@ -285,7 +285,7 @@ async function getUserSettings(username: string): Promise<any[]> {
 
         const row = await db.get(`SELECT data FROM user_settings WHERE username = ?`, [username]);
         const settings = row ? JSON.parse(row.data) : [];
-        console.log(`Fetched user settings for ${username}:`, settings)
+        console.log(`Fetched user settings for ${username}.`/*, settings*/)
         return Array.isArray(settings) ? settings : []; // Ensure it's always an array
     } catch (error) {
         console.error('Error fetching user settings:', error);
@@ -529,10 +529,10 @@ client.on('message', async (channel: any, tags: {
                 
                 // get gender from PERSONALITY_VOICE_MODELS
                 if (PERSONALITY_VOICE_MODELS.hasOwnProperty(firstWord)) {
-                    gender = PERSONALITY_VOICE_MODELS[firstWord].gender;
+                    gender = PERSONALITY_VOICE_MODELS[firstWord].gender.toLowerCase();
                 }
 
-                console.log(`Setting personality prompt to: ${ainame_local} - ${aipersonality}`);
+                console.log(`Setting personality prompt to: ${ainame_local} - ${aipersonality} as a ${gender}`);
             } else {
                 console.error(`Personality ${firstWord} not found in PERSONALITY_PROMPTS`);
             }
