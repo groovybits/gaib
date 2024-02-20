@@ -395,7 +395,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
         if (!aiSendMessage) {
           prefix = '';
         }
-        client.say(channel, `!${prefix} Hi ${username}. ${finalMessage}`);
+        client.say(channel, `!${prefix} ${finalMessage}`);
 
         console.log(`New User Join: ${username} in channel ${channel} with message: !${prefix} ${finalMessage}`);
       } catch (error) {
@@ -563,7 +563,7 @@ client.on('message', async (channel: any, tags: {
 
       // send the message to the AI personality
       sendChatMessageToAi(tags.username, message_local, ainame_local, aipersonality, gender, max_tokens, priority, voice_model).catch(console.error);
-      client.say(`${channel}`, `Hi ${tags.username}. I have sent your message to ${ainame_local} for a response.`);
+      client.say(`${channel}`, `${tags.username}. I have sent your message to ${ainame_local} for a response.`);
     } else if (message.startsWith('!personalities')) {
       // Personality Prompts command
       client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
@@ -638,7 +638,7 @@ client.on('message', async (channel: any, tags: {
         await delay(getRandomDelay());
       }
 
-      client.say(channel, `Hi ${tags.username}. ${finalMessage}`);
+      client.say(channel, `${finalMessage}`);
 
       lastMessageArray.push({ "role": "assistant", "content": `${finalMessage}` });
 
