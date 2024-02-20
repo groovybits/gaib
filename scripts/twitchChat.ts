@@ -396,7 +396,12 @@ client.on('join', async (channel: any, username: any, self: any) => {
         if (!aiSendMessage) {
           prefix = '';
         }
-        client.say(channel, `!${prefix} Hi ${username}. ${finalMessage}`);
+        // check if finalMesssage contains the user name, if not add the Hi username to the message
+        if (!finalMessage.toLowerCase().includes(username.toLowerCase())) {
+          client.say(channel, `!${prefix} Hi ${username}. ${finalMessage}`);
+        } else {
+          client.say(channel, `!${prefix} ${finalMessage}`);
+        }
 
         console.log(`New User Join: ${username} in channel ${channel} with message: !${prefix} ${finalMessage}`);
       } catch (error) {
