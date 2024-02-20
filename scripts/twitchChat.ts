@@ -396,7 +396,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
         if (!aiSendMessage) {
           prefix = '';
         }
-        client.say(channel, `!${prefix} ${finalMessage}`);
+        client.say(channel, `!${prefix} Hi ${username}. ${finalMessage}`);
 
         console.log(`New User Join: ${username} in channel ${channel} with message: !${prefix} ${finalMessage}`);
       } catch (error) {
