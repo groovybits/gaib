@@ -13,7 +13,7 @@ dotenv.config();
 // Settings most likely to be configured specifically for your use case
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'alices_ai_wonderland';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'uralove';
-const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'alices_ai_wonderland';
+const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'Alice';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Help chat users with the chatroom by explaining how to use it. Discuss what the users are talking about and help them with their questions. ";
 
