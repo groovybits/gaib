@@ -13,7 +13,7 @@ dotenv.config();
 // Settings most likely to be configured specifically for your use case
 const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'alices_ai_wonderland';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'uralove';
-const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'Alice';
+const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'alice';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Help chat users with the chatroom by explaining how to use it. Discuss what the users are talking about and help them with their questions. Carry on the conversation with the users and the moderator. Always use the history to help keep context and not repeat yourself.";
 
@@ -191,7 +191,7 @@ interface AiMessage {
 async function sendChatMessageToAi(username: string, message: string, aipersonality: string, ainame: string, gender: string, max_tokens: number, priority: number, voice_model: string): Promise<void> {
   const socket = new zmq.Push();
 
-  let voice_model_local = "openai:onyx:1.0";
+  let voice_model_local = "openai:nova:1.0";
   if (voice_model !== "") {
     voice_model_local = voice_model;
   } else if (gender === 'female') {
@@ -537,7 +537,7 @@ client.on('message', async (channel: any, tags: {
         const firstWord = message.split(' ')[1].toLowerCase().trim().replace(',', '').replace(':', '');
         let aipersonality: any = personalityPrompt;
         let ainame_local = ainame;
-        let gender = 'male';
+        let gender = 'female';
         let message_local = message.split(' ').slice(1).join(' ');
 
         let priority = 75;
@@ -550,7 +550,7 @@ client.on('message', async (channel: any, tags: {
           gender = 'female';
           max_tokens = 100;
           priority = 100;
-          voice_model = "mimic3:en_US/vctk_low#p263:1.5";
+          voice_model = "openai:nova:1.0";
         } else if (PERSONALITY_PROMPTS.hasOwnProperty(firstWord)) {
           // set personality prompt to the right personality
           aipersonality = PERSONALITY_PROMPTS[firstWord];
