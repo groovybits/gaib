@@ -35,6 +35,7 @@ const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWI
 const delayResponse = process.env.TWITCH_DELAY_RESPONSE ? parseInt(process.env.TWITCH_DELAY_RESPONSE) : 0;
 const ainame = process.env.TWITCH_AI_PERSONALITY ? process.env.TWITCH_AI_PERSONALITY : 'alice';
 const aiSendMessage = process.env.TWITCH_AI_SEND_MESSAGE ? parseInt(process.env.TWITCH_AI_SEND_MESSAGE) : 0;
+const commandControl = process.env.TWITCH_COMMAND_CONTROL ? parseInt(process.env.TWITCH_COMMAND_CONTROL) : 0;
 
 const processedMessageIds: { [id: string]: boolean } = {};
 
@@ -521,55 +522,57 @@ client.on('message', async (channel: any, tags: {
   // check message to see if it is a command
   // compare name lowercase to message lowercase
   if (message.startsWith('!') || !is_mentioned) {
-    if ((message.startsWith('!question ')
-      || message.startsWith('!message ')
-      || message.startsWith('!image')) && message.split(' ').length > 2) {
-      // Question command to send a message to the AI personality
-      let max_tokens = maxTokens * 4;
-      let cmdname = message.split(' ')[0].toLowerCase().trim().replace('!', '');
-      const firstWord = message.split(' ')[1].toLowerCase().trim().replace(',', '').replace(':', '');
-      let aipersonality: any = personalityPrompt;
-      let ainame_local = ainame;
-      let gender = 'male';
-      let message_local = message.split(' ').slice(1).join(' ');
+    if (commandControl > 0) {
+      if ((message.startsWith('!question ')
+        || message.startsWith('!message ')
+        || message.startsWith('!image')) && message.split(' ').length > 2) {
+        // Question command to send a message to the AI personality
+        let max_tokens = maxTokens * 4;
+        let cmdname = message.split(' ')[0].toLowerCase().trim().replace('!', '');
+        const firstWord = message.split(' ')[1].toLowerCase().trim().replace(',', '').replace(':', '');
+        let aipersonality: any = personalityPrompt;
+        let ainame_local = ainame;
+        let gender = 'male';
+        let message_local = message.split(' ').slice(1).join(' ');
 
-      let priority = 75;
-      let voice_model = "";
+        let priority = 75;
+        let voice_model = "";
 
-      if (cmdname === 'image') {
-        ainame_local = "passthrough";
-        message_local = `${message_local}`;
-        aipersonality = `${message_local}`;
-        gender = 'female';
-        max_tokens = 100;
-        priority = 100;
-        voice_model = "mimic3:en_US/vctk_low#p263:1.5";
-      } else if (PERSONALITY_PROMPTS.hasOwnProperty(firstWord)) {
-        // set personality prompt to the right personality
-        aipersonality = PERSONALITY_PROMPTS[firstWord];
-        ainame_local = firstWord;
+        if (cmdname === 'image') {
+          ainame_local = "passthrough";
+          message_local = `${message_local}`;
+          aipersonality = `${message_local}`;
+          gender = 'female';
+          max_tokens = 100;
+          priority = 100;
+          voice_model = "mimic3:en_US/vctk_low#p263:1.5";
+        } else if (PERSONALITY_PROMPTS.hasOwnProperty(firstWord)) {
+          // set personality prompt to the right personality
+          aipersonality = PERSONALITY_PROMPTS[firstWord];
+          ainame_local = firstWord;
 
-        // get gender from PERSONALITY_VOICE_MODELS
-        if (PERSONALITY_VOICE_MODELS.hasOwnProperty(firstWord)) {
-          gender = PERSONALITY_VOICE_MODELS[firstWord].gender.toLowerCase();
+          // get gender from PERSONALITY_VOICE_MODELS
+          if (PERSONALITY_VOICE_MODELS.hasOwnProperty(firstWord)) {
+            gender = PERSONALITY_VOICE_MODELS[firstWord].gender.toLowerCase();
+          }
+
+          console.log(`Setting personality prompt to: ${ainame_local} - ${aipersonality} as a ${gender}`);
+        } else {
+          console.error(`Personality ${firstWord} not found in PERSONALITY_PROMPTS`);
         }
 
-        console.log(`Setting personality prompt to: ${ainame_local} - ${aipersonality} as a ${gender}`);
+        console.log(`Sending message to AI personality: ${message_local} for ${tags.username} in channel ${channel}.`);
+
+        // send the message to the AI personality
+        sendChatMessageToAi(tags.username, message_local, ainame_local, aipersonality, gender, max_tokens, priority, voice_model).catch(console.error);
+        client.say(`${channel}`, `${tags.username}. I have sent your message to ${ainame_local} for a response.`);
+      } else if (message.startsWith('!personalities')) {
+        // Personality Prompts command
+        client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
       } else {
-        console.error(`Personality ${firstWord} not found in PERSONALITY_PROMPTS`);
+        // Skip sending the message to the LLM
+        console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
       }
-
-      console.log(`Sending message to AI personality: ${message_local} for ${tags.username} in channel ${channel}.`);
-
-      // send the message to the AI personality
-      sendChatMessageToAi(tags.username, message_local, ainame_local, aipersonality, gender, max_tokens, priority, voice_model).catch(console.error);
-      client.say(`${channel}`, `${tags.username}. I have sent your message to ${ainame_local} for a response.`);
-    } else if (message.startsWith('!personalities')) {
-      // Personality Prompts command
-      client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
-    } else {
-      // Skip sending the message to the LLM
-      console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
     }
   } else {
     let promptArray: any[] = [];
