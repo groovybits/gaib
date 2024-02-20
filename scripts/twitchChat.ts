@@ -196,6 +196,8 @@ async function sendChatMessageToAi(username: string, message: string, aipersonal
     voice_model_local = voice_model;
   } else if (gender === 'female') {
     voice_model_local = "openai:nova:1.0";
+  } else if (gender === 'male') {
+    voice_model_local = "openai:onyx:1.0";
   }
 
 
