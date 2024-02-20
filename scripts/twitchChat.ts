@@ -392,12 +392,12 @@ client.on('join', async (channel: any, username: any, self: any) => {
         // Truncate the message to fit within the Twitch chat character limit
         const finalMessage = truncateTwitchMessageToFullSentences(greet_message);
 
-        let prefix = `!message ${ainame}`;
+        let prefix = `message ${ainame}`;
         if (!aiSendMessage) {
           prefix = '';
         }
         // check if finalMesssage contains the user name, if not add the Hi username to the message
-        if (!finalMessage.toLowerCase().includes(username.toLowerCase())) {
+        if (!finalMessage.includes(username) || !finalMessage.toLowerCase().includes(username.toLowerCase())) {
           client.say(channel, `!${prefix} Hi ${username}. ${finalMessage}`);
         } else {
           client.say(channel, `!${prefix} ${finalMessage}`);
