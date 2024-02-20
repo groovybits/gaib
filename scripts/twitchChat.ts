@@ -11,9 +11,9 @@ import { PERSONALITY_PROMPTS, PERSONALITY_VOICE_MODELS } from '@/config/personal
 dotenv.config();
 
 // Settings most likely to be configured specifically for your use case
-const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'ai_buddha';
+const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NAME : 'alices_ai_wonderland';
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'uralove';
-const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'ai_buddha';
+const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'alices_ai_wonderland';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
 const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Help chat users with the chatroom by explaining how to use it. Discuss what the users are talking about and help them with their questions. ";
 
@@ -33,7 +33,7 @@ const temperature = process.env.LLM_TEMPERATURE ? parseFloat(process.env.LLM_TEM
 const greetUsers = process.env.TWITCH_GREET_USERS ? parseInt(process.env.TWITCH_GREET_USERS) : 1;
 const persistUsers = process.env.TWITCH_PERSIST_USERS ? parseInt(process.env.TWITCH_PERSIST_USERS) : 1;
 const delayResponse = process.env.TWITCH_DELAY_RESPONSE ? parseInt(process.env.TWITCH_DELAY_RESPONSE) : 0;
-const ainame = process.env.TWITCH_AI_PERSONALITY ? process.env.TWITCH_AI_PERSONALITY : 'buddha';
+const ainame = process.env.TWITCH_AI_PERSONALITY ? process.env.TWITCH_AI_PERSONALITY : 'alice';
 const aiSendMessage = process.env.TWITCH_AI_SEND_MESSAGE ? parseInt(process.env.TWITCH_AI_SEND_MESSAGE) : 0;
 
 const processedMessageIds: { [id: string]: boolean } = {};
