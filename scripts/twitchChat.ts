@@ -15,7 +15,7 @@ const twitchUserName = process.env.TWITCH_USER_NAME ? process.env.TWITCH_USER_NA
 const twitchModName = process.env.TWITCH_MOD_NAME ? process.env.TWITCH_MOD_NAME : 'uralove';
 const personalityName = process.env.TWITCH_PERSONALITY_NAME ? process.env.TWITCH_PERSONALITY_NAME : 'Alice';
 const dominantBot = process.env.TWITCH_DOMINANT_BOT ? parseInt(process.env.TWITCH_DOMINANT_BOT) : 1;
-const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Help chat users with the chatroom by explaining how to use it. Discuss what the users are talking about and help them with their questions. ";
+const role = process.env.TWITCH_ROLE ? process.env.TWITCH_ROLE : "Help chat users with the chatroom by explaining how to use it. Discuss what the users are talking about and help them with their questions. Carry on the conversation with the users and the moderator. Always use the history to help keep context and not repeat yourself.";
 
 // Get the channel name from the command line arguments
 const channelName = process.argv[2];
