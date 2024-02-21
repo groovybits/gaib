@@ -576,6 +576,9 @@ client.on('message', async (channel: any, tags: {
       } else if (message.startsWith('!personalities')) {
         // Personality Prompts command
         client.say(channel, `Personality Prompts: {${Object.keys(PERSONALITY_PROMPTS)}}`);
+      } else if (message.startsWith('!help')) {
+        // Help command
+        client.say(channel, `Commands: !question <personality> <message>, !personalities`);
       } else {
         // Skip sending the message to the LLM
         console.log(`Skipping message: ${message} from ${tags.username} in channel ${channel} with tags: ${JSON.stringify(tags)}`)
