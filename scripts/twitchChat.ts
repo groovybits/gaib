@@ -239,7 +239,7 @@ async function generateLLMResponse(promptArray: any[]): Promise<string> {
         'Authorization': `Bearer ${openApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4-turbo',
         max_tokens: maxTokens,
         n_predict: maxTokens,
         temperature: temperature,
@@ -248,7 +248,7 @@ async function generateLLMResponse(promptArray: any[]): Promise<string> {
         n: 1,
         stream: false,
         messages: promptArray,
-        stop: ["\n"],
+        //stop: ["<\s"],
       }),
     })
       .then(response => {
@@ -380,7 +380,7 @@ client.on('join', async (channel: any, username: any, self: any) => {
   // New user first time chat join, greet them and record the event
   if (newUser) {
     if (greetUsers == 1) {
-      let greet_prompt = `As ${personalityName} Welcome ${username} to the chatroom using their name in your response, offer them help and guidance on how to use the chatroom. ask them how they are doing and what they are interested in. `;
+      let greet_prompt = `As ${personalityName} Welcome ${username} to the chatroom using their name in your response, offer them help and guidance on how to use the chatroom. Make sure to ask them to follow you after asking how they are doing and what they are interested in. `;
       let promptArray: any[] = [];
       promptArray.push({ "role": "system", "content": personalityPrompt });
       // copy lastMessageArray into promptArrary prepending the current content member with the prompt variable
